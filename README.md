@@ -229,7 +229,9 @@ railway init
 railway up
 ```
 
-**Complete Guide**: See [docs/deployment/RAILWAY.md](docs/deployment/RAILWAY.md) for detailed step-by-step instructions.
+**Complete Guides**:
+- [Step-by-Step Deployment Guide](docs/deployment/RAILWAY-STEP-BY-STEP.md) - **START HERE** for first-time deployment
+- [Quick Reference Guide](docs/deployment/RAILWAY.md) - For experienced users
 
 **Cost Estimate**:
 - Development: ~$15-20/month
@@ -324,7 +326,8 @@ docker-compose up -d --build frontend
 - [Development Guide](docs/development/CLAUDE.md) - AI assistant guidelines for this codebase
 
 ### Deployment
-- [Railway Deployment Guide](docs/deployment/RAILWAY.md) - Complete Railway deployment guide (RECOMMENDED)
+- [Railway Step-by-Step Guide](docs/deployment/RAILWAY-STEP-BY-STEP.md) - Detailed deployment walkthrough ⭐ **START HERE**
+- [Railway Quick Reference](docs/deployment/RAILWAY.md) - Quick reference for experienced users
 
 ### Interactive Documentation
 - [API Documentation](http://localhost:8001/api/docs) - Interactive API docs

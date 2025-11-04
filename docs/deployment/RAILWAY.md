@@ -2,6 +2,15 @@
 
 Complete guide for deploying the Analytics Dashboard to Railway.
 
+> **🚀 NEW: Looking for a detailed step-by-step walkthrough?**
+> Check out [RAILWAY-STEP-BY-STEP.md](RAILWAY-STEP-BY-STEP.md) for a comprehensive beginner-friendly guide with detailed screenshots descriptions and troubleshooting!
+
+## Quick Links
+
+- **[Step-by-Step Guide](RAILWAY-STEP-BY-STEP.md)** - Detailed walkthrough (RECOMMENDED for first-time deployment)
+- **[This Guide](#deployment-steps)** - Quick reference for experienced users
+- **[Troubleshooting](#troubleshooting)** - Common issues and solutions
+
 ## Why Railway?
 
 Railway is the recommended platform for this application because:

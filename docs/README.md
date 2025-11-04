@@ -19,7 +19,8 @@ Development guides and technical documentation.
 ### `/deployment`
 Production deployment guides for various platforms.
 
-- **[RAILWAY.md](deployment/RAILWAY.md)** - Railway deployment guide (RECOMMENDED) - Complete step-by-step guide
+- **[RAILWAY-STEP-BY-STEP.md](deployment/RAILWAY-STEP-BY-STEP.md)** - **START HERE** - Detailed beginner-friendly Railway deployment walkthrough
+- **[RAILWAY.md](deployment/RAILWAY.md)** - Railway quick reference guide
 
 ### `/archive`
 Historical documentation and completed fixes (kept for reference).
@@ -30,7 +31,7 @@ Historical documentation and completed fixes (kept for reference).
 
 - **Main README**: [../README.md](../README.md) - Project overview and primary documentation
 - **Getting Started**: [setup/QUICK_START_GUIDE.md](setup/QUICK_START_GUIDE.md)
-- **Deploy to Production**: [deployment/RAILWAY.md](deployment/RAILWAY.md)
+- **Deploy to Production**: [deployment/RAILWAY-STEP-BY-STEP.md](deployment/RAILWAY-STEP-BY-STEP.md) ⭐ **START HERE**
 - **Troubleshooting**: [setup/DOCKER-TROUBLESHOOTING.md](setup/DOCKER-TROUBLESHOOTING.md)
 
 ## Contributing
