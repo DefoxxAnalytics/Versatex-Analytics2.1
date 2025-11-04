@@ -23,12 +23,16 @@ import {
   Calendar,
   Target,
   Shield,
+  User as UserIcon,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProcurementData } from '@/hooks/useProcurementData';
 import { cn } from '@/lib/utils';
 import { Breadcrumb } from './Breadcrumb';
 import { FilterPane } from './FilterPane';
+import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 
 /**
  * Check if the current user has admin role
@@ -42,6 +46,69 @@ function isAdmin(): boolean {
     return user?.profile?.role === 'admin';
   } catch {
     return false;
+  }
+}
+
+/**
+ * User information interface
+ */
+interface UserInfo {
+  username: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  role: 'admin' | 'manager' | 'viewer';
+  initials: string;
+  displayName: string;
+}
+
+/**
+ * Get current user information from localStorage
+ */
+function getUserInfo(): UserInfo | null {
+  try {
+    const userStr = localStorage.getItem('user');
+    if (!userStr) return null;
+
+    const user = JSON.parse(userStr);
+    const firstName = user?.first_name || '';
+    const lastName = user?.last_name || '';
+    const username = user?.username || 'User';
+    const role = user?.profile?.role || 'viewer';
+
+    // Generate initials
+    let initials = '';
+    if (firstName && lastName) {
+      initials = `${firstName[0]}${lastName[0]}`.toUpperCase();
+    } else if (firstName) {
+      initials = firstName.substring(0, 2).toUpperCase();
+    } else if (username) {
+      initials = username.substring(0, 2).toUpperCase();
+    } else {
+      initials = 'U';
+    }
+
+    // Generate display name
+    let displayName = '';
+    if (firstName && lastName) {
+      displayName = `${firstName} ${lastName}`;
+    } else if (firstName) {
+      displayName = firstName;
+    } else {
+      displayName = username;
+    }
+
+    return {
+      username,
+      firstName,
+      lastName,
+      email: user?.email,
+      role,
+      initials,
+      displayName,
+    };
+  } catch {
+    return null;
   }
 }
 
@@ -148,11 +215,62 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 /**
+ * User display component showing avatar, name, and role
+ */
+function UserDisplay() {
+  const userInfo = getUserInfo();
+
+  if (!userInfo) return null;
+
+  // Role badge styling
+  const getRoleBadgeVariant = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return 'default'; // Blue
+      case 'manager':
+        return 'secondary'; // Green-ish
+      case 'viewer':
+        return 'outline'; // Gray outline
+      default:
+        return 'outline';
+    }
+  };
+
+  const getRoleLabel = (role: string) => {
+    return role.charAt(0).toUpperCase() + role.slice(1);
+  };
+
+  return (
+    <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-50 border border-gray-200">
+      {/* Avatar */}
+      <Avatar className="h-8 w-8">
+        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-sm font-semibold">
+          {userInfo.initials}
+        </AvatarFallback>
+      </Avatar>
+
+      {/* Name and Role - Hidden on small screens */}
+      <div className="hidden md:flex md:flex-col md:gap-0.5">
+        <span className="text-sm font-medium text-gray-900 leading-tight">
+          {userInfo.displayName}
+        </span>
+        <Badge
+          variant={getRoleBadgeVariant(userInfo.role)}
+          className="text-xs w-fit"
+        >
+          {getRoleLabel(userInfo.role)}
+        </Badge>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Logout button component
  */
 function LogoutButton() {
   const { logout } = useAuth();
-  
+
   return (
     <button
       onClick={logout}
@@ -227,9 +345,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* User Display */}
+            <UserDisplay />
+
             {/* Logout button */}
             <LogoutButton />
-            
+
             {/* Filter pane toggle */}
             <button
               onClick={() => setIsFilterPaneOpen(!isFilterPaneOpen)}
@@ -277,10 +398,21 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               const Icon = item.icon;
               const active = isActive(item.path);
 
-              // For Settings, render Admin Panel link before it if user is admin
+              // For Settings, render divider and Admin Panel link before it if user is admin
               if (item.path === '/settings' && isAdmin()) {
                 return (
                   <div key="admin-section">
+                    {/* Divider with label */}
+                    <div className="pt-4 pb-2">
+                      <div className="flex items-center gap-2 px-3 mb-3">
+                        <Separator className="flex-1" />
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          Administration
+                        </span>
+                        <Separator className="flex-1" />
+                      </div>
+                    </div>
+
                     {/* Admin Panel Link */}
                     <a
                       href={`${window.location.protocol}//${window.location.hostname}:8001/admin/`}
@@ -296,6 +428,42 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                       <Shield className="h-5 w-5 text-gray-500" />
                       <span className="text-sm">Admin Panel</span>
                     </a>
+
+                    {/* Settings Link */}
+                    <Link
+                      href={item.path}
+                      onClick={handleNavClick}
+                      className={cn(
+                        'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
+                        'hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                        active
+                          ? 'bg-blue-50 text-blue-700 font-medium'
+                          : 'text-gray-700 hover:text-gray-900'
+                      )}
+                      aria-current={active ? 'page' : undefined}
+                      title={item.description}
+                    >
+                      <Icon className={cn('h-5 w-5', active ? 'text-blue-600' : 'text-gray-500')} />
+                      <span className="text-sm">{item.label}</span>
+                    </Link>
+                  </div>
+                );
+              }
+
+              // For Settings (non-admin), render divider before it
+              if (item.path === '/settings' && !isAdmin()) {
+                return (
+                  <div key="settings-section">
+                    {/* Divider with label */}
+                    <div className="pt-4 pb-2">
+                      <div className="flex items-center gap-2 px-3 mb-3">
+                        <Separator className="flex-1" />
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          Settings
+                        </span>
+                        <Separator className="flex-1" />
+                      </div>
+                    </div>
 
                     {/* Settings Link */}
                     <Link
