@@ -1,10 +1,14 @@
 """
-Views for procurement data management
+Views for procurement data management with security features:
+- Rate limiting on sensitive operations (upload, export, bulk_delete)
+- Organization-scoped data access
+- Audit logging for all operations
 """
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.throttling import ScopedRateThrottle
 from django.http import HttpResponse
 from django.db.models import Count, Sum, Q
 from apps.authentication.permissions import CanUploadData, CanDeleteData
@@ -16,6 +20,21 @@ from .serializers import (
     DataUploadSerializer, CSVUploadSerializer
 )
 from .services import CSVProcessor, bulk_delete_transactions, export_transactions_to_csv
+
+
+class UploadThrottle(ScopedRateThrottle):
+    """Rate limiting for file upload operations (10/hour per user)"""
+    scope = 'uploads'
+
+
+class ExportThrottle(ScopedRateThrottle):
+    """Rate limiting for export operations (30/hour per user)"""
+    scope = 'exports'
+
+
+class BulkDeleteThrottle(ScopedRateThrottle):
+    """Rate limiting for bulk delete operations (10/hour per user)"""
+    scope = 'bulk_delete'
 
 
 class SupplierViewSet(viewsets.ModelViewSet):
@@ -189,10 +208,11 @@ class TransactionViewSet(viewsets.ModelViewSet):
         )
         instance.delete()
     
-    @action(detail=False, methods=['post'], permission_classes=[CanUploadData])
+    @action(detail=False, methods=['post'], permission_classes=[CanUploadData], throttle_classes=[UploadThrottle])
     def upload_csv(self, request):
         """
-        Upload CSV file with procurement data
+        Upload CSV file with procurement data.
+        Rate limited to 10 uploads per hour per user.
         """
         serializer = CSVUploadSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -231,10 +251,11 @@ class TransactionViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
     
-    @action(detail=False, methods=['post'], permission_classes=[CanDeleteData])
+    @action(detail=False, methods=['post'], permission_classes=[CanDeleteData], throttle_classes=[BulkDeleteThrottle])
     def bulk_delete(self, request):
         """
-        Bulk delete transactions
+        Bulk delete transactions.
+        Rate limited to 10 bulk deletes per hour per user.
         """
         serializer = TransactionBulkDeleteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -257,10 +278,11 @@ class TransactionViewSet(viewsets.ModelViewSet):
             'count': count
         })
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], throttle_classes=[ExportThrottle])
     def export(self, request):
         """
-        Export transactions to CSV
+        Export transactions to CSV.
+        Rate limited to 30 exports per hour per user.
         """
         filters = {
             'start_date': request.query_params.get('start_date'),

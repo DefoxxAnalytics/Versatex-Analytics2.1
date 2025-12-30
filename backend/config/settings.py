@@ -172,10 +172,16 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.ScopedRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/hour',
         'user': '1000/hour',
+        # Scoped throttle rates for specific operations
+        'uploads': '10/hour',       # File upload rate limiting
+        'exports': '30/hour',       # Export rate limiting
+        'bulk_delete': '10/hour',   # Bulk delete rate limiting
+        'login': '5/minute',        # Login rate limiting (backup to django-ratelimit)
     },
     'EXCEPTION_HANDLER': 'config.exception_handler.custom_exception_handler',
 }
@@ -190,14 +196,36 @@ SIMPLE_JWT = {
     'UPDATE_LAST_LOGIN': True,
 }
 
-# CORS Settings - Stricter configuration
-CORS_ALLOWED_ORIGINS = config(
+# CORS Settings - Strict configuration
+# Parse allowed origins from environment
+_cors_origins = config(
     'CORS_ALLOWED_ORIGINS',
     default='http://localhost:3000,http://localhost:5173'
 ).split(',')
 
+# Helper to check if origin is for local development
+def _is_local_origin(origin):
+    """Check if origin is localhost or 127.0.0.1 (local development)"""
+    return 'localhost' in origin or '127.0.0.1' in origin
+
+# In production, only allow HTTPS origins (except for local development)
+if not DEBUG:
+    CORS_ALLOWED_ORIGINS = [
+        origin.strip() for origin in _cors_origins
+        if origin.strip().startswith('https://') or _is_local_origin(origin)
+    ]
+    # Warn if non-HTTPS origins are configured in production
+    _insecure_origins = [o for o in _cors_origins if not o.strip().startswith('https://') and not _is_local_origin(o)]
+    if _insecure_origins:
+        logging.warning(f"⚠️  Insecure CORS origins configured (should use HTTPS): {_insecure_origins}")
+else:
+    CORS_ALLOWED_ORIGINS = [origin.strip() for origin in _cors_origins]
+
 # Only allow credentials with explicit origin whitelist (not wildcards)
+# IMPORTANT: CORS_ALLOW_CREDENTIALS should only be True if origins are explicitly listed
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = False  # Never allow all origins with credentials
+
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
@@ -208,6 +236,16 @@ CORS_ALLOW_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
+]
+
+# Limit CORS methods to only what's needed
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
 ]
 
 # CSRF Settings

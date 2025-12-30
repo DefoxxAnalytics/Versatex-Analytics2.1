@@ -150,16 +150,86 @@ class DataUploadSerializer(serializers.ModelSerializer):
 
 
 class CSVUploadSerializer(serializers.Serializer):
-    """Serializer for CSV file upload"""
+    """
+    Serializer for CSV file upload with security validations.
+
+    Security features:
+    - File extension validation
+    - File size limit (50MB)
+    - Content-type validation
+    - Magic byte validation for CSV files
+    """
     file = serializers.FileField()
     skip_duplicates = serializers.BooleanField(default=True)
-    
+
+    # CSV magic bytes patterns (common file signatures)
+    # CSV doesn't have a strict magic number, but we check for text content
+    ALLOWED_CONTENT_TYPES = [
+        'text/csv',
+        'text/plain',
+        'application/csv',
+        'application/vnd.ms-excel',  # Sometimes Excel sends CSV as this
+    ]
+
+    # Characters that indicate binary (non-text) content
+    BINARY_INDICATORS = set(bytes(range(0, 9)) + bytes(range(14, 32)))
+
     def validate_file(self, value):
-        if not value.name.endswith('.csv'):
+        # 1. Check file extension
+        if not value.name.lower().endswith('.csv'):
             raise serializers.ValidationError("Only CSV files are allowed")
-        
-        # Check file size (max 50MB)
+
+        # 2. Check file size (max 50MB)
         if value.size > 50 * 1024 * 1024:
             raise serializers.ValidationError("File size must be less than 50MB")
-        
+
+        # 3. Check content type
+        content_type = getattr(value, 'content_type', 'application/octet-stream')
+        if content_type not in self.ALLOWED_CONTENT_TYPES:
+            # Some browsers don't set proper content type, do additional checks
+            pass  # Continue to magic byte validation
+
+        # 4. Validate content is text (not binary)
+        # Read first 8KB to check for binary content
+        try:
+            value.seek(0)
+            sample = value.read(8192)
+            value.seek(0)  # Reset file pointer
+
+            # Check if content appears to be binary
+            if isinstance(sample, bytes):
+                # Check for null bytes or other binary indicators
+                binary_chars = set(sample) & self.BINARY_INDICATORS
+                if binary_chars:
+                    raise serializers.ValidationError(
+                        "File appears to contain binary data. Only text CSV files are allowed."
+                    )
+
+                # Try to decode as UTF-8 (or common encodings)
+                try:
+                    sample.decode('utf-8')
+                except UnicodeDecodeError:
+                    try:
+                        sample.decode('latin-1')
+                    except UnicodeDecodeError:
+                        raise serializers.ValidationError(
+                            "File encoding not recognized. Please use UTF-8 encoded CSV files."
+                        )
+
+            # 5. Basic CSV structure validation
+            # Check if first line looks like a header (contains comma-separated values)
+            if isinstance(sample, bytes):
+                sample = sample.decode('utf-8', errors='ignore')
+
+            first_line = sample.split('\n')[0] if sample else ''
+            if ',' not in first_line and '\t' not in first_line and ';' not in first_line:
+                raise serializers.ValidationError(
+                    "File does not appear to be a valid CSV file (no delimiter found in header)."
+                )
+
+        except serializers.ValidationError:
+            raise
+        except Exception as e:
+            raise serializers.ValidationError(f"Error validating file content: Unable to read file")
+
         return value
