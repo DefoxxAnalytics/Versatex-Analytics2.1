@@ -5,6 +5,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.core.exceptions import ValidationError
 
 
 class Organization(models.Model):
@@ -74,7 +75,10 @@ class UserProfile(models.Model):
 
 class AuditLog(models.Model):
     """
-    Audit log for tracking user actions
+    Audit log for tracking user actions.
+
+    Security: The details JSONField is validated to only accept known keys
+    to prevent injection of arbitrary data.
     """
     ACTION_CHOICES = [
         ('login', 'Login'),
@@ -86,7 +90,14 @@ class AuditLog(models.Model):
         ('export', 'Export'),
         ('view', 'View'),
     ]
-    
+
+    # Allowed keys for the details JSONField (security: prevent arbitrary data injection)
+    ALLOWED_DETAIL_KEYS = {
+        'file_name', 'successful', 'failed', 'duplicate', 'batch_id', 'record_id',
+        'changes', 'count', 'username', 'error', 'old_value', 'new_value',
+        'reason', 'target_id', 'target_type'
+    }
+
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='audit_logs')
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='audit_logs')
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
@@ -96,7 +107,7 @@ class AuditLog(models.Model):
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         ordering = ['-timestamp']
         verbose_name = 'Audit Log'
@@ -106,7 +117,32 @@ class AuditLog(models.Model):
             models.Index(fields=['user', '-timestamp']),
             models.Index(fields=['action', '-timestamp']),
         ]
-    
+
+    def clean(self):
+        """Validate audit log details schema."""
+        super().clean()
+        if self.details:
+            if not isinstance(self.details, dict):
+                raise ValidationError({'details': 'Details must be a dictionary'})
+
+            invalid_keys = set(self.details.keys()) - self.ALLOWED_DETAIL_KEYS
+            if invalid_keys:
+                raise ValidationError({
+                    'details': f"Invalid audit log detail keys: {', '.join(sorted(invalid_keys))}"
+                })
+
+            # Validate value types (simple types only for security)
+            for key, value in self.details.items():
+                if value is not None and not isinstance(value, (str, int, float, bool, list)):
+                    raise ValidationError({
+                        'details': f"Invalid value type for key '{key}'. Only str, int, float, bool, list allowed."
+                    })
+
+    def save(self, *args, **kwargs):
+        """Validate before saving."""
+        self.full_clean()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.user} - {self.action} - {self.resource} at {self.timestamp}"
 

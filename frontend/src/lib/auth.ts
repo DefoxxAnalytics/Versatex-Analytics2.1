@@ -1,26 +1,48 @@
 /**
- * Authentication utilities for JWT-based authentication
+ * Authentication utilities for cookie-based JWT authentication
  *
  * Security Features:
- * - JWT token management
- * - Session timeout (30 minutes inactivity)
- * - Secure token storage cleanup
+ * - JWT tokens stored in HTTP-only cookies (XSS protection)
+ * - Session timeout tracking (30 minutes inactivity)
  * - HTTPS enforcement in production
+ *
+ * Note: Since tokens are in HTTP-only cookies, JavaScript cannot read them.
+ * Auth state is determined by the presence of user data and server validation.
  */
 
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 const LAST_ACTIVITY_KEY = 'analytics_last_activity';
+const USER_KEY = 'user';
 
 /**
- * Check if user has a valid JWT token
+ * Check if user appears to be authenticated
+ * Note: This only checks client-side state. Server validates the actual JWT cookie.
  *
- * @returns True if access token exists
+ * @returns True if user data exists and session hasn't timed out
  */
 export function isAuthenticated(): boolean {
-  const accessToken = localStorage.getItem('access_token');
-  const user = localStorage.getItem('user');
+  const user = localStorage.getItem(USER_KEY);
 
-  return !!(accessToken && user);
+  // No user data means not authenticated
+  if (!user) {
+    return false;
+  }
+
+  // Check if session has timed out
+  const lastActivity = localStorage.getItem(LAST_ACTIVITY_KEY);
+  if (lastActivity) {
+    const lastActivityTime = parseInt(lastActivity, 10);
+    const now = Date.now();
+    const timeSinceActivity = now - lastActivityTime;
+
+    if (timeSinceActivity >= SESSION_TIMEOUT_MS) {
+      // Session timed out, clear local data
+      clearSession();
+      return false;
+    }
+  }
+
+  return true;
 }
 
 /**
@@ -34,11 +56,10 @@ export function updateActivity(): void {
 
 /**
  * Clear the current session (logout)
+ * Note: HTTP-only cookies are cleared by the server on logout API call
  */
 export function clearSession(): void {
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('refresh_token');
-  localStorage.removeItem('user');
+  localStorage.removeItem(USER_KEY);
   localStorage.removeItem(LAST_ACTIVITY_KEY);
 }
 
@@ -94,4 +115,28 @@ export function isSecureContext(): boolean {
  */
 export function initializeSession(): void {
   updateActivity();
+}
+
+/**
+ * Store user data after successful login
+ * Note: Tokens are stored in HTTP-only cookies by the server
+ */
+export function setUserData(user: unknown): void {
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  initializeSession();
+}
+
+/**
+ * Get stored user data
+ */
+export function getUserData<T>(): T | null {
+  const user = localStorage.getItem(USER_KEY);
+  if (!user) {
+    return null;
+  }
+  try {
+    return JSON.parse(user) as T;
+  } catch {
+    return null;
+  }
 }

@@ -4,25 +4,25 @@ import { parseCSV, validateProcurementData } from '../csvParser';
 describe('CSV Parser', () => {
   describe('parseCSV', () => {
     it('should parse a valid CSV file with procurement data', async () => {
-      const csvContent = `Supplier,Category,Amount,Date
-Acme Corp,Office Supplies,1500.50,2024-01-15
-Tech Solutions,IT Services,5000.00,2024-01-20
-Office Depot,Office Supplies,750.25,2024-01-22`;
+      const csvContent = `Supplier,Category,Subcategory,Amount,Date,Location
+Acme Corp,Office Supplies,Pens,1500.50,2024-01-15,HQ
+Tech Solutions,IT Services,Cloud,5000.00,2024-01-20,Remote
+Office Depot,Office Supplies,Paper,750.25,2024-01-22,Branch`;
 
       const file = new File([csvContent], 'test.csv', { type: 'text/csv' });
       const result = await parseCSV(file);
 
       expect(result).toHaveLength(3);
-      expect(result[0]).toEqual({
-        supplier: 'Acme Corp',
-        category: 'Office Supplies',
-        amount: 1500.50,
-        date: '2024-01-15',
-      });
+      expect(result[0].supplier).toBe('Acme Corp');
+      expect(result[0].category).toBe('Office Supplies');
+      expect(result[0].subcategory).toBe('Pens');
+      expect(result[0].amount).toBe(1500.50);
+      expect(result[0].date).toBe('2024-01-15');
+      expect(result[0].location).toBe('HQ');
     });
 
     it('should handle empty CSV files', async () => {
-      const csvContent = 'Supplier,Category,Amount,Date';
+      const csvContent = 'Supplier,Category,Subcategory,Amount,Date,Location';
       const file = new File([csvContent], 'empty.csv', { type: 'text/csv' });
       const result = await parseCSV(file);
 
@@ -37,8 +37,8 @@ Office Depot,Office Supplies,750.25,2024-01-22`;
     });
 
     it('should convert amount strings to numbers', async () => {
-      const csvContent = `Supplier,Category,Amount,Date
-Test Supplier,Test Category,2500.75,2024-01-01`;
+      const csvContent = `Supplier,Category,Subcategory,Amount,Date,Location
+Test Supplier,Test Category,General,2500.75,2024-01-01,Main`;
 
       const file = new File([csvContent], 'test.csv', { type: 'text/csv' });
       const result = await parseCSV(file);

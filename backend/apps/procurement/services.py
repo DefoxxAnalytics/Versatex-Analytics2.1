@@ -3,9 +3,10 @@ Business logic for procurement data processing with security enhancements:
 - CSV formula injection prevention
 - File type validation
 - Sanitized error messages
+- Cryptographically secure batch IDs
 """
 import pandas as pd
-import uuid
+import secrets
 import logging
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
@@ -97,7 +98,9 @@ class CSVProcessor:
         self.user = user
         self.file = file
         self.skip_duplicates = skip_duplicates
-        self.batch_id = str(uuid.uuid4())
+        # Use cryptographically secure token instead of UUID
+        # This prevents batch ID guessing/enumeration attacks
+        self.batch_id = secrets.token_urlsafe(32)
         self.errors = []
         self.stats = {
             'total': 0,

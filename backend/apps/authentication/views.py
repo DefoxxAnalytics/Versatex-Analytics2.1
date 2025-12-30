@@ -10,6 +10,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.utils.decorators import method_decorator
+from django.conf import settings
 from django_ratelimit.decorators import ratelimit
 from .models import Organization, UserProfile, AuditLog
 from .serializers import (
@@ -24,6 +25,56 @@ from .utils import (
 )
 
 
+def set_jwt_cookies(response, refresh_token):
+    """
+    Set HTTP-only cookies for JWT tokens.
+    This prevents JavaScript access to tokens, mitigating XSS attacks.
+    """
+    jwt_settings = settings.SIMPLE_JWT
+
+    # Set access token cookie
+    response.set_cookie(
+        key=jwt_settings.get('AUTH_COOKIE', 'access_token'),
+        value=str(refresh_token.access_token),
+        max_age=int(jwt_settings['ACCESS_TOKEN_LIFETIME'].total_seconds()),
+        secure=jwt_settings.get('AUTH_COOKIE_SECURE', not settings.DEBUG),
+        httponly=jwt_settings.get('AUTH_COOKIE_HTTP_ONLY', True),
+        samesite=jwt_settings.get('AUTH_COOKIE_SAMESITE', 'Lax'),
+        path=jwt_settings.get('AUTH_COOKIE_PATH', '/'),
+    )
+
+    # Set refresh token cookie
+    response.set_cookie(
+        key=jwt_settings.get('AUTH_COOKIE_REFRESH', 'refresh_token'),
+        value=str(refresh_token),
+        max_age=int(jwt_settings['REFRESH_TOKEN_LIFETIME'].total_seconds()),
+        secure=jwt_settings.get('AUTH_COOKIE_SECURE', not settings.DEBUG),
+        httponly=jwt_settings.get('AUTH_COOKIE_HTTP_ONLY', True),
+        samesite=jwt_settings.get('AUTH_COOKIE_SAMESITE', 'Lax'),
+        path=jwt_settings.get('AUTH_COOKIE_PATH', '/'),
+    )
+
+    return response
+
+
+def clear_jwt_cookies(response):
+    """
+    Clear JWT cookies on logout.
+    """
+    jwt_settings = settings.SIMPLE_JWT
+
+    response.delete_cookie(
+        key=jwt_settings.get('AUTH_COOKIE', 'access_token'),
+        path=jwt_settings.get('AUTH_COOKIE_PATH', '/'),
+    )
+    response.delete_cookie(
+        key=jwt_settings.get('AUTH_COOKIE_REFRESH', 'refresh_token'),
+        path=jwt_settings.get('AUTH_COOKIE_PATH', '/'),
+    )
+
+    return response
+
+
 @method_decorator(ratelimit(key='ip', rate='5/m', method='POST', block=True), name='dispatch')
 class RegisterView(generics.CreateAPIView):
     """
@@ -32,15 +83,15 @@ class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = [AllowAny]
     serializer_class = RegisterSerializer
-    
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        
+
         # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
-        
+
         # Log action
         log_action(
             user=user,
@@ -50,15 +101,15 @@ class RegisterView(generics.CreateAPIView):
             details={'username': user.username},
             request=request
         )
-        
-        return Response({
+
+        # Create response with user data (no tokens in body for security)
+        response = Response({
             'user': UserSerializer(user).data,
-            'tokens': {
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-            },
             'message': 'User registered successfully'
         }, status=status.HTTP_201_CREATED)
+
+        # Set tokens as HTTP-only cookies
+        return set_jwt_cookies(response, refresh)
 
 
 @method_decorator(ratelimit(key='ip', rate='5/m', method='POST', block=True), name='dispatch')
@@ -72,18 +123,19 @@ class LoginView(generics.GenericAPIView):
     serializer_class = LoginSerializer
 
     def post(self, request):
-        # Check for IP lockout first
-        if check_login_lockout(request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        username = serializer.validated_data['username']
+
+        # Check for user-specific lockout (after we have username)
+        if check_login_lockout(request, username):
             log_security_event('login_blocked_lockout', request)
             return Response(
                 {'error': 'Too many failed attempts. Please try again later.'},
                 status=status.HTTP_429_TOO_MANY_REQUESTS
             )
 
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        username = serializer.validated_data['username']
         user = authenticate(
             username=username,
             password=serializer.validated_data['password']
@@ -119,8 +171,8 @@ class LoginView(generics.GenericAPIView):
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
-        # Successful login - clear failed attempts
-        clear_failed_logins(request)
+        # Successful login - clear failed attempts for this user
+        clear_failed_logins(request, username)
 
         # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
@@ -134,20 +186,20 @@ class LoginView(generics.GenericAPIView):
             request=request
         )
 
-        return Response({
+        # Create response with user data (no tokens in body for security)
+        response = Response({
             'user': UserSerializer(user).data,
-            'tokens': {
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-            },
             'message': 'Login successful'
         })
+
+        # Set tokens as HTTP-only cookies
+        return set_jwt_cookies(response, refresh)
 
 
 class LogoutView(generics.GenericAPIView):
     """
     User logout endpoint
-    Blacklists the refresh token to prevent reuse
+    Blacklists the refresh token and clears cookies
     """
     permission_classes = [IsAuthenticated]
 
@@ -160,8 +212,12 @@ class LogoutView(generics.GenericAPIView):
             request=request
         )
 
-        # Blacklist the refresh token
-        refresh_token = request.data.get('refresh_token')
+        # Get refresh token from cookie or body (backwards compatibility)
+        jwt_settings = settings.SIMPLE_JWT
+        refresh_token = request.COOKIES.get(
+            jwt_settings.get('AUTH_COOKIE_REFRESH', 'refresh_token')
+        ) or request.data.get('refresh_token')
+
         if refresh_token:
             try:
                 token = RefreshToken(refresh_token)
@@ -170,7 +226,9 @@ class LogoutView(generics.GenericAPIView):
                 # Token is invalid or already blacklisted - still logout successfully
                 pass
 
-        return Response({'message': 'Logout successful'})
+        # Create response and clear cookies
+        response = Response({'message': 'Logout successful'})
+        return clear_jwt_cookies(response)
 
 
 class CurrentUserView(generics.RetrieveUpdateAPIView):
@@ -286,12 +344,46 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     """
     serializer_class = AuditLogSerializer
     permission_classes = [IsManager]
-    
+
     def get_queryset(self):
         # Users can only see logs from their organization
         if not hasattr(self.request.user, 'profile'):
             return AuditLog.objects.none()
-        
+
         return AuditLog.objects.filter(
             organization=self.request.user.profile.organization
         )
+
+
+class CookieTokenRefreshView(generics.GenericAPIView):
+    """
+    Custom token refresh endpoint that reads refresh token from HTTP-only cookie
+    and sets new tokens as HTTP-only cookies.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        # Get refresh token from cookie
+        jwt_settings = settings.SIMPLE_JWT
+        refresh_token = request.COOKIES.get(
+            jwt_settings.get('AUTH_COOKIE_REFRESH', 'refresh_token')
+        )
+
+        if not refresh_token:
+            return Response(
+                {'error': 'Refresh token not found'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        try:
+            # Validate and rotate the refresh token
+            refresh = RefreshToken(refresh_token)
+
+            # Create response and set new cookies
+            response = Response({'message': 'Token refreshed successfully'})
+            return set_jwt_cookies(response, refresh)
+        except TokenError:
+            return Response(
+                {'error': 'Invalid or expired refresh token'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )

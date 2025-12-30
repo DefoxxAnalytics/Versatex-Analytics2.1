@@ -1,6 +1,7 @@
 """
 Analytics business logic and calculations
 """
+from decimal import Decimal
 from django.db.models import Sum, Count, Avg, Q, F
 from django.db.models.functions import TruncMonth, TruncYear
 from datetime import datetime, timedelta
@@ -138,8 +139,8 @@ class AnalyticsService:
             count=Count('id')
         ).order_by('-total'))
         
-        total_spend = sum(s['total'] for s in suppliers)
-        threshold_amount = total_spend * (threshold_percentage / 100)
+        total_spend = sum(s['total'] for s in suppliers) or Decimal('0')
+        threshold_amount = total_spend * Decimal(str(threshold_percentage)) / Decimal('100')
         
         cumulative = 0
         tail_suppliers = []
@@ -310,7 +311,7 @@ class AnalyticsService:
                     }
                     for s in suppliers
                 ],
-                'potential_savings': float(cat['total_spend'] * 0.10)  # Estimate 10% savings
+                'potential_savings': float(cat['total_spend'] * Decimal('0.10'))  # Estimate 10% savings
             })
         
         return opportunities

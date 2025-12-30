@@ -60,14 +60,9 @@ export interface RegisterRequest {
   role?: UserRole;
 }
 
-export interface AuthTokens {
-  access: string;
-  refresh: string;
-}
-
+// Note: Tokens are now stored in HTTP-only cookies, not returned in response body
 export interface AuthResponse {
   user: User;
-  tokens: AuthTokens;
   message: string;
 }
 
@@ -344,56 +339,35 @@ export interface ExportParams {
 // API base URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
-// Create axios instance
+// Create axios instance with credentials for HTTP-only cookie auth
 export const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Send HTTP-only cookies with requests
 });
 
-// Request interceptor to add auth token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Response interceptor to handle token refresh
+// Response interceptor to handle token refresh via cookies
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // If 401 and not already retried, try to refresh token
+    // If 401 and not already retried, try to refresh token via cookie
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
       try {
-        const refreshToken = localStorage.getItem('refresh_token');
-        if (refreshToken) {
-          const response = await axios.post(`${API_BASE_URL}/auth/token/refresh/`, {
-            refresh: refreshToken,
-          });
+        // Refresh token is in HTTP-only cookie, server will read it
+        await axios.post(`${API_BASE_URL}/auth/token/refresh/`, {}, {
+          withCredentials: true,
+        });
 
-          const { access } = response.data;
-          localStorage.setItem('access_token', access);
-
-          // Retry original request with new token
-          originalRequest.headers.Authorization = `Bearer ${access}`;
-          return axios(originalRequest);
-        }
+        // Retry original request - new access token is in cookie
+        return api(originalRequest);
       } catch (refreshError) {
-        // Refresh failed, logout user
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
+        // Refresh failed, clear user data and redirect to login
         localStorage.removeItem('user');
         window.location.href = '/login';
         return Promise.reject(refreshError);
@@ -409,6 +383,7 @@ api.interceptors.response.use(
 // =====================
 
 // Authentication API
+// Note: JWT tokens are managed via HTTP-only cookies for XSS protection
 export const authAPI = {
   register: (data: RegisterRequest): Promise<AxiosResponse<AuthResponse>> =>
     api.post('/auth/register/', data),
@@ -416,14 +391,19 @@ export const authAPI = {
   login: (data: LoginRequest): Promise<AxiosResponse<AuthResponse>> =>
     api.post('/auth/login/', data),
 
-  logout: (refreshToken: string): Promise<AxiosResponse<{ message: string }>> =>
-    api.post('/auth/logout/', { refresh_token: refreshToken }),
+  // Logout clears HTTP-only cookies on the server side
+  logout: (): Promise<AxiosResponse<{ message: string }>> =>
+    api.post('/auth/logout/'),
 
   getCurrentUser: (): Promise<AxiosResponse<User>> =>
     api.get('/auth/user/'),
 
   changePassword: (data: ChangePasswordRequest): Promise<AxiosResponse<{ message: string }>> =>
     api.post('/auth/change-password/', data),
+
+  // Refresh token endpoint - tokens in HTTP-only cookies
+  refreshToken: (): Promise<AxiosResponse<{ message: string }>> =>
+    api.post('/auth/token/refresh/'),
 };
 
 // Procurement API

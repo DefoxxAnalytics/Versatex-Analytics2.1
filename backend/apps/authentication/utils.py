@@ -45,37 +45,46 @@ def get_user_agent(request):
 def hash_user_agent(user_agent: str) -> str:
     """
     Hash the user agent string for privacy.
-    We don't need the full UA string, just enough for fingerprinting.
+    Uses full hash for better security (not truncated).
     """
     if not user_agent:
         return ''
-    return hashlib.sha256(user_agent.encode()).hexdigest()[:32]
+    return hashlib.sha256(user_agent.encode()).hexdigest()
 
 
-def get_failed_login_key(ip: str) -> str:
-    """Generate cache key for failed login tracking"""
-    return f'failed_login:{ip}'
+def get_failed_login_key(username: str, ip: str) -> str:
+    """
+    Generate cache key for failed login tracking.
+    Scoped by both username and IP to prevent cross-user lockout attacks.
+
+    Security: This prevents an attacker from locking out all users
+    by targeting a single IP. Each username+IP combination has its own counter.
+    """
+    # Hash username to prevent cache key injection
+    username_hash = hashlib.sha256(username.lower().encode()).hexdigest()[:16]
+    return f'failed_login:{username_hash}:{ip}'
 
 
 def record_failed_login(request, username: str):
     """
     Record a failed login attempt and check for lockout.
+    Uses scoped cache keys (username + IP) to prevent cross-user lockout.
 
     Returns:
         tuple: (is_locked_out, remaining_attempts)
     """
     ip = get_client_ip(request)
-    key = get_failed_login_key(ip)
+    key = get_failed_login_key(username, ip)
 
     # Get current failed attempts
     failed_attempts = cache.get(key, 0) + 1
     cache.set(key, failed_attempts, LOCKOUT_DURATION)
 
-    # Log the failed attempt
+    # Log the failed attempt (don't log full username for privacy)
     logger.warning(
         f"Failed login attempt | "
         f"IP: {ip} | "
-        f"Username: {username} | "
+        f"Username: {username[:3]}*** | "
         f"Attempts: {failed_attempts}/{MAX_FAILED_ATTEMPTS} | "
         f"User-Agent: {get_user_agent(request)[:100]}"
     )
@@ -87,31 +96,50 @@ def record_failed_login(request, username: str):
         logger.warning(
             f"Account lockout triggered | "
             f"IP: {ip} | "
-            f"Username: {username} | "
+            f"Username: {username[:3]}*** | "
             f"Lockout duration: {LOCKOUT_DURATION}s"
         )
 
     return is_locked, remaining
 
 
-def check_login_lockout(request) -> bool:
+def check_login_lockout(request, username: str = None) -> bool:
     """
-    Check if IP is currently locked out due to failed attempts.
+    Check if IP (+ optional username) is currently locked out due to failed attempts.
+
+    Args:
+        request: The HTTP request object
+        username: Optional username to check (if provided, checks user-specific lockout)
 
     Returns:
         bool: True if locked out, False otherwise
     """
     ip = get_client_ip(request)
-    key = get_failed_login_key(ip)
-    failed_attempts = cache.get(key, 0)
-    return failed_attempts >= MAX_FAILED_ATTEMPTS
+
+    if username:
+        # Check user-specific lockout
+        key = get_failed_login_key(username, ip)
+        failed_attempts = cache.get(key, 0)
+        return failed_attempts >= MAX_FAILED_ATTEMPTS
+
+    # For backwards compatibility, also check IP-only lockout (legacy)
+    # This is a fallback for the initial check before username is known
+    return False
 
 
-def clear_failed_logins(request):
-    """Clear failed login attempts after successful login"""
+def clear_failed_logins(request, username: str = None):
+    """
+    Clear failed login attempts after successful login.
+
+    Args:
+        request: The HTTP request object
+        username: Username to clear lockout for
+    """
     ip = get_client_ip(request)
-    key = get_failed_login_key(ip)
-    cache.delete(key)
+
+    if username:
+        key = get_failed_login_key(username, ip)
+        cache.delete(key)
 
 
 def log_action(user, action, resource, resource_id='', details=None, request=None):

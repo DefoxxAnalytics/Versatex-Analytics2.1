@@ -58,20 +58,32 @@ pnpm dev
 # Backend tests
 docker-compose exec backend python manage.py test
 docker-compose exec backend python manage.py test apps.authentication  # specific app
+docker-compose exec backend python manage.py test apps.authentication.tests.TestLoginView  # specific test class
+docker-compose exec backend python manage.py test apps.authentication.tests.TestLoginView.test_valid_login  # specific test method
 
 # Frontend tests
 cd frontend
 pnpm test           # watch mode
 pnpm test:run       # single run
 pnpm test:ui        # with UI
+pnpm test:run src/components/__tests__/Button.test.tsx  # specific test file
 ```
 
-### Type Checking & Formatting
+### Type Checking & Linting
 
 ```bash
+# Frontend
 cd frontend
 pnpm check          # TypeScript check (tsc --noEmit)
-pnpm format         # Prettier
+pnpm format         # Prettier format
+pnpm format --check # Check formatting without changes
+
+# Backend (install dev deps first: pip install black isort flake8)
+cd backend
+black --check .     # Check Python formatting
+black .             # Apply formatting
+isort --check .     # Check import sorting
+flake8 .            # Lint Python code
 ```
 
 ## Architecture
@@ -93,6 +105,7 @@ backend/
 - `AnalyticsService` class in `apps/analytics/services.py` handles all analytics calculations
 - JWT auth via djangorestframework-simplejwt with token refresh
 - CSRF exempt on LoginView for frontend API calls
+- Celery worker for background tasks (CSV processing, reports)
 
 ### Frontend Structure (`frontend/src/`)
 
@@ -118,26 +131,31 @@ src/
 
 **Key Patterns:**
 - Wouter for routing (not React Router)
-- TanStack Query for data fetching
+- TanStack Query v4 for server state management
+- shadcn/ui components built on Radix primitives
 - All pages lazy-loaded for code splitting
 - Auth state in localStorage (`access_token`, `refresh_token`, `user`)
 - Admin panel link only shown when `user.profile.role === 'admin'`
+- Axios interceptors handle JWT token refresh automatically
 
 ### API Structure
 
 ```
-/api/v1/auth/          # login, register, logout, token/refresh, user
-/api/v1/procurement/   # suppliers, categories, transactions (CRUD + upload_csv, bulk_delete, export)
-/api/v1/analytics/     # overview, spend-by-category, pareto, tail-spend, etc.
+/api/v1/auth/          # login, register, logout, token/refresh, user, change-password
+/api/v1/procurement/   # suppliers, categories, transactions (CRUD + upload_csv, bulk_delete, export), uploads
+/api/v1/analytics/     # overview, spend-by-category, spend-by-supplier, pareto, tail-spend, monthly-trend, stratification, seasonality, year-over-year, consolidation
 ```
 
 Legacy endpoints (`/api/auth/`, `/api/procurement/`, `/api/analytics/`) are supported for backwards compatibility.
+
+**Frontend API Client:** All API calls use typed interfaces in `frontend/src/lib/api.ts`. This file contains `authAPI`, `procurementAPI`, and `analyticsAPI` objects with typed request/response interfaces.
 
 ## Port Configuration
 
 - Frontend: `http://localhost:3000`
 - Backend API: `http://localhost:8001/api` (maps to container port 8000)
 - Django Admin: `http://localhost:8001/admin`
+- API Docs: `http://localhost:8001/api/docs` (interactive API documentation)
 - PostgreSQL: `localhost:5432`
 - Redis: `localhost:6379`
 
@@ -217,7 +235,11 @@ docker-compose exec backend python manage.py shell
 ## CI/CD
 
 GitHub Actions workflow runs on push/PR to master:
-- Backend: Python linting, Django tests
-- Frontend: TypeScript check, Vitest tests, build verification
+- Backend: Python linting (black, isort, flake8), Django tests with PostgreSQL/Redis services
+- Frontend: TypeScript check, Prettier format check, Vitest tests, production build
+- Docker: Build verification for both backend and frontend images
+- Security: Trivy vulnerability scanning
 
-Badge: [![CI](https://github.com/DefoxxAnalytics/Versatex_Analytics/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/DefoxxAnalytics/Versatex_Analytics/actions/workflows/ci.yml)
+Badges:
+- [![CI](https://github.com/DefoxxAnalytics/Versatex_Analytics/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/DefoxxAnalytics/Versatex_Analytics/actions/workflows/ci.yml)
+- [![Deploy](https://github.com/DefoxxAnalytics/Versatex_Analytics/actions/workflows/deploy.yml/badge.svg)](https://github.com/DefoxxAnalytics/Versatex_Analytics/actions/workflows/deploy.yml)

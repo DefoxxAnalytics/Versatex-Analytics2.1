@@ -5,6 +5,7 @@ Django settings for Analytics Dashboard
 import os
 import sys
 import logging
+import secrets
 from pathlib import Path
 from datetime import timedelta
 from decouple import config
@@ -75,6 +76,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'config.middleware.DeprecationMiddleware',  # Adds deprecation headers to legacy endpoints
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -153,7 +155,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'apps.authentication.backends.CookieJWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
@@ -182,6 +184,7 @@ REST_FRAMEWORK = {
         'exports': '30/hour',       # Export rate limiting
         'bulk_delete': '10/hour',   # Bulk delete rate limiting
         'login': '5/minute',        # Login rate limiting (backup to django-ratelimit)
+        'read_api': '500/hour',     # Read operations rate limiting
     },
     'EXCEPTION_HANDLER': 'config.exception_handler.custom_exception_handler',
 }
@@ -194,6 +197,14 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
     'UPDATE_LAST_LOGIN': True,
+    # Cookie-based JWT settings for XSS protection
+    'AUTH_COOKIE': 'access_token',
+    'AUTH_COOKIE_REFRESH': 'refresh_token',
+    'AUTH_COOKIE_DOMAIN': None,  # Use request domain
+    'AUTH_COOKIE_SECURE': not DEBUG,  # HTTPS only in production
+    'AUTH_COOKIE_HTTP_ONLY': True,  # Prevent JavaScript access
+    'AUTH_COOKIE_PATH': '/',
+    'AUTH_COOKIE_SAMESITE': 'Lax',
 }
 
 # CORS Settings - Strict configuration
@@ -309,7 +320,14 @@ if not DEBUG:
     X_FRAME_OPTIONS = 'DENY'
 
 # Admin Site Configuration
-ADMIN_URL = config('ADMIN_URL', default='admin/')  # Can be customized via env
+# Dynamic admin URL: if not set, generate random path on each startup for security
+_env_admin_url = config('ADMIN_URL', default='')
+if _env_admin_url:
+    ADMIN_URL = _env_admin_url if _env_admin_url.endswith('/') else f'{_env_admin_url}/'
+else:
+    # Generate dynamic admin URL for security (prevents enumeration)
+    ADMIN_URL = f'manage-{secrets.token_hex(8)}/'
+    logging.info(f"Dynamic admin URL generated: /{ADMIN_URL}")
 LOGOUT_REDIRECT_URL = f'/{ADMIN_URL}login/'
 
 # Frontend URL for "View Site" link in admin
@@ -356,3 +374,32 @@ LOGGING = {
 
 # Create logs directory if it doesn't exist
 (BASE_DIR / 'logs').mkdir(exist_ok=True)
+
+# =============================================================================
+# PRODUCTION SECURITY VALIDATION
+# =============================================================================
+# These checks run at startup to ensure critical security settings are configured
+if not DEBUG:
+    # Check for unchanged default passwords
+    _db_password = config('DB_PASSWORD', default='')
+    if 'MUST_CHANGE' in _db_password or 'CHANGE' in _db_password or _db_password == 'analytics_pass':
+        raise ImproperlyConfigured(
+            "DB_PASSWORD must be changed from the default value in production. "
+            "Generate with: python -c \"import secrets; print(secrets.token_urlsafe(32))\""
+        )
+
+    _redis_password = config('REDIS_PASSWORD', default='')
+    if not _redis_password or 'MUST_CHANGE' in _redis_password or 'CHANGE' in _redis_password:
+        raise ImproperlyConfigured(
+            "REDIS_PASSWORD must be set to a strong value in production. "
+            "Generate with: python -c \"import secrets; print(secrets.token_urlsafe(32))\""
+        )
+
+    _secret_key = config('SECRET_KEY', default='')
+    if 'MUST_CHANGE' in _secret_key or not _secret_key:
+        raise ImproperlyConfigured(
+            "SECRET_KEY must be set to a secure value in production. "
+            "Generate with: python -c \"from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())\""
+        )
+
+    logging.info("Production security validation passed.")

@@ -2,6 +2,7 @@
 Views for procurement data management with security features:
 - Rate limiting on sensitive operations (upload, export, bulk_delete)
 - Organization-scoped data access
+- Object-level permission checks
 - Audit logging for all operations
 """
 from rest_framework import viewsets, status
@@ -9,6 +10,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.exceptions import PermissionDenied
 from django.http import HttpResponse
 from django.db.models import Count, Sum, Q
 from apps.authentication.permissions import CanUploadData, CanDeleteData
@@ -37,33 +39,50 @@ class BulkDeleteThrottle(ScopedRateThrottle):
     scope = 'bulk_delete'
 
 
+class ReadAPIThrottle(ScopedRateThrottle):
+    """Rate limiting for read API operations (500/hour per user)"""
+    scope = 'read_api'
+
+
+def check_object_organization(obj, user):
+    """
+    Verify that an object belongs to the user's organization.
+    Raises PermissionDenied if organization mismatch.
+    """
+    if not hasattr(user, 'profile'):
+        raise PermissionDenied("User profile not found")
+    if obj.organization != user.profile.organization:
+        raise PermissionDenied("Cannot access data from another organization")
+
+
 class SupplierViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Supplier CRUD
     """
     serializer_class = SupplierSerializer
     permission_classes = [IsAuthenticated]
+    throttle_classes = [ReadAPIThrottle]
     filterset_fields = ['is_active']
     search_fields = ['name', 'code']
     ordering_fields = ['name', 'created_at']
-    
+
     def get_queryset(self):
         # Only show suppliers from user's organization
         if not hasattr(self.request.user, 'profile'):
             return Supplier.objects.none()
-        
+
         queryset = Supplier.objects.filter(
             organization=self.request.user.profile.organization
         )
-        
+
         # Annotate with transaction count and total spend
         queryset = queryset.annotate(
             transaction_count=Count('transactions'),
             total_spend=Sum('transactions__amount')
         )
-        
+
         return queryset
-    
+
     def perform_create(self, serializer):
         serializer.save(organization=self.request.user.profile.organization)
         log_action(
@@ -73,8 +92,10 @@ class SupplierViewSet(viewsets.ModelViewSet):
             resource_id=str(serializer.instance.id),
             request=self.request
         )
-    
+
     def perform_update(self, serializer):
+        # Verify object belongs to user's organization
+        check_object_organization(serializer.instance, self.request.user)
         serializer.save()
         log_action(
             user=self.request.user,
@@ -83,8 +104,10 @@ class SupplierViewSet(viewsets.ModelViewSet):
             resource_id=str(serializer.instance.id),
             request=self.request
         )
-    
+
     def perform_destroy(self, instance):
+        # Verify object belongs to user's organization
+        check_object_organization(instance, self.request.user)
         log_action(
             user=self.request.user,
             action='delete',
@@ -101,27 +124,28 @@ class CategoryViewSet(viewsets.ModelViewSet):
     """
     serializer_class = CategorySerializer
     permission_classes = [IsAuthenticated]
+    throttle_classes = [ReadAPIThrottle]
     filterset_fields = ['is_active', 'parent']
     search_fields = ['name', 'description']
     ordering_fields = ['name', 'created_at']
-    
+
     def get_queryset(self):
         # Only show categories from user's organization
         if not hasattr(self.request.user, 'profile'):
             return Category.objects.none()
-        
+
         queryset = Category.objects.filter(
             organization=self.request.user.profile.organization
         )
-        
+
         # Annotate with transaction count and total spend
         queryset = queryset.annotate(
             transaction_count=Count('transactions'),
             total_spend=Sum('transactions__amount')
         )
-        
+
         return queryset
-    
+
     def perform_create(self, serializer):
         serializer.save(organization=self.request.user.profile.organization)
         log_action(
@@ -131,8 +155,10 @@ class CategoryViewSet(viewsets.ModelViewSet):
             resource_id=str(serializer.instance.id),
             request=self.request
         )
-    
+
     def perform_update(self, serializer):
+        # Verify object belongs to user's organization
+        check_object_organization(serializer.instance, self.request.user)
         serializer.save()
         log_action(
             user=self.request.user,
@@ -141,8 +167,10 @@ class CategoryViewSet(viewsets.ModelViewSet):
             resource_id=str(serializer.instance.id),
             request=self.request
         )
-    
+
     def perform_destroy(self, instance):
+        # Verify object belongs to user's organization
+        check_object_organization(instance, self.request.user)
         log_action(
             user=self.request.user,
             action='delete',
@@ -158,26 +186,27 @@ class TransactionViewSet(viewsets.ModelViewSet):
     ViewSet for Transaction CRUD
     """
     permission_classes = [IsAuthenticated]
+    throttle_classes = [ReadAPIThrottle]
     filterset_fields = ['supplier', 'category', 'fiscal_year', 'date']
     search_fields = ['description', 'invoice_number']
     ordering_fields = ['date', 'amount', 'created_at']
-    
+
     def get_serializer_class(self):
         if self.action == 'create':
             return TransactionCreateSerializer
         return TransactionSerializer
-    
+
     def get_queryset(self):
         # Only show transactions from user's organization
         if not hasattr(self.request.user, 'profile'):
             return Transaction.objects.none()
-        
+
         queryset = Transaction.objects.filter(
             organization=self.request.user.profile.organization
         ).select_related('supplier', 'category', 'uploaded_by')
-        
+
         return queryset
-    
+
     def perform_create(self, serializer):
         serializer.save()
         log_action(
@@ -187,8 +216,10 @@ class TransactionViewSet(viewsets.ModelViewSet):
             resource_id=str(serializer.instance.id),
             request=self.request
         )
-    
+
     def perform_update(self, serializer):
+        # Verify object belongs to user's organization
+        check_object_organization(serializer.instance, self.request.user)
         serializer.save()
         log_action(
             user=self.request.user,
@@ -197,8 +228,10 @@ class TransactionViewSet(viewsets.ModelViewSet):
             resource_id=str(serializer.instance.id),
             request=self.request
         )
-    
+
     def perform_destroy(self, instance):
+        # Verify object belongs to user's organization
+        check_object_organization(instance, self.request.user)
         log_action(
             user=self.request.user,
             action='delete',
@@ -321,13 +354,14 @@ class DataUploadViewSet(viewsets.ReadOnlyModelViewSet):
     """
     serializer_class = DataUploadSerializer
     permission_classes = [IsAuthenticated]
+    throttle_classes = [ReadAPIThrottle]
     ordering_fields = ['created_at']
-    
+
     def get_queryset(self):
         # Only show uploads from user's organization
         if not hasattr(self.request.user, 'profile'):
             return DataUpload.objects.none()
-        
+
         return DataUpload.objects.filter(
             organization=self.request.user.profile.organization
         )

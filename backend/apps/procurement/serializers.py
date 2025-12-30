@@ -1,8 +1,19 @@
 """
 Serializers for procurement data
 """
+import logging
 from rest_framework import serializers
 from .models import Supplier, Category, Transaction, DataUpload
+
+# Try to import python-magic for robust file type validation
+try:
+    import magic
+    HAS_MAGIC = True
+except ImportError:
+    HAS_MAGIC = False
+    logging.warning("python-magic not installed. File type validation will use fallback method.")
+
+logger = logging.getLogger(__name__)
 
 
 class SupplierSerializer(serializers.ModelSerializer):
@@ -64,6 +75,8 @@ class TransactionSerializer(serializers.ModelSerializer):
 
 class TransactionCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating transactions"""
+    supplier = serializers.PrimaryKeyRelatedField(queryset=Supplier.objects.all(), required=False, allow_null=True)
+    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all(), required=False, allow_null=True)
     supplier_name = serializers.CharField(write_only=True, required=False)
     category_name = serializers.CharField(write_only=True, required=False)
 
@@ -74,6 +87,14 @@ class TransactionCreateSerializer(serializers.ModelSerializer):
             'amount', 'date', 'description', 'subcategory', 'location',
             'fiscal_year', 'spend_band', 'payment_method', 'invoice_number'
         ]
+
+    def validate(self, attrs):
+        """Ensure either supplier/category ID or name is provided."""
+        if not attrs.get('supplier') and not attrs.get('supplier_name'):
+            raise serializers.ValidationError({'supplier': 'Either supplier ID or supplier_name is required.'})
+        if not attrs.get('category') and not attrs.get('category_name'):
+            raise serializers.ValidationError({'category': 'Either category ID or category_name is required.'})
+        return attrs
 
     def validate_supplier(self, value):
         """Ensure supplier belongs to user's organization"""
@@ -183,20 +204,29 @@ class CSVUploadSerializer(serializers.Serializer):
         if value.size > 50 * 1024 * 1024:
             raise serializers.ValidationError("File size must be less than 50MB")
 
-        # 3. Check content type
+        # 3. Check content type from browser
         content_type = getattr(value, 'content_type', 'application/octet-stream')
         if content_type not in self.ALLOWED_CONTENT_TYPES:
-            # Some browsers don't set proper content type, do additional checks
-            pass  # Continue to magic byte validation
+            # Some browsers don't set proper content type, continue to magic validation
+            logger.debug(f"Unexpected content type '{content_type}', verifying with magic")
 
-        # 4. Validate content is text (not binary)
-        # Read first 8KB to check for binary content
+        # 4. Magic number validation (if python-magic is available)
         try:
             value.seek(0)
             sample = value.read(8192)
             value.seek(0)  # Reset file pointer
 
-            # Check if content appears to be binary
+            if HAS_MAGIC:
+                # Use python-magic for robust MIME type detection
+                detected_mime = magic.from_buffer(sample, mime=True)
+                if detected_mime not in self.ALLOWED_CONTENT_TYPES:
+                    logger.warning(f"File magic type mismatch: {detected_mime}")
+                    raise serializers.ValidationError(
+                        f"File content type '{detected_mime}' does not match CSV format. "
+                        "Please upload a valid CSV file."
+                    )
+
+            # 5. Validate content is text (not binary) - fallback validation
             if isinstance(sample, bytes):
                 # Check for null bytes or other binary indicators
                 binary_chars = set(sample) & self.BINARY_INDICATORS
@@ -216,7 +246,7 @@ class CSVUploadSerializer(serializers.Serializer):
                             "File encoding not recognized. Please use UTF-8 encoded CSV files."
                         )
 
-            # 5. Basic CSV structure validation
+            # 6. Basic CSV structure validation
             # Check if first line looks like a header (contains comma-separated values)
             if isinstance(sample, bytes):
                 sample = sample.decode('utf-8', errors='ignore')
@@ -230,6 +260,7 @@ class CSVUploadSerializer(serializers.Serializer):
         except serializers.ValidationError:
             raise
         except Exception as e:
-            raise serializers.ValidationError(f"Error validating file content: Unable to read file")
+            logger.exception("Error validating file content")
+            raise serializers.ValidationError("Error validating file content: Unable to read file")
 
         return value

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { isAuthenticated, clearSession, updateActivity, getRemainingSessionTime } from '@/lib/auth';
+import { authAPI } from '@/lib/api';
 import { toast } from 'sonner';
 
 interface AuthContextType {
@@ -20,7 +21,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return authenticated;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      // Call server to clear HTTP-only cookies
+      await authAPI.logout();
+    } catch {
+      // Server logout failed, but still clear local state
+    }
+    // Always clear local session data
     clearSession();
     setIsAuth(false);
     toast.info('Logged out successfully');

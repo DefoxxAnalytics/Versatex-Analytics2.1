@@ -7,10 +7,10 @@ describe('Excel Parser', () => {
     it('should parse a valid Excel file with procurement data', async () => {
       // Create a mock Excel file
       const worksheet = XLSX.utils.aoa_to_sheet([
-        ['Supplier', 'Category', 'Amount', 'Date'],
-        ['Acme Corp', 'Office Supplies', 1500.50, '2024-01-15'],
-        ['Tech Solutions', 'IT Services', 5000.00, '2024-01-20'],
-        ['Office Depot', 'Office Supplies', 750.25, '2024-01-22'],
+        ['Supplier', 'Category', 'Subcategory', 'Amount', 'Date', 'Location'],
+        ['Acme Corp', 'Office Supplies', 'Pens', 1500.50, '2024-01-15', 'HQ'],
+        ['Tech Solutions', 'IT Services', 'Cloud', 5000.00, '2024-01-20', 'Remote'],
+        ['Office Depot', 'Office Supplies', 'Paper', 750.25, '2024-01-22', 'Branch'],
       ]);
 
       const workbook = XLSX.utils.book_new();
@@ -24,17 +24,17 @@ describe('Excel Parser', () => {
       const result = await parseExcel(file);
 
       expect(result).toHaveLength(3);
-      expect(result[0]).toEqual({
-        supplier: 'Acme Corp',
-        category: 'Office Supplies',
-        amount: 1500.50,
-        date: '2024-01-15',
-      });
+      expect(result[0].supplier).toBe('Acme Corp');
+      expect(result[0].category).toBe('Office Supplies');
+      expect(result[0].subcategory).toBe('Pens');
+      expect(result[0].amount).toBe(1500.50);
+      expect(result[0].date).toBe('2024-01-15');
+      expect(result[0].location).toBe('HQ');
     });
 
     it('should handle empty Excel files', async () => {
       const worksheet = XLSX.utils.aoa_to_sheet([
-        ['Supplier', 'Category', 'Amount', 'Date'],
+        ['Supplier', 'Category', 'Subcategory', 'Amount', 'Date', 'Location'],
       ]);
 
       const workbook = XLSX.utils.book_new();
@@ -52,7 +52,7 @@ describe('Excel Parser', () => {
 
     it('should throw error for missing required columns', async () => {
       const worksheet = XLSX.utils.aoa_to_sheet([
-        ['Supplier', 'Category'], // Missing Amount and Date
+        ['Supplier', 'Category'], // Missing Subcategory, Amount, Date, Location
         ['Test Corp', 'Services'],
       ]);
 
@@ -70,8 +70,8 @@ describe('Excel Parser', () => {
     it('should handle numeric dates from Excel', async () => {
       // Excel stores dates as numbers (days since 1900-01-01)
       const worksheet = XLSX.utils.aoa_to_sheet([
-        ['Supplier', 'Category', 'Amount', 'Date'],
-        ['Test Corp', 'Services', 1000, 45292], // Excel date number for 2024-01-01
+        ['Supplier', 'Category', 'Subcategory', 'Amount', 'Date', 'Location'],
+        ['Test Corp', 'Services', 'General', 1000, 45292, 'Main'], // Excel date number for 2024-01-01
       ]);
 
       const workbook = XLSX.utils.book_new();
@@ -90,13 +90,13 @@ describe('Excel Parser', () => {
 
     it('should read from the first sheet by default', async () => {
       const worksheet1 = XLSX.utils.aoa_to_sheet([
-        ['Supplier', 'Category', 'Amount', 'Date'],
-        ['First Sheet Corp', 'Services', 1000, '2024-01-01'],
+        ['Supplier', 'Category', 'Subcategory', 'Amount', 'Date', 'Location'],
+        ['First Sheet Corp', 'Services', 'General', 1000, '2024-01-01', 'Main'],
       ]);
 
       const worksheet2 = XLSX.utils.aoa_to_sheet([
-        ['Supplier', 'Category', 'Amount', 'Date'],
-        ['Second Sheet Corp', 'Products', 2000, '2024-01-02'],
+        ['Supplier', 'Category', 'Subcategory', 'Amount', 'Date', 'Location'],
+        ['Second Sheet Corp', 'Products', 'General', 2000, '2024-01-02', 'Branch'],
       ]);
 
       const workbook = XLSX.utils.book_new();

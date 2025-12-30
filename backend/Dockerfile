@@ -10,12 +10,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     gcc \
     python3-dev \
     musl-dev \
     libpq-dev \
+    libmagic1 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
@@ -30,8 +31,15 @@ COPY . .
 # Collect static files
 RUN python manage.py collectstatic --noinput || true
 
-# Create media directory
-RUN mkdir -p /app/media
+# Create media and logs directories
+RUN mkdir -p /app/media /app/logs
+
+# Create non-root user for security
+RUN useradd -m -u 1000 -s /bin/bash appuser && \
+    chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
 
 # Expose port
 EXPOSE 8000

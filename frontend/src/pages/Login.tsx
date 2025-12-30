@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Lock, User, AlertCircle } from 'lucide-react';
-import { api } from '@/lib/api';
+import { authAPI } from '@/lib/api';
+import { setUserData } from '@/lib/auth';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -28,18 +29,15 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      const response = await api.post('/auth/login/', {
+      // Login request - tokens are set as HTTP-only cookies by the server
+      const response = await authAPI.login({
         username,
         password,
       });
 
-      // Store tokens (backend returns them nested under 'tokens')
-      localStorage.setItem('access_token', response.data.tokens.access);
-      localStorage.setItem('refresh_token', response.data.tokens.refresh);
-
-      // Store user info
+      // Store user info (tokens are in HTTP-only cookies, not accessible to JS)
       if (response.data.user) {
-        localStorage.setItem('user', JSON.stringify(response.data.user));
+        setUserData(response.data.user);
       }
 
       toast.success('Login successful');

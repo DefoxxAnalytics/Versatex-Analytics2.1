@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { DashboardLayout } from '../DashboardLayout';
 import { Router } from 'wouter';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from '../../contexts/AuthContext';
 
 /**
  * Test suite for DashboardLayout component
@@ -19,7 +20,9 @@ function createTestWrapper() {
 
   return ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>
-      <Router>{children}</Router>
+      <AuthProvider>
+        <Router>{children}</Router>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

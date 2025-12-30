@@ -3,9 +3,8 @@ URL patterns for authentication
 """
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
-    RegisterView, LoginView, LogoutView,
+    RegisterView, LoginView, LogoutView, CookieTokenRefreshView,
     CurrentUserView, ChangePasswordView,
     OrganizationViewSet, UserProfileViewSet, AuditLogViewSet
 )
@@ -20,12 +19,12 @@ urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
     path('login/', LoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    
+    path('token/refresh/', CookieTokenRefreshView.as_view(), name='token_refresh'),
+
     # User management
     path('user/', CurrentUserView.as_view(), name='current-user'),
     path('change-password/', ChangePasswordView.as_view(), name='change-password'),
-    
+
     # Router URLs
     path('', include(router.urls)),
 ]
