@@ -1,24 +1,34 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 /**
+ * Color scheme type for brand theming
+ * - navy: New navy blue & white theme (default)
+ * - classic: Original light theme with white header/sidebar
+ */
+export type ColorScheme = 'navy' | 'classic';
+
+/**
  * User settings interface
  * Defines all configurable user preferences
  */
 export interface UserSettings {
   // Theme preferences
   theme: 'light' | 'dark';
-  
+
+  // Color scheme (brand theme)
+  colorScheme: ColorScheme;
+
   // Notification settings
   notifications: boolean;
-  
+
   // Export preferences
   exportFormat: 'csv' | 'xlsx' | 'pdf';
-  
+
   // User profile
   userName?: string;
   userEmail?: string;
   userRole?: string;
-  
+
   // Display preferences
   currency?: string;
   dateFormat?: string;
@@ -31,6 +41,7 @@ export interface UserSettings {
  */
 const DEFAULT_SETTINGS: UserSettings = {
   theme: 'light',
+  colorScheme: 'navy',
   notifications: true,
   exportFormat: 'csv',
   currency: 'USD',
@@ -91,7 +102,12 @@ function saveSettings(settings: Partial<UserSettings>): UserSettings {
     if (settings.theme && !['light', 'dark'].includes(settings.theme)) {
       updated.theme = DEFAULT_SETTINGS.theme;
     }
-    
+
+    // Validate color scheme
+    if (settings.colorScheme && !['navy', 'classic'].includes(settings.colorScheme)) {
+      updated.colorScheme = DEFAULT_SETTINGS.colorScheme;
+    }
+
     // Validate export format
     if (settings.exportFormat && !['csv', 'xlsx', 'pdf'].includes(settings.exportFormat)) {
       updated.exportFormat = DEFAULT_SETTINGS.exportFormat;

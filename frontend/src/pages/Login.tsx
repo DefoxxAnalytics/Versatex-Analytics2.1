@@ -8,19 +8,25 @@ import { authAPI } from '@/lib/api';
 import { setUserData } from '@/lib/auth';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { cn } from '@/lib/utils';
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const { checkAuth } = useAuth();
+  const { colorScheme } = useTheme();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Color scheme-aware styles
+  const isNavy = colorScheme === 'navy';
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
+
     if (!username || !password) {
       setError('Please enter both username and password');
       return;
@@ -51,7 +57,7 @@ export default function Login() {
       }, 100);
     } catch (error: any) {
       console.error('Login error:', error);
-      
+
       if (error.response?.status === 401) {
         setError('Invalid username or password');
       } else if (error.response?.data?.detail) {
@@ -61,7 +67,7 @@ export default function Login() {
       } else {
         setError('Login failed. Please try again.');
       }
-      
+
       toast.error('Login failed');
     } finally {
       setIsLoading(false);
@@ -69,7 +75,12 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#1e3a8a] flex items-center justify-center p-4">
+    <div className={cn(
+      "min-h-screen flex items-center justify-center p-4 transition-colors duration-300",
+      isNavy
+        ? "bg-[#1e3a8a]"
+        : "bg-gradient-to-br from-indigo-50 via-white to-cyan-50"
+    )}>
       <div className="w-full max-w-md">
         {/* Login Card */}
         <Card className="border-0 shadow-2xl">
@@ -143,7 +154,12 @@ export default function Login() {
               {/* Submit Button */}
               <Button
                 type="submit"
-                className="w-full h-12 text-base bg-[#1e3a8a] hover:bg-[#1e40af] shadow-[0_4px_12px_rgba(30,58,138,0.4)]"
+                className={cn(
+                  "w-full h-12 text-base transition-all duration-300",
+                  isNavy
+                    ? "bg-[#1e3a8a] hover:bg-[#1e40af] shadow-[0_4px_12px_rgba(30,58,138,0.4)]"
+                    : "bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-lg"
+                )}
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -170,7 +186,10 @@ export default function Login() {
         </Card>
 
         {/* Footer */}
-        <p className="text-center text-sm text-white/70 mt-6">
+        <p className={cn(
+          "text-center text-sm mt-6 transition-colors duration-300",
+          isNavy ? "text-white/70" : "text-gray-600"
+        )}>
           Protected by JWT authentication
         </p>
       </div>

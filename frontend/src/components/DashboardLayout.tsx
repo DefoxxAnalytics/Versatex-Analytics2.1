@@ -26,13 +26,58 @@ import {
   User as UserIcon,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { useProcurementData } from '@/hooks/useProcurementData';
+import type { ColorScheme } from '@/hooks/useSettings';
 import { cn } from '@/lib/utils';
 import { Breadcrumb } from './Breadcrumb';
 import { FilterPane } from './FilterPane';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+
+/**
+ * Style helpers for color scheme-aware components
+ * Provides consistent styling between Navy and Classic themes
+ */
+const getHeaderStyles = (scheme: ColorScheme) => ({
+  header: scheme === 'navy'
+    ? 'bg-[#1e3a8a] border-blue-900 shadow-lg'
+    : 'bg-white border-gray-200 shadow-sm',
+  text: scheme === 'navy' ? 'text-white' : 'text-gray-900',
+  logo: scheme === 'navy' ? 'brightness-0 invert' : '',
+  button: scheme === 'navy'
+    ? 'text-white hover:bg-blue-700'
+    : 'text-gray-700 hover:bg-gray-100',
+  userBox: scheme === 'navy'
+    ? 'bg-blue-900/50 border-blue-700'
+    : 'bg-gray-50 border-gray-200',
+  avatar: scheme === 'navy'
+    ? 'bg-white text-[#1e3a8a]'
+    : 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white',
+});
+
+const getSidebarStyles = (scheme: ColorScheme) => ({
+  bg: scheme === 'navy'
+    ? 'bg-[#1e3a8a] border-blue-900'
+    : 'bg-white border-gray-200',
+  active: scheme === 'navy'
+    ? 'bg-white/20 text-white font-medium'
+    : 'bg-blue-50 text-blue-700 font-medium',
+  inactive: scheme === 'navy'
+    ? 'text-white/80 hover:text-white'
+    : 'text-gray-700 hover:text-gray-900',
+  hover: scheme === 'navy'
+    ? 'hover:bg-white/10'
+    : 'hover:bg-gray-100',
+  focus: scheme === 'navy'
+    ? 'focus:ring-white/50'
+    : 'focus:ring-blue-500',
+  icon: scheme === 'navy' ? 'text-white/70' : 'text-gray-500',
+  iconActive: scheme === 'navy' ? 'text-white' : 'text-blue-600',
+  divider: scheme === 'navy' ? 'bg-white/20' : 'bg-gray-200',
+  dividerText: scheme === 'navy' ? 'text-white/60' : 'text-gray-500',
+});
 
 /**
  * Check if the current user has admin role
@@ -217,8 +262,9 @@ const NAV_ITEMS: NavItem[] = [
 /**
  * User display component showing avatar, name, and role
  */
-function UserDisplay() {
+function UserDisplay({ colorScheme }: { colorScheme: ColorScheme }) {
   const userInfo = getUserInfo();
+  const headerStyles = getHeaderStyles(colorScheme);
 
   if (!userInfo) return null;
 
@@ -241,17 +287,20 @@ function UserDisplay() {
   };
 
   return (
-    <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-blue-900/50 border border-blue-700">
+    <div className={cn(
+      "flex items-center gap-3 px-3 py-2 rounded-lg border transition-colors",
+      headerStyles.userBox
+    )}>
       {/* Avatar */}
       <Avatar className="h-8 w-8">
-        <AvatarFallback className="bg-white text-[#1e3a8a] text-sm font-semibold">
+        <AvatarFallback className={cn("text-sm font-semibold", headerStyles.avatar)}>
           {userInfo.initials}
         </AvatarFallback>
       </Avatar>
 
       {/* Name and Role - Hidden on small screens */}
       <div className="hidden md:flex md:flex-col md:gap-0.5">
-        <span className="text-sm font-medium text-white leading-tight">
+        <span className={cn("text-sm font-medium leading-tight", headerStyles.text)}>
           {userInfo.displayName}
         </span>
         <Badge
@@ -268,13 +317,17 @@ function UserDisplay() {
 /**
  * Logout button component
  */
-function LogoutButton() {
+function LogoutButton({ colorScheme }: { colorScheme: ColorScheme }) {
   const { logout } = useAuth();
+  const headerStyles = getHeaderStyles(colorScheme);
 
   return (
     <button
       onClick={logout}
-      className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 rounded-md transition-colors"
+      className={cn(
+        "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+        headerStyles.button
+      )}
       title="Logout"
     >
       <LogOut className="h-4 w-4" />
@@ -303,6 +356,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isFilterPaneOpen, setIsFilterPaneOpen] = useState(true);
   const { data = [] } = useProcurementData();
+  const { colorScheme } = useTheme();
+
+  // Get style configurations based on current color scheme
+  const headerStyles = getHeaderStyles(colorScheme);
+  const sidebarStyles = getSidebarStyles(colorScheme);
 
   /**
    * Check if a navigation item is currently active
@@ -331,30 +389,38 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header - Navy theme matching admin panel */}
-      <header className="bg-[#1e3a8a] border-b border-blue-900 shadow-lg sticky top-0 z-40">
+    <div className="min-h-screen bg-gray-50 dark:bg-background">
+      {/* Header - Theme-aware styling */}
+      <header className={cn(
+        "border-b sticky top-0 z-40 transition-colors duration-300",
+        headerStyles.header
+      )}>
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
               src="/vtx_logo2.png"
               alt="Versatex Logo"
-              className="h-10 w-auto brightness-0 invert"
+              className={cn("h-10 w-auto transition-all duration-300", headerStyles.logo)}
             />
-            <h1 className="text-xl font-bold text-white">Analytics Dashboard</h1>
+            <h1 className={cn("text-xl font-bold transition-colors duration-300", headerStyles.text)}>
+              Analytics Dashboard
+            </h1>
           </div>
 
           <div className="flex items-center gap-2">
             {/* User Display */}
-            <UserDisplay />
+            <UserDisplay colorScheme={colorScheme} />
 
             {/* Logout button */}
-            <LogoutButton />
+            <LogoutButton colorScheme={colorScheme} />
 
             {/* Filter pane toggle */}
             <button
               onClick={() => setIsFilterPaneOpen(!isFilterPaneOpen)}
-              className="p-2 rounded-md hover:bg-blue-700 text-white"
+              className={cn(
+                "p-2 rounded-md transition-colors",
+                headerStyles.button
+              )}
               aria-label="Toggle filters"
               aria-expanded={isFilterPaneOpen}
               title="Toggle filter pane"
@@ -365,7 +431,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             {/* Mobile menu toggle */}
             <button
               onClick={toggleMobileMenu}
-              className="lg:hidden p-2 rounded-md hover:bg-blue-700 text-white"
+              className={cn(
+                "lg:hidden p-2 rounded-md transition-colors",
+                headerStyles.button
+              )}
               aria-label="Toggle menu"
               aria-expanded={isMobileMenuOpen}
               aria-controls="mobile-navigation"
@@ -381,12 +450,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </header>
 
       <div className="flex">
-        {/* Sidebar Navigation - Navy theme */}
+        {/* Sidebar Navigation - Theme-aware styling */}
         <aside
           id="mobile-navigation"
           className={cn(
-            'fixed lg:sticky top-[73px] left-0 h-[calc(100vh-73px)] w-64 bg-[#1e3a8a] border-r border-blue-900',
-            'overflow-y-auto transition-transform duration-200 z-30',
+            'fixed lg:sticky top-[73px] left-0 h-[calc(100vh-73px)] w-64 border-r',
+            'overflow-y-auto transition-all duration-300 z-30',
+            sidebarStyles.bg,
             isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
           )}
         >
@@ -405,11 +475,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     {/* Divider with label */}
                     <div className="pt-4 pb-2">
                       <div className="flex items-center gap-2 px-3 mb-3">
-                        <Separator className="flex-1 bg-white/20" />
-                        <span className="text-xs font-semibold text-white/60 uppercase tracking-wider">
+                        <Separator className={cn("flex-1", sidebarStyles.divider)} />
+                        <span className={cn("text-xs font-semibold uppercase tracking-wider", sidebarStyles.dividerText)}>
                           Administration
                         </span>
-                        <Separator className="flex-1 bg-white/20" />
+                        <Separator className={cn("flex-1", sidebarStyles.divider)} />
                       </div>
                     </div>
 
@@ -420,12 +490,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                       rel="noopener noreferrer"
                       className={cn(
                         'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
-                        'hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/50',
-                        'text-white/80 hover:text-white'
+                        sidebarStyles.hover,
+                        'focus:outline-none focus:ring-2',
+                        sidebarStyles.focus,
+                        sidebarStyles.inactive
                       )}
                       title="Django Admin Panel (admins only)"
                     >
-                      <Shield className="h-5 w-5 text-white/70" />
+                      <Shield className={cn("h-5 w-5", sidebarStyles.icon)} />
                       <span className="text-sm">Admin Panel</span>
                     </a>
 
@@ -435,15 +507,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                       onClick={handleNavClick}
                       className={cn(
                         'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
-                        'hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/50',
-                        active
-                          ? 'bg-white/20 text-white font-medium'
-                          : 'text-white/80 hover:text-white'
+                        sidebarStyles.hover,
+                        'focus:outline-none focus:ring-2',
+                        sidebarStyles.focus,
+                        active ? sidebarStyles.active : sidebarStyles.inactive
                       )}
                       aria-current={active ? 'page' : undefined}
                       title={item.description}
                     >
-                      <Icon className={cn('h-5 w-5', active ? 'text-white' : 'text-white/70')} />
+                      <Icon className={cn('h-5 w-5', active ? sidebarStyles.iconActive : sidebarStyles.icon)} />
                       <span className="text-sm">{item.label}</span>
                     </Link>
                   </div>
@@ -457,11 +529,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     {/* Divider with label */}
                     <div className="pt-4 pb-2">
                       <div className="flex items-center gap-2 px-3 mb-3">
-                        <Separator className="flex-1 bg-white/20" />
-                        <span className="text-xs font-semibold text-white/60 uppercase tracking-wider">
+                        <Separator className={cn("flex-1", sidebarStyles.divider)} />
+                        <span className={cn("text-xs font-semibold uppercase tracking-wider", sidebarStyles.dividerText)}>
                           Settings
                         </span>
-                        <Separator className="flex-1 bg-white/20" />
+                        <Separator className={cn("flex-1", sidebarStyles.divider)} />
                       </div>
                     </div>
 
@@ -471,15 +543,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                       onClick={handleNavClick}
                       className={cn(
                         'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
-                        'hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/50',
-                        active
-                          ? 'bg-white/20 text-white font-medium'
-                          : 'text-white/80 hover:text-white'
+                        sidebarStyles.hover,
+                        'focus:outline-none focus:ring-2',
+                        sidebarStyles.focus,
+                        active ? sidebarStyles.active : sidebarStyles.inactive
                       )}
                       aria-current={active ? 'page' : undefined}
                       title={item.description}
                     >
-                      <Icon className={cn('h-5 w-5', active ? 'text-white' : 'text-white/70')} />
+                      <Icon className={cn('h-5 w-5', active ? sidebarStyles.iconActive : sidebarStyles.icon)} />
                       <span className="text-sm">{item.label}</span>
                     </Link>
                   </div>
@@ -493,15 +565,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   onClick={handleNavClick}
                   className={cn(
                     'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
-                    'hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/50',
-                    active
-                      ? 'bg-white/20 text-white font-medium'
-                      : 'text-white/80 hover:text-white'
+                    sidebarStyles.hover,
+                    'focus:outline-none focus:ring-2',
+                    sidebarStyles.focus,
+                    active ? sidebarStyles.active : sidebarStyles.inactive
                   )}
                   aria-current={active ? 'page' : undefined}
                   title={item.description}
                 >
-                  <Icon className={cn('h-5 w-5', active ? 'text-white' : 'text-white/70')} />
+                  <Icon className={cn('h-5 w-5', active ? sidebarStyles.iconActive : sidebarStyles.icon)} />
                   <span className="text-sm">{item.label}</span>
                 </Link>
               );

@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { useSettings, useUpdateSettings, useResetSettings } from '@/hooks/useSettings';
+import { useState, useEffect } from 'react';
+import { useSettings, useUpdateSettings, useResetSettings, type ColorScheme } from '@/hooks/useSettings';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -14,25 +14,26 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { User, Bell, Download, Palette, RotateCcw, Save } from 'lucide-react';
+import { User, Bell, Download, Palette, RotateCcw, Save, Sun, Moon } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 
 /**
  * Settings Page Component
- * 
+ *
  * Features:
  * - User profile management
- * - Theme preferences (light/dark)
+ * - Theme preferences (light/dark mode)
+ * - Color scheme preferences (Navy/Classic)
  * - Notification settings
  * - Export format preferences
  * - Settings persistence
  * - Reset to defaults
- * 
+ *
  * Security:
  * - Input validation
  * - XSS prevention through React escaping
  * - Sanitized localStorage operations
- * 
+ *
  * Accessibility:
  * - Proper labels for all inputs
  * - Keyboard navigation
@@ -43,23 +44,23 @@ export default function Settings() {
   const { data: settings, isLoading } = useSettings();
   const updateSettings = useUpdateSettings();
   const resetSettings = useResetSettings();
-  const { setTheme } = useTheme();
+  const { setTheme, setColorScheme } = useTheme();
 
-  // Local state for form inputs
-  const [userName, setUserName] = useState(settings?.userName || '');
-  const [userEmail, setUserEmail] = useState(settings?.userEmail || '');
-  const [userRole, setUserRole] = useState(settings?.userRole || '');
+  // Local state for form inputs - initialized empty, synced via useEffect
+  const [userName, setUserName] = useState('');
+  const [userEmail, setUserEmail] = useState('');
+  const [userRole, setUserRole] = useState('');
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Update local state when settings load
-  if (settings && !userName && settings.userName) {
-    setUserName(settings.userName);
-  }
-  if (settings && !userEmail && settings.userEmail) {
-    setUserEmail(settings.userEmail);
-  }
-  if (settings && !userRole && settings.userRole) {
-    setUserRole(settings.userRole);
-  }
+  // Sync local state when settings load (once)
+  useEffect(() => {
+    if (settings && !isInitialized) {
+      setUserName(settings.userName || '');
+      setUserEmail(settings.userEmail || '');
+      setUserRole(settings.userRole || '');
+      setIsInitialized(true);
+    }
+  }, [settings, isInitialized]);
 
   /**
    * Handle profile update
@@ -90,7 +91,7 @@ export default function Settings() {
   };
 
   /**
-   * Handle theme change
+   * Handle theme change (light/dark mode)
    * Updates both settings and applies theme immediately
    */
   const handleThemeChange = (theme: 'light' | 'dark') => {
@@ -98,13 +99,35 @@ export default function Settings() {
     if (setTheme) {
       setTheme(theme);
     }
-    
+
     // Save to settings for persistence
     updateSettings.mutate(
       { theme },
       {
         onSuccess: () => {
           toast.success(`Theme changed to ${theme} mode`);
+        },
+      }
+    );
+  };
+
+  /**
+   * Handle color scheme change (Navy/Classic)
+   * Updates both settings and applies scheme immediately
+   */
+  const handleColorSchemeChange = (scheme: ColorScheme) => {
+    // Apply color scheme immediately for instant feedback
+    if (setColorScheme) {
+      setColorScheme(scheme);
+    }
+
+    // Save to settings for persistence
+    updateSettings.mutate(
+      { colorScheme: scheme },
+      {
+        onSuccess: () => {
+          const schemeName = scheme === 'navy' ? 'Navy Blue' : 'Classic';
+          toast.success(`Color scheme changed to ${schemeName}`);
         },
       }
     );
@@ -148,6 +171,9 @@ export default function Settings() {
           setUserName('');
           setUserEmail('');
           setUserRole('');
+          // Reset theme context state
+          if (setTheme) setTheme('light');
+          if (setColorScheme) setColorScheme('navy');
           toast.success('Settings reset to defaults');
         },
         onError: () => {
@@ -169,7 +195,7 @@ export default function Settings() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-gray-600 mt-2">
+        <p className="text-gray-600 dark:text-gray-400 mt-2">
           Manage your account settings and preferences
         </p>
       </div>
@@ -243,24 +269,70 @@ export default function Settings() {
             <CardTitle>Theme Preferences</CardTitle>
           </div>
           <CardDescription>
-            Choose your preferred color theme
+            Customize the look and feel of the application
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <Label htmlFor="theme">Theme</Label>
+        <CardContent className="space-y-6">
+          {/* Color Scheme Selection */}
+          <div className="space-y-3">
+            <Label htmlFor="colorScheme">Color Scheme</Label>
+            <Select
+              value={settings?.colorScheme || 'navy'}
+              onValueChange={(value) => handleColorSchemeChange(value as ColorScheme)}
+            >
+              <SelectTrigger id="colorScheme" className="w-full sm:w-[280px]">
+                <SelectValue placeholder="Select color scheme" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="navy">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded bg-[#1e3a8a] border border-blue-900" />
+                    <span>Navy Blue & White</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="classic">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded bg-white border border-gray-300" />
+                    <span>Classic (Original)</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              Choose between the modern navy theme or the original classic look
+            </p>
+          </div>
+
+          <Separator />
+
+          {/* Light/Dark Mode Selection */}
+          <div className="space-y-3">
+            <Label htmlFor="theme">Appearance</Label>
             <Select
               value={settings?.theme || 'light'}
               onValueChange={(value) => handleThemeChange(value as 'light' | 'dark')}
             >
-              <SelectTrigger id="theme" className="w-full sm:w-[200px]">
-                <SelectValue placeholder="Select theme" />
+              <SelectTrigger id="theme" className="w-full sm:w-[280px]">
+                <SelectValue placeholder="Select appearance" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="light">Light</SelectItem>
-                <SelectItem value="dark">Dark</SelectItem>
+                <SelectItem value="light">
+                  <div className="flex items-center gap-2">
+                    <Sun className="h-4 w-4" />
+                    <span>Light Mode</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="dark">
+                  <div className="flex items-center gap-2">
+                    <Moon className="h-4 w-4" />
+                    <span>Dark Mode</span>
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
+            <p className="text-sm text-muted-foreground">
+              Select light or dark mode for the interface
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -282,7 +354,7 @@ export default function Settings() {
               <Label htmlFor="notifications" className="text-base">
                 Enable Notifications
               </Label>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Receive alerts and updates
               </p>
             </div>
@@ -327,7 +399,7 @@ export default function Settings() {
       </Card>
 
       {/* Reset Settings */}
-      <Card className="border-red-200">
+      <Card className="border-red-200 dark:border-red-900">
         <CardHeader>
           <div className="flex items-center gap-2">
             <RotateCcw className="h-5 w-5 text-red-600" />

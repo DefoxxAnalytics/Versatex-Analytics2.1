@@ -1,12 +1,14 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { useSettings } from "@/hooks/useSettings";
+import { useSettings, type ColorScheme } from "@/hooks/useSettings";
 
 type Theme = "light" | "dark";
 
 interface ThemeContextType {
   theme: Theme;
+  colorScheme: ColorScheme;
   toggleTheme?: () => void;
   setTheme?: (theme: Theme) => void;
+  setColorScheme?: (scheme: ColorScheme) => void;
   switchable: boolean;
 }
 
@@ -15,77 +17,76 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 interface ThemeProviderProps {
   children: React.ReactNode;
   defaultTheme?: Theme;
+  defaultColorScheme?: ColorScheme;
   switchable?: boolean;
 }
 
 /**
  * Theme Provider Component
- * 
+ *
  * Features:
- * - Syncs with user settings from useSettings hook
- * - Applies theme to document root
- * - Supports light and dark modes
- * - Optional theme switching
- * 
- * The theme is managed in two places:
- * 1. ThemeContext state (for immediate UI updates)
- * 2. User settings (for persistence via useSettings)
- * 
- * When settings are loaded, the theme is synced automatically.
+ * - Syncs with user settings from useSettings hook (single source of truth)
+ * - Applies theme (light/dark) to document root
+ * - Applies color scheme (navy/classic) to document root
+ * - Supports both theme and color scheme switching
+ * - Smooth transitions between themes
+ *
+ * CSS Classes Applied:
+ * - .dark - for dark mode
+ * - .classic - for classic color scheme (navy is default, no class)
+ *
+ * Settings persistence is handled by useSettings hook (localStorage).
+ * This context only manages the UI state and DOM class application.
  */
 export function ThemeProvider({
   children,
   defaultTheme = "light",
-  switchable = true, // Enable switching by default for settings page
+  defaultColorScheme = "navy",
+  switchable = true,
 }: ThemeProviderProps) {
   const { data: settings } = useSettings();
-  
-  // Initialize theme from settings or default
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (settings?.theme) {
-      return settings.theme;
-    }
-    if (switchable) {
-      const stored = localStorage.getItem("theme");
-      return (stored as Theme) || defaultTheme;
-    }
-    return defaultTheme;
-  });
 
-  // Sync theme with settings when they load
+  // Initialize theme from defaults - will sync from settings when loaded
+  const [theme, setThemeState] = useState<Theme>(defaultTheme);
+  const [colorScheme, setColorSchemeState] = useState<ColorScheme>(defaultColorScheme);
+
+  // Sync theme and color scheme with settings when they load
   useEffect(() => {
-    if (settings?.theme && settings.theme !== theme) {
-      setThemeState(settings.theme);
+    if (settings) {
+      if (settings.theme && settings.theme !== theme) {
+        setThemeState(settings.theme);
+      }
+      if (settings.colorScheme && settings.colorScheme !== colorScheme) {
+        setColorSchemeState(settings.colorScheme);
+      }
     }
-  }, [settings?.theme]);
+    // Intentionally only depend on settings to avoid loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings]);
 
-  // Apply theme to document
+  // Apply theme and color scheme CSS classes to document root
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === "dark") {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
 
-    // Also update localStorage for backwards compatibility
-    if (switchable) {
-      localStorage.setItem("theme", theme);
-    }
-  }, [theme, switchable]);
+    // Apply light/dark theme
+    root.classList.toggle("dark", theme === "dark");
+
+    // Apply color scheme (classic adds class, navy is default)
+    root.classList.toggle("classic", colorScheme === "classic");
+  }, [theme, colorScheme]);
 
   /**
    * Toggle between light and dark themes
    */
   const toggleTheme = switchable
     ? () => {
-        setThemeState(prev => (prev === "light" ? "dark" : "light"));
+        setThemeState((prev) => (prev === "light" ? "dark" : "light"));
       }
     : undefined;
 
   /**
    * Set theme directly
-   * Used by Settings page to apply theme changes
+   * Used by Settings page to apply theme changes immediately
    */
   const setTheme = switchable
     ? (newTheme: Theme) => {
@@ -93,8 +94,27 @@ export function ThemeProvider({
       }
     : undefined;
 
+  /**
+   * Set color scheme directly
+   * Used by Settings page to apply color scheme changes immediately
+   */
+  const setColorScheme = switchable
+    ? (newScheme: ColorScheme) => {
+        setColorSchemeState(newScheme);
+      }
+    : undefined;
+
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme, switchable }}>
+    <ThemeContext.Provider
+      value={{
+        theme,
+        colorScheme,
+        toggleTheme,
+        setTheme,
+        setColorScheme,
+        switchable,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );
@@ -102,18 +122,21 @@ export function ThemeProvider({
 
 /**
  * Hook to access theme context
- * 
+ *
  * @throws Error if used outside ThemeProvider
- * 
+ *
  * @example
  * ```tsx
- * const { theme, toggleTheme, setTheme } = useTheme();
- * 
+ * const { theme, colorScheme, setTheme, setColorScheme } = useTheme();
+ *
  * // Toggle theme
  * toggleTheme();
- * 
+ *
  * // Set specific theme
  * setTheme('dark');
+ *
+ * // Set color scheme
+ * setColorScheme('classic');
  * ```
  */
 export function useTheme() {
