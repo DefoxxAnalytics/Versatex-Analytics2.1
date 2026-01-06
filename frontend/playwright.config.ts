@@ -11,7 +11,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? 'github' : 'html',
-  timeout: 30000,
+  timeout: 60000, // Increased for admin wizard tests
 
   use: {
     baseURL: 'http://localhost:3000',
@@ -33,12 +33,25 @@ export default defineConfig({
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
     },
+    // Admin tests project (Django Admin at port 8001)
+    {
+      name: 'admin',
+      testMatch: '**/admin-*.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: 'http://localhost:8001',
+      },
+    },
   ],
 
-  webServer: {
-    command: 'pnpm dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000,
-  },
+  webServer: [
+    // Frontend server
+    {
+      command: 'pnpm dev',
+      url: 'http://localhost:3000',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120000,
+    },
+    // Note: Backend (Django) at localhost:8001 is expected to be running via Docker
+  ],
 });

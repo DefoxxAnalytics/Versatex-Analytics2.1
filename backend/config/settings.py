@@ -185,6 +185,10 @@ REST_FRAMEWORK = {
         'bulk_delete': '10/hour',   # Bulk delete rate limiting
         'login': '5/minute',        # Login rate limiting (backup to django-ratelimit)
         'read_api': '500/hour',     # Read operations rate limiting
+        'ai_insights': '30/hour',   # AI insights rate limiting (expensive computation)
+        'predictions': '60/hour',   # Predictions rate limiting
+        'contract_analytics': '100/hour',  # Contract analytics rate limiting
+        'compliance': '100/hour',  # Compliance rate limiting
     },
     'EXCEPTION_HANDLER': 'config.exception_handler.custom_exception_handler',
 }

@@ -1,6 +1,14 @@
 """
-Django admin configuration for procurement with CSV upload functionality
+Django admin configuration for procurement with CSV upload functionality.
+Includes Data Upload Center with organization management and upload wizard.
 """
+import json
+import csv
+import io
+import uuid as uuid_lib
+from datetime import datetime
+from decimal import Decimal, InvalidOperation
+
 from django.contrib import admin
 from django.urls import path
 from django.shortcuts import render, redirect
@@ -8,10 +16,19 @@ from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.utils.decorators import method_decorator
 from django.utils.html import format_html
+from django.utils import timezone
+from django.db import transaction
+from django.http import JsonResponse, HttpResponse
+from django.views.decorators.http import require_POST, require_GET
+from django.core.serializers.json import DjangoJSONEncoder
 
-from .models import Supplier, Category, Transaction, DataUpload
-from .forms import CSVUploadForm
+from .models import (
+    Supplier, Category, Transaction, DataUpload,
+    ColumnMappingTemplate, Contract, SpendingPolicy, PolicyViolation
+)
+from .forms import CSVUploadForm, OrganizationResetForm, DeleteAllDataForm
 from .services import CSVProcessor
+from apps.authentication.models import Organization
 from apps.authentication.utils import log_action
 
 
@@ -67,17 +84,19 @@ class TransactionAdmin(admin.ModelAdmin):
 @admin.register(DataUpload)
 class DataUploadAdmin(admin.ModelAdmin):
     list_display = ['file_name', 'organization', 'uploaded_by', 'status_badge', 'successful_rows', 'failed_rows', 'duplicate_rows', 'created_at']
-    list_filter = ['status', 'organization', 'created_at']
+    list_filter = ['status', 'organization', 'created_at', 'processing_mode']
     search_fields = ['file_name', 'batch_id']
     readonly_fields = ['file_name', 'file_size', 'batch_id', 'total_rows', 'successful_rows',
                        'failed_rows', 'duplicate_rows', 'status', 'error_log', 'uploaded_by',
-                       'organization', 'created_at', 'completed_at']
+                       'organization', 'created_at', 'completed_at', 'progress_percent',
+                       'progress_message', 'processing_mode', 'celery_task_id']
     ordering = ['-created_at']
     change_list_template = 'admin/procurement/dataupload/change_list.html'
 
     def status_badge(self, obj):
         """Display status with color-coded badge"""
         colors = {
+            'pending': '#6b7280',     # gray
             'processing': '#f59e0b',  # amber
             'completed': '#10b981',   # green
             'failed': '#ef4444',      # red
@@ -95,10 +114,70 @@ class DataUploadAdmin(admin.ModelAdmin):
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
+            # Legacy upload (still supported)
             path(
                 'upload-csv/',
                 self.admin_site.admin_view(self.upload_csv_view),
                 name='procurement_dataupload_upload_csv'
+            ),
+            # Upload Wizard
+            path(
+                'upload-wizard/',
+                self.admin_site.admin_view(self.upload_wizard_view),
+                name='procurement_dataupload_upload_wizard'
+            ),
+            # AJAX API Endpoints for Upload Wizard
+            path(
+                'api/preview/',
+                self.admin_site.admin_view(self.api_preview_file),
+                name='procurement_dataupload_api_preview'
+            ),
+            path(
+                'api/validate/',
+                self.admin_site.admin_view(self.api_validate_mapping),
+                name='procurement_dataupload_api_validate'
+            ),
+            path(
+                'api/upload/',
+                self.admin_site.admin_view(self.api_process_upload),
+                name='procurement_dataupload_api_upload'
+            ),
+            path(
+                'api/progress/<str:task_id>/',
+                self.admin_site.admin_view(self.api_get_progress),
+                name='procurement_dataupload_api_progress'
+            ),
+            path(
+                'api/templates/',
+                self.admin_site.admin_view(self.api_list_templates),
+                name='procurement_dataupload_api_templates'
+            ),
+            path(
+                'api/templates/save/',
+                self.admin_site.admin_view(self.api_save_template),
+                name='procurement_dataupload_api_save_template'
+            ),
+            # Organization Management
+            path(
+                'reset-organization/',
+                self.admin_site.admin_view(self.reset_organization_view),
+                name='procurement_dataupload_reset_organization'
+            ),
+            path(
+                'delete-all-data/',
+                self.admin_site.admin_view(self.delete_all_data_view),
+                name='procurement_dataupload_delete_all_data'
+            ),
+            # Upload Detail View
+            path(
+                '<str:uuid>/detail/',
+                self.admin_site.admin_view(self.upload_detail_view),
+                name='procurement_dataupload_detail'
+            ),
+            path(
+                '<str:uuid>/download-errors/',
+                self.admin_site.admin_view(self.download_error_report),
+                name='procurement_dataupload_download_errors'
             ),
         ]
         return custom_urls + urls
@@ -214,3 +293,946 @@ class DataUploadAdmin(admin.ModelAdmin):
         }
 
         return render(request, 'admin/procurement/dataupload/upload_csv.html', context)
+
+    @method_decorator(staff_member_required)
+    def reset_organization_view(self, request):
+        """
+        Super admin only: Complete database reset for an organization.
+        Requires typing the exact organization name to confirm.
+        """
+        # Permission check - superuser only
+        if not request.user.is_superuser:
+            messages.error(request, 'Only super administrators can reset organizations.')
+            return redirect('..')
+
+        if request.method == 'POST':
+            form = OrganizationResetForm(request.POST)
+            if form.is_valid():
+                organization = form.cleaned_data['organization']
+
+                # Perform reset in correct order (respecting FK constraints)
+                with transaction.atomic():
+                    counts = {}
+
+                    # 1. Delete policy violations first (FK to transactions)
+                    counts['violations'] = PolicyViolation.objects.filter(
+                        organization=organization
+                    ).count()
+                    PolicyViolation.objects.filter(organization=organization).delete()
+
+                    # 2. Delete transactions
+                    counts['transactions'] = Transaction.objects.filter(
+                        organization=organization
+                    ).count()
+                    Transaction.objects.filter(organization=organization).delete()
+
+                    # 3. Delete uploads
+                    counts['uploads'] = DataUpload.objects.filter(
+                        organization=organization
+                    ).count()
+                    DataUpload.objects.filter(organization=organization).delete()
+
+                    # 4. Delete mapping templates
+                    counts['templates'] = ColumnMappingTemplate.objects.filter(
+                        organization=organization
+                    ).count()
+                    ColumnMappingTemplate.objects.filter(organization=organization).delete()
+
+                    # 5. Delete contracts (has FK to suppliers)
+                    counts['contracts'] = Contract.objects.filter(
+                        organization=organization
+                    ).count()
+                    Contract.objects.filter(organization=organization).delete()
+
+                    # 6. Delete suppliers
+                    counts['suppliers'] = Supplier.objects.filter(
+                        organization=organization
+                    ).count()
+                    Supplier.objects.filter(organization=organization).delete()
+
+                    # 7. Delete categories
+                    counts['categories'] = Category.objects.filter(
+                        organization=organization
+                    ).count()
+                    Category.objects.filter(organization=organization).delete()
+
+                    # 8. Delete spending policies
+                    counts['policies'] = SpendingPolicy.objects.filter(
+                        organization=organization
+                    ).count()
+                    SpendingPolicy.objects.filter(organization=organization).delete()
+
+                    # Log the action
+                    log_action(
+                        user=request.user,
+                        action='reset',
+                        resource='organization',
+                        resource_id=str(organization.pk),
+                        details={
+                            'organization_name': organization.name,
+                            'transactions_deleted': counts['transactions'],
+                            'suppliers_deleted': counts['suppliers'],
+                            'categories_deleted': counts['categories'],
+                            'uploads_deleted': counts['uploads'],
+                            'templates_deleted': counts['templates'],
+                            'contracts_deleted': counts['contracts'],
+                        },
+                        request=request
+                    )
+
+                messages.success(
+                    request,
+                    f'Organization "{organization.name}" has been reset. '
+                    f'Deleted: {counts["transactions"]} transactions, '
+                    f'{counts["suppliers"]} suppliers, {counts["categories"]} categories, '
+                    f'{counts["uploads"]} uploads, {counts["contracts"]} contracts.'
+                )
+                return redirect('..')
+        else:
+            form = OrganizationResetForm()
+
+        context = {
+            **self.admin_site.each_context(request),
+            'title': 'Reset Organization',
+            'form': form,
+            'opts': self.model._meta,
+            'has_view_permission': self.has_view_permission(request),
+        }
+
+        return render(request, 'admin/procurement/dataupload/reset_organization.html', context)
+
+    @method_decorator(staff_member_required)
+    def delete_all_data_view(self, request):
+        """
+        Org admin: Delete all transactions for the user's organization.
+        Preserves master data (suppliers, categories).
+        """
+        # Permission check
+        if not request.user.is_superuser:
+            if not hasattr(request.user, 'profile'):
+                messages.error(request, 'You do not have a user profile.')
+                return redirect('..')
+            if request.user.profile.role != 'admin':
+                messages.error(request, 'Only organization administrators can delete data.')
+                return redirect('..')
+
+        # Get user's organization for non-superusers
+        organization = None
+        if not request.user.is_superuser and hasattr(request.user, 'profile'):
+            organization = request.user.profile.organization
+
+        if request.method == 'POST':
+            form = DeleteAllDataForm(request.POST, user=request.user)
+            if form.is_valid():
+                target_org = form.get_organization()
+                if not target_org:
+                    messages.error(request, 'Could not determine target organization.')
+                    return redirect('.')
+
+                # Delete all transactions and uploads
+                with transaction.atomic():
+                    # Delete policy violations first
+                    violation_count = PolicyViolation.objects.filter(
+                        organization=target_org
+                    ).count()
+                    PolicyViolation.objects.filter(organization=target_org).delete()
+
+                    # Delete transactions
+                    transaction_count = Transaction.objects.filter(
+                        organization=target_org
+                    ).count()
+                    Transaction.objects.filter(organization=target_org).delete()
+
+                    # Delete upload records
+                    upload_count = DataUpload.objects.filter(
+                        organization=target_org
+                    ).count()
+                    DataUpload.objects.filter(organization=target_org).delete()
+
+                    # Log the action
+                    log_action(
+                        user=request.user,
+                        action='bulk_delete',
+                        resource='transactions',
+                        resource_id=str(target_org.pk),
+                        details={
+                            'organization_name': target_org.name,
+                            'transactions_deleted': transaction_count,
+                            'uploads_deleted': upload_count,
+                        },
+                        request=request
+                    )
+
+                messages.success(
+                    request,
+                    f'Deleted {transaction_count} transactions and {upload_count} upload records '
+                    f'from "{target_org.name}". Master data (suppliers, categories) preserved.'
+                )
+                return redirect('..')
+        else:
+            form = DeleteAllDataForm(user=request.user)
+
+        context = {
+            **self.admin_site.each_context(request),
+            'title': 'Delete All Data',
+            'form': form,
+            'organization': organization,
+            'opts': self.model._meta,
+            'has_view_permission': self.has_view_permission(request),
+        }
+
+        return render(request, 'admin/procurement/dataupload/delete_all_data.html', context)
+
+    # ==================== Upload Wizard Views ====================
+
+    @method_decorator(staff_member_required)
+    def upload_wizard_view(self, request):
+        """Render the 5-step upload wizard interface."""
+        # Permission check
+        if not request.user.is_superuser:
+            if not hasattr(request.user, 'profile'):
+                messages.error(request, 'You do not have a user profile.')
+                return redirect('..')
+            if request.user.profile.role not in ['admin', 'manager']:
+                messages.error(request, 'Only Admins and Managers can upload data.')
+                return redirect('..')
+
+        # Get organizations for superuser dropdown
+        organizations = []
+        if request.user.is_superuser:
+            organizations = list(
+                Organization.objects.filter(is_active=True)
+                .order_by('name')
+                .values('id', 'name')
+            )
+
+        # Get user's organization
+        user_org = None
+        if hasattr(request.user, 'profile') and request.user.profile.organization:
+            user_org = {
+                'id': request.user.profile.organization.id,
+                'name': request.user.profile.organization.name,
+            }
+
+        context = {
+            **self.admin_site.each_context(request),
+            'title': 'Upload Wizard',
+            'opts': self.model._meta,
+            'has_view_permission': self.has_view_permission(request),
+            'is_superuser': request.user.is_superuser,
+            'organizations': json.dumps(organizations, default=str),
+            'user_organization': json.dumps(user_org, default=str),
+        }
+
+        return render(request, 'admin/procurement/dataupload/upload_wizard.html', context)
+
+    @method_decorator(staff_member_required)
+    def api_preview_file(self, request):
+        """
+        API endpoint to preview CSV file contents.
+        Returns headers and first 100 rows for preview.
+        """
+        if request.method != 'POST':
+            return JsonResponse({'error': 'POST required'}, status=405)
+
+        # Permission check
+        if not self._check_upload_permission(request):
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+
+        file = request.FILES.get('file')
+        if not file:
+            return JsonResponse({'error': 'No file provided'}, status=400)
+
+        # Validate file
+        if not file.name.lower().endswith('.csv'):
+            return JsonResponse({'error': 'File must be a CSV'}, status=400)
+
+        if file.size > 50 * 1024 * 1024:
+            return JsonResponse({'error': 'File size must be less than 50MB'}, status=400)
+
+        try:
+            # Read CSV content
+            content = file.read().decode('utf-8-sig')
+            file.seek(0)  # Reset for later use
+
+            reader = csv.DictReader(io.StringIO(content))
+            headers = reader.fieldnames or []
+
+            # Get first 100 rows for preview
+            rows = []
+            for i, row in enumerate(reader):
+                if i >= 100:
+                    break
+                rows.append(row)
+
+            # Count total rows
+            file.seek(0)
+            total_rows = sum(1 for _ in csv.reader(io.StringIO(content))) - 1  # Exclude header
+
+            return JsonResponse({
+                'success': True,
+                'headers': headers,
+                'preview_rows': rows,
+                'total_rows': total_rows,
+                'file_name': file.name,
+                'file_size': file.size,
+            })
+
+        except UnicodeDecodeError:
+            return JsonResponse({'error': 'File encoding not supported. Please use UTF-8.'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': f'Error reading file: {str(e)}'}, status=400)
+
+    @method_decorator(staff_member_required)
+    def api_validate_mapping(self, request):
+        """
+        API endpoint to validate column mappings before upload.
+        Returns validation results with error details.
+        """
+        if request.method != 'POST':
+            return JsonResponse({'error': 'POST required'}, status=405)
+
+        if not self._check_upload_permission(request):
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+
+        file = request.FILES.get('file')
+        mapping_json = request.POST.get('mapping', '{}')
+        organization_id = request.POST.get('organization_id')
+
+        if not file:
+            return JsonResponse({'error': 'No file provided'}, status=400)
+
+        try:
+            mapping = json.loads(mapping_json)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid mapping JSON'}, status=400)
+
+        # Get organization
+        organization = self._get_target_organization(request, organization_id)
+        if not organization:
+            return JsonResponse({'error': 'Organization not found'}, status=400)
+
+        # Required fields check
+        required_fields = {'supplier', 'category', 'amount', 'date'}
+        mapped_fields = set(mapping.values())
+        missing_required = required_fields - mapped_fields
+
+        if missing_required:
+            return JsonResponse({
+                'success': False,
+                'error': f'Missing required mappings: {", ".join(missing_required)}',
+                'missing_fields': list(missing_required)
+            }, status=400)
+
+        try:
+            content = file.read().decode('utf-8-sig')
+            reader = csv.DictReader(io.StringIO(content))
+            headers = reader.fieldnames or []
+
+            # Validate each row
+            errors = []
+            valid_count = 0
+            duplicate_count = 0
+
+            for row_num, row in enumerate(reader, start=2):  # Start at 2 (header is row 1)
+                row_errors = self._validate_row(row, mapping, organization, row_num)
+                if row_errors:
+                    errors.extend(row_errors)
+                else:
+                    # Check for duplicates
+                    if self._is_duplicate_row(row, mapping, organization):
+                        duplicate_count += 1
+                    else:
+                        valid_count += 1
+
+            return JsonResponse({
+                'success': True,
+                'valid_count': valid_count,
+                'error_count': len(errors),
+                'duplicate_count': duplicate_count,
+                'errors': errors[:100],  # Limit to first 100 errors
+                'total_errors': len(errors),
+            })
+
+        except Exception as e:
+            return JsonResponse({'error': f'Validation error: {str(e)}'}, status=400)
+
+    @method_decorator(staff_member_required)
+    def api_process_upload(self, request):
+        """
+        API endpoint to process the CSV upload.
+        Uses sync or async processing based on file size.
+        """
+        if request.method != 'POST':
+            return JsonResponse({'error': 'POST required'}, status=405)
+
+        if not self._check_upload_permission(request):
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+
+        file = request.FILES.get('file')
+        mapping_json = request.POST.get('mapping', '{}')
+        organization_id = request.POST.get('organization_id')
+        skip_invalid = request.POST.get('skip_invalid', 'true').lower() == 'true'
+        template_name = request.POST.get('template_name', '')
+
+        if not file:
+            return JsonResponse({'error': 'No file provided'}, status=400)
+
+        try:
+            mapping = json.loads(mapping_json)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid mapping JSON'}, status=400)
+
+        organization = self._get_target_organization(request, organization_id)
+        if not organization:
+            return JsonResponse({'error': 'Organization not found'}, status=400)
+
+        # Determine processing mode based on file size
+        # Files >10MB use async processing
+        use_async = file.size > 10 * 1024 * 1024
+
+        try:
+            # Create upload record
+            batch_id = str(uuid_lib.uuid4())
+            upload = DataUpload.objects.create(
+                organization=organization,
+                uploaded_by=request.user,
+                file_name=file.name,
+                file_size=file.size,
+                batch_id=batch_id,
+                status='pending',
+                processing_mode='async' if use_async else 'sync',
+                column_mapping_snapshot=mapping,
+            )
+
+            if use_async:
+                # Save file for async processing
+                from django.core.files.base import ContentFile
+                content = file.read()
+                upload.stored_file.save(file.name, ContentFile(content))
+                upload.save()
+
+                # Queue Celery task
+                from .tasks import process_csv_upload
+                task = process_csv_upload.delay(upload.id, mapping, skip_invalid)
+
+                upload.celery_task_id = task.id
+                upload.status = 'processing'
+                upload.save()
+
+                return JsonResponse({
+                    'success': True,
+                    'async': True,
+                    'task_id': task.id,
+                    'upload_id': str(upload.uuid),
+                    'message': 'Upload queued for background processing'
+                })
+            else:
+                # Sync processing for smaller files
+                upload.status = 'processing'
+                upload.save()
+
+                result = self._process_csv_sync(file, mapping, organization, request.user, upload, skip_invalid)
+
+                # Log the action
+                log_action(
+                    user=request.user,
+                    action='upload',
+                    resource='transactions',
+                    resource_id=upload.batch_id,
+                    details={
+                        'file_name': upload.file_name,
+                        'successful': upload.successful_rows,
+                        'failed': upload.failed_rows,
+                        'duplicates': upload.duplicate_rows,
+                        'processing_mode': 'sync',
+                    },
+                    request=request
+                )
+
+                return JsonResponse({
+                    'success': True,
+                    'async': False,
+                    'upload_id': str(upload.uuid),
+                    'status': upload.status,
+                    'successful_rows': upload.successful_rows,
+                    'failed_rows': upload.failed_rows,
+                    'duplicate_rows': upload.duplicate_rows,
+                    'message': f'Processed {upload.successful_rows} transactions'
+                })
+
+        except Exception as e:
+            return JsonResponse({'error': f'Upload error: {str(e)}'}, status=500)
+
+    @method_decorator(staff_member_required)
+    def api_get_progress(self, request, task_id):
+        """API endpoint to get upload progress for async tasks."""
+        try:
+            upload = DataUpload.objects.get(celery_task_id=task_id)
+
+            # Check organization access
+            if not request.user.is_superuser:
+                if hasattr(request.user, 'profile'):
+                    if upload.organization != request.user.profile.organization:
+                        return JsonResponse({'error': 'Access denied'}, status=403)
+                else:
+                    return JsonResponse({'error': 'Access denied'}, status=403)
+
+            return JsonResponse({
+                'success': True,
+                'status': upload.status,
+                'progress_percent': upload.progress_percent,
+                'progress_message': upload.progress_message,
+                'successful_rows': upload.successful_rows,
+                'failed_rows': upload.failed_rows,
+                'duplicate_rows': upload.duplicate_rows,
+                'total_rows': upload.total_rows,
+            })
+
+        except DataUpload.DoesNotExist:
+            return JsonResponse({'error': 'Upload not found'}, status=404)
+
+    @method_decorator(staff_member_required)
+    def api_list_templates(self, request):
+        """API endpoint to list column mapping templates."""
+        organization = self._get_target_organization(
+            request,
+            request.GET.get('organization_id')
+        )
+
+        if not organization:
+            return JsonResponse({'error': 'Organization not found'}, status=400)
+
+        templates = ColumnMappingTemplate.objects.filter(
+            organization=organization
+        ).order_by('-is_default', 'name').values(
+            'id', 'uuid', 'name', 'description', 'mapping', 'is_default', 'created_at'
+        )
+
+        return JsonResponse({
+            'success': True,
+            'templates': list(templates)
+        }, encoder=DjangoJSONEncoder)
+
+    @method_decorator(staff_member_required)
+    def api_save_template(self, request):
+        """API endpoint to save a column mapping template."""
+        if request.method != 'POST':
+            return JsonResponse({'error': 'POST required'}, status=405)
+
+        if not self._check_upload_permission(request):
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+        name = data.get('name', '').strip()
+        description = data.get('description', '').strip()
+        mapping = data.get('mapping', {})
+        organization_id = data.get('organization_id')
+        set_default = data.get('is_default', False)
+
+        if not name:
+            return JsonResponse({'error': 'Template name is required'}, status=400)
+
+        if not mapping:
+            return JsonResponse({'error': 'Mapping is required'}, status=400)
+
+        organization = self._get_target_organization(request, organization_id)
+        if not organization:
+            return JsonResponse({'error': 'Organization not found'}, status=400)
+
+        try:
+            with transaction.atomic():
+                # If setting as default, unset other defaults
+                if set_default:
+                    ColumnMappingTemplate.objects.filter(
+                        organization=organization,
+                        is_default=True
+                    ).update(is_default=False)
+
+                # Create or update template
+                template, created = ColumnMappingTemplate.objects.update_or_create(
+                    organization=organization,
+                    name=name,
+                    defaults={
+                        'description': description,
+                        'mapping': mapping,
+                        'is_default': set_default,
+                        'created_by': request.user,
+                    }
+                )
+
+                # Log action
+                log_action(
+                    user=request.user,
+                    action='create' if created else 'update',
+                    resource='mapping_template',
+                    resource_id=str(template.uuid),
+                    details={
+                        'template_name': name,
+                        'organization_name': organization.name,
+                    },
+                    request=request
+                )
+
+                return JsonResponse({
+                    'success': True,
+                    'template_id': str(template.uuid),
+                    'created': created,
+                    'message': f'Template "{name}" {"created" if created else "updated"} successfully'
+                })
+
+        except Exception as e:
+            return JsonResponse({'error': f'Error saving template: {str(e)}'}, status=500)
+
+    # ==================== Upload Detail Views ====================
+
+    @method_decorator(staff_member_required)
+    def upload_detail_view(self, request, uuid):
+        """Detailed view of an upload with logs and error information."""
+        try:
+            upload = DataUpload.objects.get(uuid=uuid)
+        except DataUpload.DoesNotExist:
+            messages.error(request, 'Upload not found.')
+            return redirect('..')
+
+        # Check organization access
+        if not request.user.is_superuser:
+            if hasattr(request.user, 'profile'):
+                if upload.organization != request.user.profile.organization:
+                    messages.error(request, 'Access denied.')
+                    return redirect('..')
+            else:
+                messages.error(request, 'Access denied.')
+                return redirect('..')
+
+        # Parse error log
+        error_entries = []
+        if upload.error_log:
+            try:
+                error_entries = json.loads(upload.error_log)
+            except json.JSONDecodeError:
+                error_entries = [{'message': upload.error_log}]
+
+        context = {
+            **self.admin_site.each_context(request),
+            'title': f'Upload Detail: {upload.file_name}',
+            'upload': upload,
+            'error_entries': error_entries[:100],  # Limit displayed errors
+            'total_errors': len(error_entries),
+            'opts': self.model._meta,
+            'has_view_permission': self.has_view_permission(request),
+        }
+
+        return render(request, 'admin/procurement/dataupload/upload_detail.html', context)
+
+    @method_decorator(staff_member_required)
+    def download_error_report(self, request, uuid):
+        """Download error log as CSV."""
+        try:
+            upload = DataUpload.objects.get(uuid=uuid)
+        except DataUpload.DoesNotExist:
+            return HttpResponse('Upload not found', status=404)
+
+        # Check organization access
+        if not request.user.is_superuser:
+            if hasattr(request.user, 'profile'):
+                if upload.organization != request.user.profile.organization:
+                    return HttpResponse('Access denied', status=403)
+            else:
+                return HttpResponse('Access denied', status=403)
+
+        # Create CSV response
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="errors_{upload.file_name}"'
+
+        writer = csv.writer(response)
+        writer.writerow(['Row', 'Field', 'Error', 'Value'])
+
+        if upload.error_log:
+            try:
+                errors = json.loads(upload.error_log)
+                for error in errors:
+                    writer.writerow([
+                        error.get('row', ''),
+                        error.get('field', ''),
+                        error.get('message', ''),
+                        error.get('value', '')
+                    ])
+            except json.JSONDecodeError:
+                writer.writerow(['', '', upload.error_log, ''])
+
+        return response
+
+    # ==================== Helper Methods ====================
+
+    def _check_upload_permission(self, request):
+        """Check if user has permission to upload."""
+        if request.user.is_superuser:
+            return True
+        if hasattr(request.user, 'profile'):
+            return request.user.profile.role in ['admin', 'manager']
+        return False
+
+    def _get_target_organization(self, request, organization_id=None):
+        """Get the target organization for an operation."""
+        if organization_id and request.user.is_superuser:
+            try:
+                return Organization.objects.get(id=organization_id, is_active=True)
+            except Organization.DoesNotExist:
+                pass
+
+        if hasattr(request.user, 'profile'):
+            return request.user.profile.organization
+
+        return None
+
+    def _validate_row(self, row, mapping, organization, row_num):
+        """Validate a single row and return list of errors."""
+        errors = []
+
+        # Get mapped values
+        supplier_col = next((k for k, v in mapping.items() if v == 'supplier'), None)
+        category_col = next((k for k, v in mapping.items() if v == 'category'), None)
+        amount_col = next((k for k, v in mapping.items() if v == 'amount'), None)
+        date_col = next((k for k, v in mapping.items() if v == 'date'), None)
+
+        # Validate supplier
+        if supplier_col:
+            supplier_val = row.get(supplier_col, '').strip()
+            if not supplier_val:
+                errors.append({
+                    'row': row_num,
+                    'field': 'supplier',
+                    'message': 'Supplier is required',
+                    'value': ''
+                })
+
+        # Validate category
+        if category_col:
+            category_val = row.get(category_col, '').strip()
+            if not category_val:
+                errors.append({
+                    'row': row_num,
+                    'field': 'category',
+                    'message': 'Category is required',
+                    'value': ''
+                })
+
+        # Validate amount
+        if amount_col:
+            amount_val = row.get(amount_col, '').strip()
+            if not amount_val:
+                errors.append({
+                    'row': row_num,
+                    'field': 'amount',
+                    'message': 'Amount is required',
+                    'value': ''
+                })
+            else:
+                try:
+                    # Clean amount string
+                    clean_amount = amount_val.replace('$', '').replace(',', '').strip()
+                    Decimal(clean_amount)
+                except (InvalidOperation, ValueError):
+                    errors.append({
+                        'row': row_num,
+                        'field': 'amount',
+                        'message': 'Invalid amount format',
+                        'value': amount_val
+                    })
+
+        # Validate date
+        if date_col:
+            date_val = row.get(date_col, '').strip()
+            if not date_val:
+                errors.append({
+                    'row': row_num,
+                    'field': 'date',
+                    'message': 'Date is required',
+                    'value': ''
+                })
+            else:
+                if not self._parse_date(date_val):
+                    errors.append({
+                        'row': row_num,
+                        'field': 'date',
+                        'message': 'Invalid date format (use YYYY-MM-DD, MM/DD/YYYY, or DD-MM-YYYY)',
+                        'value': date_val
+                    })
+
+        return errors
+
+    def _parse_date(self, date_str):
+        """Try to parse a date string in various formats."""
+        formats = [
+            '%Y-%m-%d',
+            '%m/%d/%Y',
+            '%d/%m/%Y',
+            '%m-%d-%Y',
+            '%d-%m-%Y',
+            '%Y/%m/%d',
+        ]
+
+        for fmt in formats:
+            try:
+                return datetime.strptime(date_str.strip(), fmt).date()
+            except ValueError:
+                continue
+
+        return None
+
+    def _is_duplicate_row(self, row, mapping, organization):
+        """Check if a row would create a duplicate transaction."""
+        supplier_col = next((k for k, v in mapping.items() if v == 'supplier'), None)
+        category_col = next((k for k, v in mapping.items() if v == 'category'), None)
+        amount_col = next((k for k, v in mapping.items() if v == 'amount'), None)
+        date_col = next((k for k, v in mapping.items() if v == 'date'), None)
+        invoice_col = next((k for k, v in mapping.items() if v == 'invoice_number'), None)
+
+        if not all([supplier_col, category_col, amount_col, date_col]):
+            return False
+
+        supplier_name = row.get(supplier_col, '').strip()
+        category_name = row.get(category_col, '').strip()
+        amount_str = row.get(amount_col, '').strip().replace('$', '').replace(',', '')
+        date_str = row.get(date_col, '').strip()
+        invoice_number = row.get(invoice_col, '').strip() if invoice_col else ''
+
+        try:
+            amount = Decimal(amount_str)
+            date = self._parse_date(date_str)
+
+            if not date:
+                return False
+
+            # Check for existing transaction
+            query = Transaction.objects.filter(
+                organization=organization,
+                supplier__name__iexact=supplier_name,
+                category__name__iexact=category_name,
+                amount=amount,
+                date=date
+            )
+
+            if invoice_number:
+                query = query.filter(invoice_number=invoice_number)
+
+            return query.exists()
+
+        except (InvalidOperation, ValueError):
+            return False
+
+    def _process_csv_sync(self, file, mapping, organization, user, upload, skip_invalid=True):
+        """Process CSV file synchronously."""
+        content = file.read().decode('utf-8-sig')
+        reader = csv.DictReader(io.StringIO(content))
+
+        successful = 0
+        failed = 0
+        duplicates = 0
+        errors = []
+
+        # Get column mappings
+        supplier_col = next((k for k, v in mapping.items() if v == 'supplier'), None)
+        category_col = next((k for k, v in mapping.items() if v == 'category'), None)
+        amount_col = next((k for k, v in mapping.items() if v == 'amount'), None)
+        date_col = next((k for k, v in mapping.items() if v == 'date'), None)
+        description_col = next((k for k, v in mapping.items() if v == 'description'), None)
+        invoice_col = next((k for k, v in mapping.items() if v == 'invoice_number'), None)
+        fiscal_year_col = next((k for k, v in mapping.items() if v == 'fiscal_year'), None)
+
+        with transaction.atomic():
+            for row_num, row in enumerate(reader, start=2):
+                try:
+                    # Validate row
+                    row_errors = self._validate_row(row, mapping, organization, row_num)
+                    if row_errors:
+                        errors.extend(row_errors)
+                        if not skip_invalid:
+                            raise ValueError(f"Row {row_num} has validation errors")
+                        failed += 1
+                        continue
+
+                    # Check for duplicates
+                    if self._is_duplicate_row(row, mapping, organization):
+                        duplicates += 1
+                        continue
+
+                    # Get or create supplier
+                    supplier_name = row.get(supplier_col, '').strip()
+                    supplier, _ = Supplier.objects.get_or_create(
+                        organization=organization,
+                        name__iexact=supplier_name,
+                        defaults={'name': supplier_name}
+                    )
+
+                    # Get or create category
+                    category_name = row.get(category_col, '').strip()
+                    category, _ = Category.objects.get_or_create(
+                        organization=organization,
+                        name__iexact=category_name,
+                        defaults={'name': category_name}
+                    )
+
+                    # Parse amount
+                    amount_str = row.get(amount_col, '').strip().replace('$', '').replace(',', '')
+                    amount = Decimal(amount_str)
+
+                    # Parse date
+                    date_str = row.get(date_col, '').strip()
+                    date = self._parse_date(date_str)
+
+                    # Create transaction
+                    trans = Transaction.objects.create(
+                        organization=organization,
+                        supplier=supplier,
+                        category=category,
+                        amount=amount,
+                        date=date,
+                        description=row.get(description_col, '').strip() if description_col else '',
+                        invoice_number=row.get(invoice_col, '').strip() if invoice_col else '',
+                        fiscal_year=row.get(fiscal_year_col, '').strip() if fiscal_year_col else str(date.year),
+                        uploaded_by=user,
+                        upload_batch=upload.batch_id
+                    )
+
+                    successful += 1
+
+                except Exception as e:
+                    failed += 1
+                    errors.append({
+                        'row': row_num,
+                        'field': 'general',
+                        'message': str(e),
+                        'value': ''
+                    })
+                    if not skip_invalid:
+                        raise
+
+        # Update upload record
+        upload.successful_rows = successful
+        upload.failed_rows = failed
+        upload.duplicate_rows = duplicates
+        upload.total_rows = successful + failed + duplicates
+        upload.error_log = json.dumps(errors) if errors else ''
+        upload.completed_at = timezone.now()
+
+        if failed == 0 and duplicates == 0:
+            upload.status = 'completed'
+        elif successful > 0:
+            upload.status = 'partial'
+        else:
+            upload.status = 'failed'
+
+        upload.save()
+
+        return {
+            'successful': successful,
+            'failed': failed,
+            'duplicates': duplicates,
+            'errors': errors
+        }

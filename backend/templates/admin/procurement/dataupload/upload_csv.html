@@ -185,6 +185,29 @@
         margin-bottom: 16px;
         list-style: none;
     }
+
+    /* Selection display label */
+    .selection-display {
+        margin-top: 8px;
+        padding: 10px 14px;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 6px;
+        font-size: 0.95rem;
+        color: #1e40af;
+        font-weight: 500;
+        display: none;
+    }
+
+    .selection-display.visible {
+        display: block;
+    }
+
+    .selection-display::before {
+        content: "Selected: ";
+        color: #6b7280;
+        font-weight: 400;
+    }
 </style>
 {% endblock %}
 
@@ -241,6 +264,7 @@
                 Target Organization
             </label>
             {{ form.organization }}
+            <div id="org-selection-display" class="selection-display"></div>
             {% if form.organization.help_text %}
             <p class="help-text">{{ form.organization.help_text }}</p>
             {% endif %}
@@ -267,4 +291,30 @@
         </div>
     </form>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const orgSelect = document.getElementById('id_organization');
+    const selectionDisplay = document.getElementById('org-selection-display');
+
+    function updateSelectionDisplay() {
+        if (orgSelect && selectionDisplay) {
+            const selectedOption = orgSelect.options[orgSelect.selectedIndex];
+            if (selectedOption && selectedOption.value) {
+                selectionDisplay.textContent = selectedOption.text;
+                selectionDisplay.classList.add('visible');
+            } else {
+                selectionDisplay.textContent = '';
+                selectionDisplay.classList.remove('visible');
+            }
+        }
+    }
+
+    if (orgSelect) {
+        orgSelect.addEventListener('change', updateSelectionDisplay);
+        // Initial state
+        updateSelectionDisplay();
+    }
+});
+</script>
 {% endblock %}

@@ -153,6 +153,54 @@
         text-align: center;
         border-top: 1px solid #e5e7eb;
     }
+
+    /* Form inputs - override Django's color-scheme for visibility */
+    select,
+    input[type="text"],
+    input[type="password"],
+    input[type="email"],
+    input[type="number"],
+    textarea {
+        background-color: #ffffff !important;
+        color: #1f2937 !important;
+        border: 1px solid #d1d5db !important;
+        color-scheme: light !important;
+    }
+
+    select option {
+        background-color: #ffffff !important;
+        color: #1f2937 !important;
+    }
+
+    /* Specific admin form fields */
+    #id_organization,
+    #id_confirmation,
+    #organization-select,
+    #template-select,
+    .vTextField,
+    .vIntegerField,
+    .vForeignKeyRawIdAdminField {
+        background-color: #ffffff !important;
+        color: #1f2937 !important;
+        border: 1px solid #d1d5db !important;
+        color-scheme: light !important;
+        -webkit-appearance: menulist !important;
+        appearance: menulist !important;
+    }
+
+    #id_organization option,
+    #id_confirmation option,
+    #organization-select option,
+    #template-select option {
+        background-color: #ffffff !important;
+        color: #1f2937 !important;
+    }
+
+    /* Placeholder text styling */
+    select option[value=""],
+    input::placeholder {
+        color: #6b7280 !important;
+    }
 </style>
 {% endblock %}
 
@@ -163,6 +211,30 @@
 {% endblock %}
 
 {% block nav-global %}{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<script>
+    // Override Django's color-scheme for form visibility
+    document.addEventListener('DOMContentLoaded', function() {
+        // Force all select and input elements to use light color-scheme
+        const formElements = document.querySelectorAll('select, input[type="text"], input[type="password"], textarea');
+        formElements.forEach(function(el) {
+            el.style.setProperty('color-scheme', 'light', 'important');
+            el.style.setProperty('background-color', '#ffffff', 'important');
+            el.style.setProperty('color', '#1f2937', 'important');
+            el.style.setProperty('border', '1px solid #d1d5db', 'important');
+        });
+
+        // Style all options
+        const options = document.querySelectorAll('option');
+        options.forEach(function(opt) {
+            opt.style.setProperty('background-color', '#ffffff', 'important');
+            opt.style.setProperty('color', '#1f2937', 'important');
+        });
+    });
+</script>
+{% endblock %}
 
 {% block footer %}
 <div id="footer">

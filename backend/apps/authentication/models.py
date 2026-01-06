@@ -104,13 +104,23 @@ class AuditLog(models.Model):
         ('upload', 'Upload'),
         ('export', 'Export'),
         ('view', 'View'),
+        ('reset', 'Reset'),           # Organization reset
+        ('bulk_delete', 'Bulk Delete'),  # Delete all data
     ]
 
     # Allowed keys for the details JSONField (security: prevent arbitrary data injection)
     ALLOWED_DETAIL_KEYS = {
         'file_name', 'successful', 'failed', 'duplicate', 'batch_id', 'record_id',
         'changes', 'count', 'username', 'error', 'old_value', 'new_value',
-        'reason', 'target_id', 'target_type', 'organizations_affected'
+        'reason', 'target_id', 'target_type', 'organizations_affected',
+        # AI & Predictive Analytics keys
+        'months', 'category_id', 'supplier_id', 'annual_budget', 'days',
+        'contract_id', 'violation_id', 'resolved', 'severity', 'sensitivity',
+        'insight_count', 'resolution_notes',
+        # Data Upload Center keys
+        'organization_name', 'deleted_counts', 'transactions_deleted', 'uploads_deleted',
+        'suppliers_deleted', 'categories_deleted', 'templates_deleted', 'contracts_deleted',
+        'duplicates', 'template_name', 'mapping_snapshot', 'processing_mode'
     }
 
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='audit_logs')

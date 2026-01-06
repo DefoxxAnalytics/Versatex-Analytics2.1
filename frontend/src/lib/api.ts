@@ -83,6 +83,12 @@ export interface UserPreferences {
   dateFormat?: string;
   dashboardLayout?: Record<string, unknown>;
   sidebarCollapsed?: boolean;
+  // AI & Predictive Analytics Settings
+  forecastingModel?: 'simple' | 'standard';
+  useExternalAI?: boolean;
+  aiProvider?: 'anthropic' | 'openai';
+  forecastHorizonMonths?: number;
+  anomalySensitivity?: number;
 }
 
 // Supplier
@@ -299,6 +305,397 @@ export interface ConsolidationOpportunity {
   total_spend: number;
   suppliers: ConsolidationSupplier[];
   potential_savings: number;
+}
+
+// AI Insights types
+export type AIInsightType = 'cost_optimization' | 'risk' | 'anomaly' | 'consolidation';
+export type AIInsightSeverity = 'high' | 'medium' | 'low';
+
+export interface AIInsight {
+  id: string;
+  type: AIInsightType;
+  severity: AIInsightSeverity;
+  confidence: number;
+  title: string;
+  description: string;
+  potential_savings: number;
+  affected_entities: string[];
+  recommended_actions: string[];
+  data?: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface AIInsightsSummary {
+  total_insights: number;
+  high_priority: number;
+  total_potential_savings: number;
+  by_type: Record<AIInsightType, number>;
+}
+
+export interface AIInsightsResponse {
+  insights: AIInsight[];
+  summary: AIInsightsSummary;
+}
+
+export interface AIInsightsListResponse {
+  insights: AIInsight[];
+  count: number;
+  sensitivity?: number;
+}
+
+// Predictive Analytics types
+export type TrendDirection = 'increasing' | 'decreasing' | 'stable';
+
+export interface ForecastPoint {
+  month: string;
+  predicted_spend: number;
+  lower_bound_80: number;
+  upper_bound_80: number;
+  lower_bound_95: number;
+  upper_bound_95: number;
+}
+
+export interface TrendInfo {
+  direction: TrendDirection;
+  monthly_change_rate: number;
+  seasonality_detected?: boolean;
+  peak_months?: string[];
+}
+
+export interface ModelAccuracy {
+  mape: number | null;
+  data_points_used: number;
+  r_squared?: number | null;
+}
+
+export interface SpendingForecastResponse {
+  forecast: ForecastPoint[];
+  trend: TrendInfo;
+  model_accuracy: ModelAccuracy;
+}
+
+export interface CategoryForecastResponse extends SpendingForecastResponse {
+  category_id: number;
+}
+
+export interface SupplierForecastResponse extends SpendingForecastResponse {
+  supplier_id: number;
+}
+
+export interface CategoryTrend {
+  category_id: number;
+  category_name: string;
+  direction: TrendDirection;
+  change_rate: number;
+}
+
+export interface SupplierTrend {
+  supplier_id: number;
+  supplier_name: string;
+  direction: TrendDirection;
+  change_rate: number;
+}
+
+export interface GrowthMetrics {
+  yoy_growth?: number;
+  six_month_growth?: number;
+  three_month_growth?: number;
+}
+
+export interface TrendAnalysisResponse {
+  overall_trend: {
+    direction: TrendDirection;
+    change_rate: number;
+    r_squared: number;
+  };
+  category_trends: CategoryTrend[];
+  supplier_trends: SupplierTrend[];
+  growth_metrics: GrowthMetrics;
+}
+
+export interface BudgetProjectionResponse {
+  annual_budget: number;
+  monthly_budget: number;
+  ytd_spend: number;
+  ytd_budget: number;
+  variance: number;
+  variance_percentage: number;
+  projected_year_end: number;
+  projected_variance: number;
+  months_elapsed: number;
+  months_remaining: number;
+  status: 'under_budget' | 'over_budget' | 'on_track' | 'no_data';
+  monthly_forecast: ForecastPoint[];
+}
+
+// Contract Analytics types
+export type ContractStatus = 'draft' | 'active' | 'expiring' | 'expired' | 'renewed' | 'terminated';
+
+export interface Contract {
+  id: number;
+  uuid: string;
+  contract_number: string;
+  title: string;
+  supplier_id: number;
+  supplier_name: string;
+  total_value: number;
+  annual_value: number | null;
+  start_date: string;
+  end_date: string;
+  renewal_notice_days: number;
+  status: ContractStatus;
+  auto_renew: boolean;
+  categories: string[];
+  days_until_expiry: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContractOverview {
+  total_contracts: number;
+  active_contracts: number;
+  total_value: number;
+  annual_value: number;
+  expiring_soon: number;
+  expired: number;
+  coverage_percentage: number;
+  total_contracted_spend: number;
+  off_contract_spend: number;
+}
+
+export interface ContractListItem {
+  id: number;
+  uuid: string;
+  contract_number: string;
+  title: string;
+  supplier_name: string;
+  total_value: number;
+  status: ContractStatus;
+  start_date: string;
+  end_date: string;
+  days_until_expiry: number;
+  utilization_percentage: number;
+}
+
+export interface ContractDetail extends Contract {
+  actual_spend: number;
+  utilization_percentage: number;
+  monthly_spend: { month: string; amount: number }[];
+  category_breakdown: { category: string; amount: number }[];
+  remaining_value: number;
+  average_monthly_spend: number;
+}
+
+export interface ExpiringContract {
+  id: number;
+  contract_number: string;
+  title: string;
+  supplier_name: string;
+  end_date: string;
+  days_until_expiry: number;
+  total_value: number;
+  actual_spend: number;
+  utilization_percentage: number;
+  renewal_notice_days: number;
+  auto_renew: boolean;
+  recommendation: 'renew' | 'renegotiate' | 'terminate' | 'review';
+  recommendation_reason: string;
+}
+
+export interface ContractPerformance {
+  contract_id: number;
+  contract_number: string;
+  title: string;
+  total_value: number;
+  actual_spend: number;
+  utilization_percentage: number;
+  remaining_value: number;
+  monthly_trend: { month: string; amount: number; cumulative: number }[];
+  supplier_performance: {
+    on_time_delivery_rate: number;
+    quality_score: number;
+    transaction_count: number;
+  };
+  run_rate: number;
+  projected_spend: number;
+  variance_at_expiry: number;
+}
+
+export interface ContractSavingsOpportunity {
+  type: 'underutilized' | 'off_contract' | 'consolidation' | 'price_variance';
+  title: string;
+  description: string;
+  potential_savings: number;
+  affected_contracts?: number[];
+  affected_suppliers?: string[];
+  affected_categories?: string[];
+  confidence: number;
+  recommended_action: string;
+}
+
+export interface ContractSavingsResponse {
+  opportunities: ContractSavingsOpportunity[];
+  total_potential_savings: number;
+  opportunity_count: number;
+}
+
+export interface RenewalRecommendation {
+  contract_id: number;
+  contract_number: string;
+  title: string;
+  supplier_name: string;
+  end_date: string;
+  days_until_expiry: number;
+  total_value: number;
+  actual_spend: number;
+  utilization_percentage: number;
+  recommendation: 'renew' | 'renegotiate' | 'terminate' | 'review';
+  recommendation_reason: string;
+  suggested_new_value: number | null;
+  priority: 'high' | 'medium' | 'low';
+}
+
+export interface ContractVsActualItem {
+  contract_id: number;
+  contract_number: string;
+  title: string;
+  contracted_value: number;
+  actual_spend: number;
+  variance: number;
+  variance_percentage: number;
+  status: 'over' | 'under' | 'on_track';
+}
+
+export interface ContractVsActualResponse {
+  contracts: ContractVsActualItem[];
+  summary: {
+    total_contracted: number;
+    total_actual: number;
+    total_variance: number;
+    overall_utilization: number;
+  };
+  monthly_comparison?: { month: string; contracted: number; actual: number }[];
+}
+
+// Compliance types
+export type ViolationType = 'amount_exceeded' | 'non_preferred_supplier' | 'restricted_category' | 'no_contract' | 'approval_missing';
+export type ViolationSeverity = 'critical' | 'high' | 'medium' | 'low';
+export type RiskLevel = 'high' | 'medium' | 'low';
+
+export interface ComplianceOverview {
+  total_transactions: number;
+  total_spend: number;
+  compliance_rate: number;
+  total_violations: number;
+  unresolved_violations: number;
+  resolved_today: number;
+  severity_breakdown: {
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+  };
+  maverick_spend: number;
+  maverick_percentage: number;
+  on_contract_spend: number;
+  active_policies: number;
+}
+
+export interface MaverickSupplier {
+  supplier_id: number;
+  supplier_name: string;
+  spend: number;
+  transaction_count: number;
+}
+
+export interface MaverickCategory {
+  category_id: number;
+  category_name: string;
+  spend: number;
+  transaction_count: number;
+}
+
+export interface MaverickRecommendation {
+  type: 'contract_negotiation' | 'category_coverage' | 'spend_consolidation';
+  title: string;
+  description: string;
+  potential_savings: number;
+  affected_suppliers?: string[];
+  affected_categories?: string[];
+  priority: 'high' | 'medium' | 'low';
+}
+
+export interface MaverickSpendAnalysis {
+  total_maverick_spend: number;
+  total_on_contract_spend: number;
+  maverick_percentage: number;
+  maverick_suppliers: MaverickSupplier[];
+  maverick_supplier_count: number;
+  maverick_categories: MaverickCategory[];
+  on_contract_suppliers: MaverickSupplier[];
+  recommendations: MaverickRecommendation[];
+}
+
+export interface PolicyViolation {
+  id: number;
+  uuid: string;
+  transaction_id: number;
+  transaction_date: string;
+  transaction_amount: number;
+  supplier_name: string;
+  category_name: string;
+  policy_name: string;
+  violation_type: ViolationType;
+  violation_type_display: string;
+  severity: ViolationSeverity;
+  details: Record<string, unknown>;
+  is_resolved: boolean;
+  resolved_at: string | null;
+  resolution_notes: string;
+  created_at: string;
+}
+
+export interface ViolationTrendMonth {
+  month: string;
+  total: number;
+  resolved: number;
+  resolution_rate: number;
+  critical: number;
+  high: number;
+}
+
+export interface ViolationTrends {
+  monthly_trend: ViolationTrendMonth[];
+  by_type: {
+    amount_exceeded: number;
+    non_preferred_supplier: number;
+    restricted_category: number;
+    no_contract: number;
+    approval_missing: number;
+  };
+}
+
+export interface SupplierComplianceScore {
+  supplier_id: number;
+  supplier_name: string;
+  compliance_score: number;
+  transaction_count: number;
+  violation_count: number;
+  unresolved_violations: number;
+  has_contract: boolean;
+  total_spend: number;
+  risk_level: RiskLevel;
+}
+
+export interface SpendingPolicy {
+  id: number;
+  uuid: string;
+  name: string;
+  description: string;
+  is_active: boolean;
+  rules_summary: string[];
+  violation_count: number;
+  created_at: string;
 }
 
 // Paginated response
@@ -533,6 +930,82 @@ export const analyticsAPI = {
 
   getConsolidation: (): Promise<AxiosResponse<ConsolidationOpportunity[]>> =>
     api.get('/analytics/consolidation/'),
+
+  // AI Insights endpoints
+  getAIInsights: (): Promise<AxiosResponse<AIInsightsResponse>> =>
+    api.get('/analytics/ai-insights/'),
+
+  getAIInsightsCost: (): Promise<AxiosResponse<AIInsightsListResponse>> =>
+    api.get('/analytics/ai-insights/cost/'),
+
+  getAIInsightsRisk: (): Promise<AxiosResponse<AIInsightsListResponse>> =>
+    api.get('/analytics/ai-insights/risk/'),
+
+  getAIInsightsAnomalies: (sensitivity: number = 2.0): Promise<AxiosResponse<AIInsightsListResponse>> =>
+    api.get('/analytics/ai-insights/anomalies/', { params: { sensitivity } }),
+
+  // Predictive Analytics endpoints
+  getSpendingForecast: (months: number = 6): Promise<AxiosResponse<SpendingForecastResponse>> =>
+    api.get('/analytics/predictions/spending/', { params: { months } }),
+
+  getCategoryForecast: (categoryId: number, months: number = 6): Promise<AxiosResponse<CategoryForecastResponse>> =>
+    api.get(`/analytics/predictions/category/${categoryId}/`, { params: { months } }),
+
+  getSupplierForecast: (supplierId: number, months: number = 6): Promise<AxiosResponse<SupplierForecastResponse>> =>
+    api.get(`/analytics/predictions/supplier/${supplierId}/`, { params: { months } }),
+
+  getTrendAnalysis: (): Promise<AxiosResponse<TrendAnalysisResponse>> =>
+    api.get('/analytics/predictions/trends/'),
+
+  getBudgetProjection: (annualBudget: number): Promise<AxiosResponse<BudgetProjectionResponse>> =>
+    api.get('/analytics/predictions/budget/', { params: { annual_budget: annualBudget } }),
+
+  // Contract Analytics endpoints
+  getContractOverview: (): Promise<AxiosResponse<ContractOverview>> =>
+    api.get('/analytics/contracts/overview/'),
+
+  getContracts: (): Promise<AxiosResponse<{ contracts: ContractListItem[]; count: number }>> =>
+    api.get('/analytics/contracts/'),
+
+  getContractDetail: (contractId: number): Promise<AxiosResponse<ContractDetail>> =>
+    api.get(`/analytics/contracts/${contractId}/`),
+
+  getExpiringContracts: (days: number = 90): Promise<AxiosResponse<{ contracts: ExpiringContract[]; count: number; days_threshold: number }>> =>
+    api.get('/analytics/contracts/expiring/', { params: { days } }),
+
+  getContractPerformance: (contractId: number): Promise<AxiosResponse<ContractPerformance>> =>
+    api.get(`/analytics/contracts/${contractId}/performance/`),
+
+  getContractSavings: (): Promise<AxiosResponse<ContractSavingsResponse>> =>
+    api.get('/analytics/contracts/savings/'),
+
+  getContractRenewals: (): Promise<AxiosResponse<{ recommendations: RenewalRecommendation[]; count: number }>> =>
+    api.get('/analytics/contracts/renewals/'),
+
+  getContractVsActual: (contractId?: number): Promise<AxiosResponse<ContractVsActualResponse>> =>
+    api.get('/analytics/contracts/vs-actual/', { params: contractId ? { contract_id: contractId } : {} }),
+
+  // Compliance & Maverick Spend endpoints
+  getComplianceOverview: (): Promise<AxiosResponse<ComplianceOverview>> =>
+    api.get('/analytics/compliance/overview/'),
+
+  getMaverickSpendAnalysis: (): Promise<AxiosResponse<MaverickSpendAnalysis>> =>
+    api.get('/analytics/compliance/maverick-spend/'),
+
+  getPolicyViolations: (params?: { resolved?: boolean; severity?: ViolationSeverity; limit?: number }): Promise<AxiosResponse<{ violations: PolicyViolation[]; count: number }>> =>
+    api.get('/analytics/compliance/violations/', { params }),
+
+  resolveViolation: (violationId: number, resolutionNotes: string): Promise<AxiosResponse<{ id: number; is_resolved: boolean; resolved_at: string; resolution_notes: string }>> =>
+    api.post(`/analytics/compliance/violations/${violationId}/resolve/`, { resolution_notes: resolutionNotes }),
+
+  getViolationTrends: (months: number = 12): Promise<AxiosResponse<ViolationTrends>> =>
+    api.get('/analytics/compliance/trends/', { params: { months } }),
+
+  getSupplierComplianceScores: (): Promise<AxiosResponse<{ suppliers: SupplierComplianceScore[]; count: number }>> =>
+    api.get('/analytics/compliance/supplier-scores/'),
+
+  getSpendingPolicies: (): Promise<AxiosResponse<{ policies: SpendingPolicy[]; count: number }>> =>
+    api.get('/analytics/compliance/policies/'),
 };
 
 export default api;

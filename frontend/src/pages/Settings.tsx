@@ -1,5 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useSettings, useUpdateSettings, useResetSettings, type ColorScheme } from '@/hooks/useSettings';
+import {
+  useSettings,
+  useUpdateSettings,
+  useResetSettings,
+  type ColorScheme,
+  type AIProvider,
+  type ForecastingModel,
+} from '@/hooks/useSettings';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,10 +18,25 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { User, Bell, Download, Palette, RotateCcw, Save, Sun, Moon } from 'lucide-react';
+import {
+  User,
+  Bell,
+  Download,
+  Palette,
+  RotateCcw,
+  Save,
+  Sun,
+  Moon,
+  Brain,
+  Sparkles,
+  Key,
+  TrendingUp,
+  AlertTriangle,
+} from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 
 /**
@@ -394,6 +416,238 @@ export default function Settings() {
                 <SelectItem value="pdf">PDF</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* AI & Predictive Analytics Settings */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Brain className="h-5 w-5 text-indigo-600" />
+            <CardTitle>AI & Predictive Analytics</CardTitle>
+          </div>
+          <CardDescription>
+            Configure AI-powered insights and forecasting settings
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Forecasting Model Selection */}
+          <div className="space-y-3">
+            <Label htmlFor="forecastingModel">Forecasting Model</Label>
+            <Select
+              value={settings?.forecastingModel || 'standard'}
+              onValueChange={(value) => {
+                updateSettings.mutate(
+                  { forecastingModel: value as ForecastingModel },
+                  {
+                    onSuccess: () => {
+                      toast.success(`Forecasting model set to ${value === 'standard' ? 'Standard ML' : 'Simple (Moving Average)'}`);
+                    },
+                  }
+                );
+              }}
+            >
+              <SelectTrigger id="forecastingModel" className="w-full sm:w-[280px]">
+                <SelectValue placeholder="Select forecasting model" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="simple">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4" />
+                    <span>Simple (Moving Average)</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="standard">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4" />
+                    <span>Standard ML (Recommended)</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              Standard ML provides more accurate forecasts with trend and seasonality detection
+            </p>
+          </div>
+
+          <Separator />
+
+          {/* External AI Enhancement */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="useExternalAI" className="text-base">
+                  Enable External AI Enhancement
+                </Label>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Use Claude or OpenAI to enhance insights with strategic recommendations
+                </p>
+              </div>
+              <Switch
+                id="useExternalAI"
+                checked={settings?.useExternalAI || false}
+                onCheckedChange={(checked) => {
+                  updateSettings.mutate(
+                    { useExternalAI: checked },
+                    {
+                      onSuccess: () => {
+                        toast.success(`External AI ${checked ? 'enabled' : 'disabled'}`);
+                      },
+                    }
+                  );
+                }}
+              />
+            </div>
+
+            {/* Show AI Provider and API Key only when external AI is enabled */}
+            {settings?.useExternalAI && (
+              <div className="space-y-4 pl-4 border-l-2 border-indigo-200 dark:border-indigo-800">
+                {/* AI Provider Selection */}
+                <div className="space-y-2">
+                  <Label htmlFor="aiProvider">AI Provider</Label>
+                  <Select
+                    value={settings?.aiProvider || 'anthropic'}
+                    onValueChange={(value) => {
+                      updateSettings.mutate(
+                        { aiProvider: value as AIProvider },
+                        {
+                          onSuccess: () => {
+                            const name = value === 'anthropic' ? 'Anthropic (Claude)' : 'OpenAI (GPT)';
+                            toast.success(`AI provider set to ${name}`);
+                          },
+                        }
+                      );
+                    }}
+                  >
+                    <SelectTrigger id="aiProvider" className="w-full sm:w-[280px]">
+                      <SelectValue placeholder="Select AI provider" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="anthropic">
+                        <div className="flex items-center gap-2">
+                          <Brain className="h-4 w-4" />
+                          <span>Anthropic (Claude)</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="openai">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="h-4 w-4" />
+                          <span>OpenAI (GPT)</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* API Key Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="aiApiKey">API Key</Label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="aiApiKey"
+                        type="password"
+                        placeholder={settings?.aiApiKey ? '••••••••••••••••' : 'Enter your API key'}
+                        className="pl-10"
+                        maxLength={200}
+                        onBlur={(e) => {
+                          if (e.target.value) {
+                            updateSettings.mutate(
+                              { aiApiKey: e.target.value },
+                              {
+                                onSuccess: () => {
+                                  toast.success('API key saved securely');
+                                  e.target.value = '';
+                                },
+                              }
+                            );
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    Your API key is stored encrypted and never displayed
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <Separator />
+
+          {/* Forecast Horizon */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="forecastHorizon">Forecast Horizon</Label>
+              <span className="text-sm font-medium">
+                {settings?.forecastHorizonMonths || 6} months
+              </span>
+            </div>
+            <Slider
+              id="forecastHorizon"
+              min={3}
+              max={24}
+              step={1}
+              value={[settings?.forecastHorizonMonths || 6]}
+              onValueChange={(value) => {
+                updateSettings.mutate(
+                  { forecastHorizonMonths: value[0] },
+                  {
+                    onSuccess: () => {
+                      toast.success(`Forecast horizon set to ${value[0]} months`);
+                    },
+                  }
+                );
+              }}
+              className="w-full"
+            />
+            <p className="text-sm text-muted-foreground">
+              How far ahead to forecast spending trends (3-24 months)
+            </p>
+          </div>
+
+          <Separator />
+
+          {/* Anomaly Sensitivity */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="anomalySensitivity">Anomaly Detection Sensitivity</Label>
+              <span className="text-sm font-medium">
+                {settings?.anomalySensitivity || 2} (
+                {(settings?.anomalySensitivity || 2) <= 2
+                  ? 'High'
+                  : (settings?.anomalySensitivity || 2) <= 3
+                    ? 'Medium'
+                    : 'Low'}
+                )
+              </span>
+            </div>
+            <Slider
+              id="anomalySensitivity"
+              min={1}
+              max={5}
+              step={0.5}
+              value={[settings?.anomalySensitivity || 2]}
+              onValueChange={(value) => {
+                updateSettings.mutate(
+                  { anomalySensitivity: value[0] },
+                  {
+                    onSuccess: () => {
+                      const level = value[0] <= 2 ? 'High' : value[0] <= 3 ? 'Medium' : 'Low';
+                      toast.success(`Anomaly sensitivity set to ${level}`);
+                    },
+                  }
+                );
+              }}
+              className="w-full"
+            />
+            <p className="text-sm text-muted-foreground">
+              Lower values detect more anomalies, higher values only flag extreme outliers
+            </p>
           </div>
         </CardContent>
       </Card>

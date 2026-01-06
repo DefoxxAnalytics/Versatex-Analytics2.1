@@ -10,6 +10,16 @@ import { authAPI, type UserPreferences } from '@/lib/api';
 export type ColorScheme = 'navy' | 'classic';
 
 /**
+ * AI Provider type
+ */
+export type AIProvider = 'anthropic' | 'openai';
+
+/**
+ * Forecasting model type
+ */
+export type ForecastingModel = 'simple' | 'standard';
+
+/**
  * User settings interface
  * Defines all configurable user preferences
  */
@@ -35,6 +45,14 @@ export interface UserSettings {
   currency?: string;
   dateFormat?: string;
   timezone?: string;
+
+  // AI & Predictive Analytics Settings
+  forecastingModel: ForecastingModel;
+  useExternalAI: boolean;
+  aiProvider: AIProvider;
+  aiApiKey?: string; // Stored encrypted, never displayed
+  forecastHorizonMonths: number;
+  anomalySensitivity: number;
 }
 
 /**
@@ -49,6 +67,12 @@ const DEFAULT_SETTINGS: UserSettings = {
   currency: 'USD',
   dateFormat: 'MM/DD/YYYY',
   timezone: 'America/New_York',
+  // AI & Predictive Analytics defaults
+  forecastingModel: 'standard',
+  useExternalAI: false,
+  aiProvider: 'anthropic',
+  forecastHorizonMonths: 6,
+  anomalySensitivity: 2,
 };
 
 /**
@@ -108,6 +132,20 @@ function saveSettingsToStorage(settings: Partial<UserSettings>): UserSettings {
       updated.exportFormat = DEFAULT_SETTINGS.exportFormat;
     }
 
+    // Validate AI settings
+    if (settings.forecastingModel && !['simple', 'standard'].includes(settings.forecastingModel)) {
+      updated.forecastingModel = DEFAULT_SETTINGS.forecastingModel;
+    }
+    if (settings.aiProvider && !['anthropic', 'openai'].includes(settings.aiProvider)) {
+      updated.aiProvider = DEFAULT_SETTINGS.aiProvider;
+    }
+    if (settings.forecastHorizonMonths !== undefined) {
+      updated.forecastHorizonMonths = Math.max(3, Math.min(24, settings.forecastHorizonMonths));
+    }
+    if (settings.anomalySensitivity !== undefined) {
+      updated.anomalySensitivity = Math.max(1, Math.min(5, settings.anomalySensitivity));
+    }
+
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(updated));
     return updated;
   } catch (error) {
@@ -128,6 +166,13 @@ function toApiFormat(settings: Partial<UserSettings>): Partial<UserPreferences> 
   if (settings.exportFormat !== undefined) prefs.exportFormat = settings.exportFormat;
   if (settings.currency !== undefined) prefs.currency = settings.currency;
   if (settings.dateFormat !== undefined) prefs.dateFormat = settings.dateFormat;
+  // AI settings
+  if (settings.forecastingModel !== undefined) prefs.forecastingModel = settings.forecastingModel;
+  if (settings.useExternalAI !== undefined) prefs.useExternalAI = settings.useExternalAI;
+  if (settings.aiProvider !== undefined) prefs.aiProvider = settings.aiProvider;
+  if (settings.forecastHorizonMonths !== undefined) prefs.forecastHorizonMonths = settings.forecastHorizonMonths;
+  if (settings.anomalySensitivity !== undefined) prefs.anomalySensitivity = settings.anomalySensitivity;
+  // Note: aiApiKey is handled separately for security (encrypted on backend)
 
   return prefs;
 }
@@ -146,6 +191,12 @@ function fromApiFormat(prefs: UserPreferences): Partial<UserSettings> {
   if (prefs.exportFormat !== undefined) settings.exportFormat = prefs.exportFormat;
   if (prefs.currency !== undefined) settings.currency = prefs.currency;
   if (prefs.dateFormat !== undefined) settings.dateFormat = prefs.dateFormat;
+  // AI settings
+  if (prefs.forecastingModel !== undefined) settings.forecastingModel = prefs.forecastingModel as 'simple' | 'standard';
+  if (prefs.useExternalAI !== undefined) settings.useExternalAI = prefs.useExternalAI;
+  if (prefs.aiProvider !== undefined) settings.aiProvider = prefs.aiProvider as 'anthropic' | 'openai';
+  if (prefs.forecastHorizonMonths !== undefined) settings.forecastHorizonMonths = prefs.forecastHorizonMonths;
+  if (prefs.anomalySensitivity !== undefined) settings.anomalySensitivity = prefs.anomalySensitivity;
 
   return settings;
 }
