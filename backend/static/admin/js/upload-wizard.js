@@ -478,8 +478,9 @@ const UploadWizard = {
             }
 
             const select = document.createElement('select');
-            select.className = 'form-select';
+            select.className = 'form-select mapping-select';
             select.dataset.targetField = field.key;
+            select.id = 'mapping-select-' + field.key;
 
             // Apply dark theme styling
             this.applyDarkSelectStyle(select);
@@ -505,10 +506,34 @@ const UploadWizard = {
                 select.appendChild(option);
             });
 
-            select.addEventListener('change', (e) => this.updateMapping(field.key, e.target.value));
+            // Create selection display label (workaround for invisible dropdown text)
+            const selectionDisplay = document.createElement('div');
+            selectionDisplay.className = 'mapping-selection-display';
+            selectionDisplay.id = 'mapping-display-' + field.key;
+            if (mappedColumn) {
+                selectionDisplay.textContent = mappedColumn;
+                selectionDisplay.classList.add('visible');
+            }
+
+            // Update selection display on change
+            select.addEventListener('change', (e) => {
+                const selectedValue = e.target.value;
+                const display = document.getElementById('mapping-display-' + field.key);
+                if (display) {
+                    if (selectedValue) {
+                        display.textContent = selectedValue;
+                        display.classList.add('visible');
+                    } else {
+                        display.textContent = '';
+                        display.classList.remove('visible');
+                    }
+                }
+                this.updateMapping(field.key, selectedValue);
+            });
 
             item.appendChild(label);
             item.appendChild(select);
+            item.appendChild(selectionDisplay);
             grid.appendChild(item);
         });
     },

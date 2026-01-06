@@ -1,16 +1,29 @@
 /**
  * Custom hooks for Contract Analytics data from Django API
+ *
+ * All hooks include organization_id in query keys to properly
+ * invalidate cache when switching organizations (superuser feature).
  */
 import { useQuery } from '@tanstack/react-query';
-import { analyticsAPI } from '@/lib/api';
+import { analyticsAPI, getOrganizationParam } from '@/lib/api';
 import type { ContractStatus } from '@/lib/api';
+
+/**
+ * Get the current organization ID for query key inclusion.
+ * Returns undefined if viewing own org (default behavior).
+ */
+function getOrgKeyPart(): number | undefined {
+  const param = getOrganizationParam();
+  return param.organization_id;
+}
 
 /**
  * Get contract portfolio overview
  */
 export function useContractOverview() {
+  const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['contract-overview'],
+    queryKey: ['contract-overview', { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getContractOverview();
       return response.data;
@@ -24,8 +37,9 @@ export function useContractOverview() {
  * Get list of all contracts
  */
 export function useContracts() {
+  const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['contracts-list'],
+    queryKey: ['contracts-list', { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getContracts();
       return response.data;
@@ -38,8 +52,9 @@ export function useContracts() {
  * Get detailed information for a specific contract
  */
 export function useContractDetail(contractId: number | null) {
+  const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['contract-detail', contractId],
+    queryKey: ['contract-detail', contractId, { orgId }],
     queryFn: async () => {
       if (!contractId) return null;
       const response = await analyticsAPI.getContractDetail(contractId);
@@ -54,8 +69,9 @@ export function useContractDetail(contractId: number | null) {
  * Get contracts expiring within specified days
  */
 export function useExpiringContracts(days: number = 90) {
+  const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['expiring-contracts', days],
+    queryKey: ['expiring-contracts', days, { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getExpiringContracts(days);
       return response.data;
@@ -68,8 +84,9 @@ export function useExpiringContracts(days: number = 90) {
  * Get performance metrics for a specific contract
  */
 export function useContractPerformance(contractId: number | null) {
+  const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['contract-performance', contractId],
+    queryKey: ['contract-performance', contractId, { orgId }],
     queryFn: async () => {
       if (!contractId) return null;
       const response = await analyticsAPI.getContractPerformance(contractId);
@@ -84,8 +101,9 @@ export function useContractPerformance(contractId: number | null) {
  * Get contract savings opportunities
  */
 export function useContractSavings() {
+  const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['contract-savings'],
+    queryKey: ['contract-savings', { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getContractSavings();
       return response.data;
@@ -98,8 +116,9 @@ export function useContractSavings() {
  * Get contract renewal recommendations
  */
 export function useContractRenewals() {
+  const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['contract-renewals'],
+    queryKey: ['contract-renewals', { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getContractRenewals();
       return response.data;
@@ -112,8 +131,9 @@ export function useContractRenewals() {
  * Get contract vs actual spend comparison
  */
 export function useContractVsActual(contractId?: number) {
+  const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['contract-vs-actual', contractId],
+    queryKey: ['contract-vs-actual', contractId, { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getContractVsActual(contractId);
       return response.data;

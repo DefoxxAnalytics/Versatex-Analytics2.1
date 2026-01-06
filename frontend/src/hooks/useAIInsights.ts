@@ -1,16 +1,29 @@
 /**
  * Custom hooks for AI Insights data from Django API
+ *
+ * All hooks include organization_id in query keys to properly
+ * invalidate cache when switching organizations (superuser feature).
  */
 import { useQuery } from '@tanstack/react-query';
-import { analyticsAPI } from '@/lib/api';
+import { analyticsAPI, getOrganizationParam } from '@/lib/api';
 import type { AIInsight, AIInsightType } from '@/lib/api';
+
+/**
+ * Get the current organization ID for query key inclusion.
+ * Returns undefined if viewing own org (default behavior).
+ */
+function getOrgKeyPart(): number | undefined {
+  const param = getOrganizationParam();
+  return param.organization_id;
+}
 
 /**
  * Get all AI insights combined
  */
 export function useAIInsights() {
+  const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['ai-insights'],
+    queryKey: ['ai-insights', { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getAIInsights();
       return response.data;
@@ -24,8 +37,9 @@ export function useAIInsights() {
  * Get cost optimization insights only
  */
 export function useAIInsightsCost() {
+  const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['ai-insights-cost'],
+    queryKey: ['ai-insights-cost', { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getAIInsightsCost();
       return response.data;
@@ -38,8 +52,9 @@ export function useAIInsightsCost() {
  * Get supplier risk insights only
  */
 export function useAIInsightsRisk() {
+  const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['ai-insights-risk'],
+    queryKey: ['ai-insights-risk', { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getAIInsightsRisk();
       return response.data;
@@ -52,8 +67,9 @@ export function useAIInsightsRisk() {
  * Get anomaly detection insights
  */
 export function useAIInsightsAnomalies(sensitivity: number = 2.0) {
+  const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['ai-insights-anomalies', sensitivity],
+    queryKey: ['ai-insights-anomalies', sensitivity, { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getAIInsightsAnomalies(sensitivity);
       return response.data;

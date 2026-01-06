@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -12,8 +13,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   useContractOverview,
   useContracts,
+  useContractDetail,
   useExpiringContracts,
   useContractSavings,
   useContractRenewals,
@@ -38,6 +47,9 @@ import {
   Calendar,
   Building2,
   PiggyBank,
+  X,
+  Info,
+  Users,
 } from 'lucide-react';
 import {
   BarChart,
@@ -152,9 +164,179 @@ function OverviewSection() {
   );
 }
 
+function ContractDetailModal({
+  contractId,
+  isOpen,
+  onClose,
+}: {
+  contractId: number | null;
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const { data: contract, isLoading } = useContractDetail(contractId);
+
+  if (!isOpen) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5 text-blue-600" />
+            Contract Details
+          </DialogTitle>
+          <DialogDescription>
+            Full contract information and performance metrics
+          </DialogDescription>
+        </DialogHeader>
+
+        {isLoading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-8 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+        ) : !contract ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Info className="mx-auto h-12 w-12 mb-4 opacity-50" />
+            <p>Contract details not available</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Header Info */}
+            <div className="border-b pb-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-lg font-semibold">{contract.title}</h3>
+                <Badge className={`${getContractStatusDisplay(contract.status).color} ${getContractStatusDisplay(contract.status).bgColor}`}>
+                  {getContractStatusDisplay(contract.status).label}
+                </Badge>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                <span>{contract.contract_number}</span>
+                <span className="mx-2">•</span>
+                <span>{contract.supplier_name}</span>
+              </div>
+            </div>
+
+            {/* Key Metrics */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-3 rounded-lg bg-muted/50">
+                <div className="text-xs text-muted-foreground">Total Value</div>
+                <div className="text-lg font-bold">{formatCurrency(contract.total_value)}</div>
+              </div>
+              <div className="p-3 rounded-lg bg-muted/50">
+                <div className="text-xs text-muted-foreground">Actual Spend</div>
+                <div className="text-lg font-bold">{formatCurrency(contract.actual_spend || 0)}</div>
+              </div>
+              <div className="p-3 rounded-lg bg-muted/50">
+                <div className="text-xs text-muted-foreground">Remaining</div>
+                <div className="text-lg font-bold text-green-600">
+                  {formatCurrency(contract.remaining_value || 0)}
+                </div>
+              </div>
+              <div className="p-3 rounded-lg bg-muted/50">
+                <div className="text-xs text-muted-foreground">Utilization</div>
+                <div className={`text-lg font-bold ${getUtilizationStatus(contract.utilization_percentage).color}`}>
+                  {contract.utilization_percentage.toFixed(1)}%
+                </div>
+              </div>
+            </div>
+
+            {/* Utilization Progress */}
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-muted-foreground">Contract Utilization</span>
+                <span className={getUtilizationStatus(contract.utilization_percentage).color}>
+                  {getUtilizationStatus(contract.utilization_percentage).label}
+                </span>
+              </div>
+              <Progress value={contract.utilization_percentage} className="h-3" />
+            </div>
+
+            {/* Dates & Terms */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-3 rounded-lg border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Contract Period</span>
+                </div>
+                <div className="text-sm">
+                  <div>Start: {new Date(contract.start_date).toLocaleDateString()}</div>
+                  <div>End: {new Date(contract.end_date).toLocaleDateString()}</div>
+                  <div className={`mt-1 ${contract.days_until_expiry <= 30 ? 'text-red-600' : contract.days_until_expiry <= 90 ? 'text-amber-600' : 'text-green-600'}`}>
+                    {formatDaysUntilExpiry(contract.days_until_expiry)}
+                  </div>
+                </div>
+              </div>
+              <div className="p-3 rounded-lg border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Supplier Info</span>
+                </div>
+                <div className="text-sm">
+                  <div className="font-medium">{contract.supplier_name}</div>
+                  {contract.categories && contract.categories.length > 0 && (
+                    <div className="text-muted-foreground">Categories: {contract.categories.join(', ')}</div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Category Breakdown */}
+            {contract.category_breakdown && contract.category_breakdown.length > 0 && (
+              <div className="p-3 rounded-lg border">
+                <div className="text-sm font-medium mb-2">Spend by Category</div>
+                <div className="space-y-2">
+                  {contract.category_breakdown.map((cat, index) => (
+                    <div key={index} className="flex justify-between text-sm">
+                      <span>{cat.category}</span>
+                      <span className="font-medium">{formatCurrency(cat.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Monthly Spend */}
+            {contract.monthly_spend && contract.monthly_spend.length > 0 && (
+              <div className="p-3 rounded-lg border">
+                <div className="text-sm font-medium mb-2">Monthly Spend (Recent)</div>
+                <div className="space-y-2">
+                  {contract.monthly_spend.slice(-6).map((month, index) => (
+                    <div key={index} className="flex justify-between text-sm">
+                      <span>{month.month}</span>
+                      <span className="font-medium">{formatCurrency(month.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+                {contract.average_monthly_spend > 0 && (
+                  <div className="mt-2 pt-2 border-t text-sm flex justify-between">
+                    <span className="text-muted-foreground">Monthly Average</span>
+                    <span className="font-medium">{formatCurrency(contract.average_monthly_spend)}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Auto-renew Badge */}
+            {contract.auto_renew && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 border border-blue-100">
+                <RefreshCw className="h-4 w-4 text-blue-600" />
+                <span className="text-sm text-blue-700">This contract is set to auto-renew</span>
+              </div>
+            )}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ContractsListSection() {
   const { data, isLoading } = useContracts();
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [selectedContractId, setSelectedContractId] = useState<number | null>(null);
 
   const contracts = data?.contracts ?? [];
   const filteredContracts = statusFilter === 'all'
@@ -205,7 +387,7 @@ function ContractsListSection() {
           <div className="text-center py-8 text-muted-foreground">
             <FileText className="mx-auto h-12 w-12 mb-4 opacity-50" />
             <p>No contracts found</p>
-            <p className="text-sm">Contracts can be imported via CSV in Django Admin</p>
+            <p className="text-sm mt-1">Contact your administrator to add contracts to your organization</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -216,7 +398,8 @@ function ContractsListSection() {
               return (
                 <div
                   key={contract.id}
-                  className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                  className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer"
+                  onClick={() => setSelectedContractId(contract.id)}
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
@@ -244,12 +427,24 @@ function ContractsListSection() {
                       {contract.utilization_percentage.toFixed(0)}%
                     </div>
                   </div>
+                  <div className="ml-4">
+                    <Button variant="ghost" size="sm" className="text-muted-foreground">
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               );
             })}
           </div>
         )}
       </CardContent>
+
+      {/* Contract Detail Modal */}
+      <ContractDetailModal
+        contractId={selectedContractId}
+        isOpen={selectedContractId !== null}
+        onClose={() => setSelectedContractId(null)}
+      />
     </Card>
   );
 }

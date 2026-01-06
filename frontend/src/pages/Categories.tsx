@@ -1,18 +1,44 @@
-import { useFilteredProcurementData } from '@/hooks/useProcurementData';
+import { useCategoryDetails } from '@/hooks/useAnalytics';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Package, TrendingUp, DollarSign, Layers, AlertTriangle, Eye, ShieldAlert, Shield, Search, X } from 'lucide-react';
+import { Package, TrendingUp, Layers, AlertTriangle, Eye, ShieldAlert, Shield, Search, X } from 'lucide-react';
 import { useState } from 'react';
+import { SkeletonCard } from '@/components/SkeletonCard';
+import { SkeletonChart } from '@/components/SkeletonChart';
+import type { CategoryDetail } from '@/lib/api';
 
 export default function Categories() {
-  const { data = [] } = useFilteredProcurementData();
+  // Use backend API for accurate category analytics (no data truncation)
+  const { data: categories = [], isLoading } = useCategoryDetails();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  if (data.length === 0) {
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Category Analysis</h1>
+          <p className="text-gray-600 mt-1">Comprehensive category and subcategory spending analysis</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <SkeletonChart height={350} type="pie" />
+          <SkeletonChart height={350} type="bar" />
+        </div>
+      </div>
+    );
+  }
+
+  if (categories.length === 0) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-200px)]">
         <div className="text-center">
@@ -24,106 +50,20 @@ export default function Categories() {
     );
   }
 
-  // Calculate comprehensive category metrics with subcategory analysis
-  const categoryData = data.reduce((acc, record) => {
-    const category = record.category || 'Uncategorized';
-    const subcategory = record.subcategory || 'Unspecified';
-    const supplier = record.supplier || 'Unknown';
-    
-    if (!acc[category]) {
-      acc[category] = {
-        category,
-        totalSpend: 0,
-        transactionCount: 0,
-        subcategories: new Map<string, number>(),
-        suppliers: new Set<string>(),
-        supplierSpend: new Map<string, number>(),
-      };
-    }
-    
-    acc[category].totalSpend += record.amount;
-    acc[category].transactionCount += 1;
-    acc[category].suppliers.add(supplier);
-    
-    // Track subcategory spend
-    const currentSubSpend = acc[category].subcategories.get(subcategory) || 0;
-    acc[category].subcategories.set(subcategory, currentSubSpend + record.amount);
-    
-    // Track supplier spend
-    const currentSupplierSpend = acc[category].supplierSpend.get(supplier) || 0;
-    acc[category].supplierSpend.set(supplier, currentSupplierSpend + record.amount);
-    
-    return acc;
-  }, {} as Record<string, {
-    category: string;
-    totalSpend: number;
-    transactionCount: number;
-    subcategories: Map<string, number>;
-    suppliers: Set<string>;
-    supplierSpend: Map<string, number>;
-  }>);
-
-  const totalSpend = data.reduce((sum, r) => sum + r.amount, 0);
-
-  // Calculate enhanced metrics
-  const categories = Object.values(categoryData)
-    .map(cat => {
-      const subcategoryCount = cat.subcategories.size;
-      const supplierCount = cat.suppliers.size;
-      const avgPerSupplier = supplierCount > 0 ? cat.totalSpend / supplierCount : 0;
-      
-      // Find top subcategory
-      let topSubcategory = '';
-      let topSubSpend = 0;
-      cat.subcategories.forEach((spend, subcat) => {
-        if (spend > topSubSpend) {
-          topSubSpend = spend;
-          topSubcategory = subcat;
-        }
-      });
-      
-      // Calculate concentration (top subcategory as % of category spend)
-      const concentration = cat.totalSpend > 0 ? (topSubSpend / cat.totalSpend) * 100 : 0;
-      
-      // Calculate risk level based on concentration and supplier count
-      let riskLevel: 'Low' | 'Medium' | 'High';
-      if (concentration > 70 || supplierCount < 3) {
-        riskLevel = 'High';
-      } else if (concentration > 50 || supplierCount < 5) {
-        riskLevel = 'Medium';
-      } else {
-        riskLevel = 'Low';
-      }
-      
-      return {
-        ...cat,
-        subcategoryCount,
-        supplierCount,
-        avgPerSupplier,
-        topSubcategory,
-        topSubSpend,
-        concentration,
-        riskLevel,
-        percentage: (cat.totalSpend / totalSpend) * 100,
-        avgTransaction: cat.totalSpend / cat.transactionCount,
-      };
-    })
-    .sort((a, b) => b.totalSpend - a.totalSpend);
-
   // Filter categories based on search query
   const filteredCategories = searchQuery.trim()
-    ? categories.filter(cat => 
+    ? categories.filter(cat =>
         cat.category.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : categories;
 
-  // Calculate summary metrics
+  // Calculate summary metrics from backend data
   const totalCategories = categories.length;
-  const mostComplexCategory = categories.reduce((max, cat) => 
-    cat.subcategoryCount > max.subcategoryCount ? cat : max
+  const mostComplexCategory = categories.reduce((max, cat) =>
+    cat.subcategory_count > max.subcategory_count ? cat : max
   , categories[0]);
-  const avgSubcategories = categories.reduce((sum, cat) => sum + cat.subcategoryCount, 0) / totalCategories;
-  const highestRiskCategory = categories.find(cat => cat.riskLevel === 'High') || categories[0];
+  const avgSubcategories = categories.reduce((sum, cat) => sum + cat.subcategory_count, 0) / totalCategories;
+  const highestRiskCategory = categories.find(cat => cat.risk_level === 'high') || categories[0];
 
   // Colors for charts
   const COLORS = [
@@ -135,82 +75,44 @@ export default function Categories() {
   const topCategories = categories.slice(0, 10);
   const pieData = topCategories.map(cat => ({
     name: cat.category,
-    value: cat.totalSpend,
+    value: cat.total_spend,
   }));
 
   // Risk level colors
   const getRiskColor = (risk: string) => {
     switch (risk) {
-      case 'High': return 'text-red-600 bg-red-50';
-      case 'Medium': return 'text-yellow-600 bg-yellow-50';
-      case 'Low': return 'text-green-600 bg-green-50';
+      case 'high': return 'text-red-600 bg-red-50';
+      case 'medium': return 'text-yellow-600 bg-yellow-50';
+      case 'low': return 'text-green-600 bg-green-50';
       default: return 'text-gray-600 bg-gray-50';
     }
   };
 
   const getRiskIcon = (risk: string) => {
     switch (risk) {
-      case 'High': return <ShieldAlert className="h-4 w-4" />;
-      case 'Medium': return <AlertTriangle className="h-4 w-4" />;
-      case 'Low': return <Shield className="h-4 w-4" />;
+      case 'high': return <ShieldAlert className="h-4 w-4" />;
+      case 'medium': return <AlertTriangle className="h-4 w-4" />;
+      case 'low': return <Shield className="h-4 w-4" />;
       default: return <Shield className="h-4 w-4" />;
     }
   };
 
-  // Calculate modal data for selected category
-  const selectedCategoryData = selectedCategory ? (() => {
-    const categoryInfo = categories.find(c => c.category === selectedCategory);
-    if (!categoryInfo) return null;
+  const getRiskLabel = (risk: string) => {
+    return risk.charAt(0).toUpperCase() + risk.slice(1);
+  };
 
-    const categoryRecords = data.filter(r => r.category === selectedCategory);
-    
-    const subcategoryData = categoryRecords.reduce((acc, record) => {
-      const subcategory = record.subcategory || 'Unspecified';
-      const supplier = record.supplier || 'Unknown';
-      
-      if (!acc[subcategory]) {
-        acc[subcategory] = {
-          subcategory,
-          totalSpend: 0,
-          transactionCount: 0,
-          suppliers: new Set<string>(),
-        };
-      }
-      
-      acc[subcategory].totalSpend += record.amount;
-      acc[subcategory].transactionCount += 1;
-      acc[subcategory].suppliers.add(supplier);
-      
-      return acc;
-    }, {} as Record<string, {
-      subcategory: string;
-      totalSpend: number;
-      transactionCount: number;
-      suppliers: Set<string>;
-    }>);
+  // Get selected category data for modal
+  const selectedCategoryData = selectedCategory
+    ? categories.find(c => c.category === selectedCategory)
+    : null;
 
-    const subcategories = Object.values(subcategoryData)
-      .map(sub => ({
-        ...sub,
-        supplierCount: sub.suppliers.size,
-        avgTransaction: sub.totalSpend / sub.transactionCount,
-        percentage: (sub.totalSpend / categoryInfo.totalSpend) * 100,
-      }))
-      .sort((a, b) => b.totalSpend - a.totalSpend);
-
-    const largestSubcategory = subcategories[0];
-    const subPieData = subcategories.slice(0, 10).map(sub => ({
-      name: sub.subcategory,
-      value: sub.totalSpend,
+  // Prepare subcategory chart data for modal
+  const getSubcategoryChartData = (cat: CategoryDetail) => {
+    return cat.subcategories.slice(0, 10).map(sub => ({
+      name: sub.name,
+      value: sub.spend,
     }));
-
-    return {
-      categoryInfo,
-      subcategories,
-      largestSubcategory,
-      subPieData,
-    };
-  })() : null;
+  };
 
   return (
     <div className="space-y-6">
@@ -247,7 +149,7 @@ export default function Categories() {
               {mostComplexCategory?.category}
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              {mostComplexCategory?.subcategoryCount} subcategories
+              {mostComplexCategory?.subcategory_count} subcategories
             </p>
           </CardContent>
         </Card>
@@ -277,7 +179,7 @@ export default function Categories() {
               {highestRiskCategory?.category}
             </div>
             <p className="text-xs text-red-600 mt-1 font-semibold">
-              {highestRiskCategory?.riskLevel} Risk • {highestRiskCategory?.concentration.toFixed(0)}% concentration
+              {getRiskLabel(highestRiskCategory?.risk_level || 'low')} Risk • {highestRiskCategory?.concentration.toFixed(0)}% concentration
             </p>
           </CardContent>
         </Card>
@@ -299,7 +201,7 @@ export default function Categories() {
                   {cat.category}
                 </div>
                 <div className="text-2xl font-bold text-green-600 mt-2">
-                  {cat.subcategoryCount}
+                  {cat.subcategory_count}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">subcategories</div>
               </div>
@@ -329,16 +231,16 @@ export default function Categories() {
                   dataKey="value"
                   label={false}
                 >
-                  {pieData.map((entry, index) => (
+                  {pieData.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip 
+                <Tooltip
                   formatter={(value: number) => `$${value.toLocaleString()}`}
                   contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '8px' }}
                 />
-                <Legend 
-                  verticalAlign="bottom" 
+                <Legend
+                  verticalAlign="bottom"
                   height={60}
                   iconType="circle"
                   wrapperStyle={{ fontSize: '12px' }}
@@ -357,11 +259,11 @@ export default function Categories() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={350}>
-              <BarChart 
+              <BarChart
                 data={topCategories.map(cat => ({
                   category: cat.category.length > 20 ? cat.category.substring(0, 20) + '...' : cat.category,
-                  spend: cat.totalSpend,
-                }))} 
+                  spend: cat.total_spend,
+                }))}
                 layout="vertical"
               >
                 <CartesianGrid strokeDasharray="3 3" />
@@ -441,30 +343,30 @@ export default function Categories() {
                   <tr key={cat.category} className="hover:bg-blue-50/50 transition-colors">
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{cat.category}</td>
                     <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">
-                      ${cat.totalSpend.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      ${cat.total_spend.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600">
-                      {cat.percentage.toFixed(1)}%
+                      {cat.percent_of_total.toFixed(1)}%
                     </td>
                     <td className="px-4 py-3 text-sm text-right font-semibold text-blue-600">
-                      {cat.subcategoryCount}
+                      {cat.subcategory_count}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 truncate max-w-[150px]" title={cat.topSubcategory}>
-                      {cat.topSubcategory}
+                    <td className="px-4 py-3 text-sm text-gray-700 truncate max-w-[150px]" title={cat.top_subcategory}>
+                      {cat.top_subcategory}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600">
                       {cat.concentration.toFixed(0)}%
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600">
-                      {cat.supplierCount}
+                      {cat.supplier_count}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600">
-                      ${cat.avgPerSupplier.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      ${cat.avg_spend_per_supplier.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${getRiskColor(cat.riskLevel)}`}>
-                        {getRiskIcon(cat.riskLevel)}
-                        {cat.riskLevel}
+                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${getRiskColor(cat.risk_level)}`}>
+                        {getRiskIcon(cat.risk_level)}
+                        {getRiskLabel(cat.risk_level)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -506,7 +408,7 @@ export default function Categories() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold text-gray-900">{selectedCategoryData.subcategories.length}</div>
+                      <div className="text-2xl font-bold text-gray-900">{selectedCategoryData.subcategory_count}</div>
                       <p className="text-xs text-gray-500 mt-1">Unique subcategories</p>
                     </CardContent>
                   </Card>
@@ -519,11 +421,11 @@ export default function Categories() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-sm font-bold text-gray-900 truncate" title={selectedCategoryData.largestSubcategory?.subcategory}>
-                        {selectedCategoryData.largestSubcategory?.subcategory}
+                      <div className="text-sm font-bold text-gray-900 truncate" title={selectedCategoryData.top_subcategory}>
+                        {selectedCategoryData.top_subcategory}
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
-                        ${(selectedCategoryData.largestSubcategory?.totalSpend || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        ${selectedCategoryData.top_subcategory_spend.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                       </p>
                     </CardContent>
                   </Card>
@@ -536,7 +438,7 @@ export default function Categories() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold text-gray-900">{selectedCategoryData.categoryInfo.supplierCount}</div>
+                      <div className="text-2xl font-bold text-gray-900">{selectedCategoryData.supplier_count}</div>
                       <p className="text-xs text-gray-500 mt-1">Across all subcategories</p>
                     </CardContent>
                   </Card>
@@ -545,14 +447,14 @@ export default function Categories() {
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-xs font-semibold text-gray-600">Risk Level</CardTitle>
-                        {getRiskIcon(selectedCategoryData.categoryInfo.riskLevel)}
+                        {getRiskIcon(selectedCategoryData.risk_level)}
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className={`text-xl font-bold ${selectedCategoryData.categoryInfo.riskLevel === 'High' ? 'text-red-600' : selectedCategoryData.categoryInfo.riskLevel === 'Medium' ? 'text-yellow-600' : 'text-green-600'}`}>
-                        {selectedCategoryData.categoryInfo.riskLevel}
+                      <div className={`text-xl font-bold ${selectedCategoryData.risk_level === 'high' ? 'text-red-600' : selectedCategoryData.risk_level === 'medium' ? 'text-yellow-600' : 'text-green-600'}`}>
+                        {getRiskLabel(selectedCategoryData.risk_level)}
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">{selectedCategoryData.categoryInfo.concentration.toFixed(0)}% concentration</p>
+                      <p className="text-xs text-gray-500 mt-1">{selectedCategoryData.concentration.toFixed(0)}% concentration</p>
                     </CardContent>
                   </Card>
                 </div>
@@ -568,7 +470,7 @@ export default function Categories() {
                       <ResponsiveContainer width="100%" height={300}>
                         <PieChart>
                           <Pie
-                            data={selectedCategoryData.subPieData}
+                            data={getSubcategoryChartData(selectedCategoryData)}
                             cx="50%"
                             cy="50%"
                             innerRadius={60}
@@ -577,16 +479,16 @@ export default function Categories() {
                             dataKey="value"
                             label={false}
                           >
-                            {selectedCategoryData.subPieData.map((entry, index) => (
+                            {getSubcategoryChartData(selectedCategoryData).map((_, index) => (
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
                           </Pie>
-                          <Tooltip 
+                          <Tooltip
                             formatter={(value: number) => `$${value.toLocaleString()}`}
                             contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '8px' }}
                           />
-                          <Legend 
-                            verticalAlign="bottom" 
+                          <Legend
+                            verticalAlign="bottom"
                             height={50}
                             iconType="circle"
                             wrapperStyle={{ fontSize: '11px' }}
@@ -604,11 +506,11 @@ export default function Categories() {
                     </CardHeader>
                     <CardContent>
                       <ResponsiveContainer width="100%" height={300}>
-                        <BarChart 
+                        <BarChart
                           data={selectedCategoryData.subcategories.slice(0, 10).map(sub => ({
-                            subcategory: sub.subcategory.length > 20 ? sub.subcategory.substring(0, 20) + '...' : sub.subcategory,
-                            spend: sub.totalSpend,
-                          }))} 
+                            subcategory: sub.name.length > 20 ? sub.name.substring(0, 20) + '...' : sub.name,
+                            spend: sub.spend,
+                          }))}
                           layout="vertical"
                         >
                           <CartesianGrid strokeDasharray="3 3" />
@@ -637,31 +539,23 @@ export default function Categories() {
                             <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">% of Category</th>
                             <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">Transactions</th>
                             <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">Suppliers</th>
-                            <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">Avg/Transaction</th>
-                            <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">Concentration</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                           {selectedCategoryData.subcategories.map((sub) => (
-                            <tr key={sub.subcategory} className="hover:bg-purple-50/50 transition-colors">
-                              <td className="px-4 py-3 text-sm font-medium text-gray-900">{sub.subcategory}</td>
+                            <tr key={sub.name} className="hover:bg-purple-50/50 transition-colors">
+                              <td className="px-4 py-3 text-sm font-medium text-gray-900">{sub.name}</td>
                               <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">
-                                ${sub.totalSpend.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                ${sub.spend.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                               </td>
                               <td className="px-4 py-3 text-sm text-right text-gray-600">
-                                {sub.percentage.toFixed(1)}%
+                                {sub.percent_of_category.toFixed(1)}%
                               </td>
                               <td className="px-4 py-3 text-sm text-right text-gray-600">
-                                {sub.transactionCount.toLocaleString()}
+                                {sub.transaction_count.toLocaleString()}
                               </td>
                               <td className="px-4 py-3 text-sm text-right text-gray-600">
-                                {sub.supplierCount}
-                              </td>
-                              <td className="px-4 py-3 text-sm text-right text-gray-600">
-                                ${sub.avgTransaction.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                              </td>
-                              <td className="px-4 py-3 text-sm text-right text-gray-600">
-                                {sub.percentage.toFixed(0)}%
+                                {sub.supplier_count}
                               </td>
                             </tr>
                           ))}

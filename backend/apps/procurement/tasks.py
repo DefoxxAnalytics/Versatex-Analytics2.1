@@ -66,6 +66,10 @@ def process_csv_upload(self, upload_id, mapping, skip_invalid=True):
         description_col = next((k for k, v in mapping.items() if v == 'description'), None)
         invoice_col = next((k for k, v in mapping.items() if v == 'invoice_number'), None)
         fiscal_year_col = next((k for k, v in mapping.items() if v == 'fiscal_year'), None)
+        subcategory_col = next((k for k, v in mapping.items() if v == 'subcategory'), None)
+        location_col = next((k for k, v in mapping.items() if v == 'location'), None)
+        spend_band_col = next((k for k, v in mapping.items() if v == 'spend_band'), None)
+        payment_method_col = next((k for k, v in mapping.items() if v == 'payment_method'), None)
 
         organization = upload.organization
         user = upload.uploaded_by
@@ -140,6 +144,10 @@ def process_csv_upload(self, upload_id, mapping, skip_invalid=True):
                             description=row.get(description_col, '').strip() if description_col else '',
                             invoice_number=row.get(invoice_col, '').strip() if invoice_col else '',
                             fiscal_year=row.get(fiscal_year_col, '').strip() if fiscal_year_col else str(date.year),
+                            subcategory=row.get(subcategory_col, '').strip() if subcategory_col else '',
+                            location=row.get(location_col, '').strip() if location_col else '',
+                            spend_band=row.get(spend_band_col, '').strip() if spend_band_col else '',
+                            payment_method=row.get(payment_method_col, '').strip() if payment_method_col else '',
                             uploaded_by=user,
                             upload_batch=upload.batch_id
                         )

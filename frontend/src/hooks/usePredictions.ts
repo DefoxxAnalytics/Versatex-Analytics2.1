@@ -1,16 +1,29 @@
 /**
  * Custom hooks for Predictive Analytics data from Django API
+ *
+ * All hooks include organization_id in query keys to properly
+ * invalidate cache when switching organizations (superuser feature).
  */
 import { useQuery } from '@tanstack/react-query';
-import { analyticsAPI } from '@/lib/api';
+import { analyticsAPI, getOrganizationParam } from '@/lib/api';
 import type { TrendDirection } from '@/lib/api';
+
+/**
+ * Get the current organization ID for query key inclusion.
+ * Returns undefined if viewing own org (default behavior).
+ */
+function getOrgKeyPart(): number | undefined {
+  const param = getOrganizationParam();
+  return param.organization_id;
+}
 
 /**
  * Get spending forecast for the next N months
  */
 export function useSpendingForecast(months: number = 6) {
+  const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['spending-forecast', months],
+    queryKey: ['spending-forecast', months, { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getSpendingForecast(months);
       return response.data;
@@ -24,8 +37,9 @@ export function useSpendingForecast(months: number = 6) {
  * Get forecast for a specific category
  */
 export function useCategoryForecast(categoryId: number, months: number = 6) {
+  const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['category-forecast', categoryId, months],
+    queryKey: ['category-forecast', categoryId, months, { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getCategoryForecast(categoryId, months);
       return response.data;
@@ -39,8 +53,9 @@ export function useCategoryForecast(categoryId: number, months: number = 6) {
  * Get forecast for a specific supplier
  */
 export function useSupplierForecast(supplierId: number, months: number = 6) {
+  const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['supplier-forecast', supplierId, months],
+    queryKey: ['supplier-forecast', supplierId, months, { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getSupplierForecast(supplierId, months);
       return response.data;
@@ -54,8 +69,9 @@ export function useSupplierForecast(supplierId: number, months: number = 6) {
  * Get comprehensive trend analysis
  */
 export function useTrendAnalysis() {
+  const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['trend-analysis'],
+    queryKey: ['trend-analysis', { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getTrendAnalysis();
       return response.data;
@@ -68,8 +84,9 @@ export function useTrendAnalysis() {
  * Get budget projection
  */
 export function useBudgetProjection(annualBudget: number) {
+  const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['budget-projection', annualBudget],
+    queryKey: ['budget-projection', annualBudget, { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getBudgetProjection(annualBudget);
       return response.data;

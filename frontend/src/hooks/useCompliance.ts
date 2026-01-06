@@ -1,16 +1,29 @@
 /**
  * Custom hooks for Compliance & Maverick Spend data from Django API
+ *
+ * All hooks include organization_id in query keys to properly
+ * invalidate cache when switching organizations (superuser feature).
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { analyticsAPI } from '@/lib/api';
+import { analyticsAPI, getOrganizationParam } from '@/lib/api';
 import type { ViolationType, ViolationSeverity, RiskLevel } from '@/lib/api';
+
+/**
+ * Get the current organization ID for query key inclusion.
+ * Returns undefined if viewing own org (default behavior).
+ */
+function getOrgKeyPart(): number | undefined {
+  const param = getOrganizationParam();
+  return param.organization_id;
+}
 
 /**
  * Get compliance overview statistics
  */
 export function useComplianceOverview() {
+  const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['compliance-overview'],
+    queryKey: ['compliance-overview', { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getComplianceOverview();
       return response.data;
@@ -24,8 +37,9 @@ export function useComplianceOverview() {
  * Get maverick spend analysis
  */
 export function useMaverickSpendAnalysis() {
+  const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['maverick-spend-analysis'],
+    queryKey: ['maverick-spend-analysis', { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getMaverickSpendAnalysis();
       return response.data;
@@ -42,8 +56,9 @@ export function usePolicyViolations(params?: {
   severity?: ViolationSeverity;
   limit?: number;
 }) {
+  const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['policy-violations', params],
+    queryKey: ['policy-violations', params, { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getPolicyViolations(params);
       return response.data;
@@ -56,8 +71,9 @@ export function usePolicyViolations(params?: {
  * Get violation trends over time
  */
 export function useViolationTrends(months: number = 12) {
+  const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['violation-trends', months],
+    queryKey: ['violation-trends', months, { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getViolationTrends(months);
       return response.data;
@@ -70,8 +86,9 @@ export function useViolationTrends(months: number = 12) {
  * Get supplier compliance scores
  */
 export function useSupplierComplianceScores() {
+  const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['supplier-compliance-scores'],
+    queryKey: ['supplier-compliance-scores', { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getSupplierComplianceScores();
       return response.data;
@@ -84,8 +101,9 @@ export function useSupplierComplianceScores() {
  * Get spending policies
  */
 export function useSpendingPolicies() {
+  const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['spending-policies'],
+    queryKey: ['spending-policies', { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getSpendingPolicies();
       return response.data;

@@ -243,7 +243,45 @@ GitHub Actions workflow runs on push/PR to master:
 Badges:
 - [![CI](https://github.com/DefoxxAnalytics/Versatex_Analytics2.0/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/DefoxxAnalytics/Versatex_Analytics2.0/actions/workflows/ci.yml)
 
-## Recent Updates (v2.0)
+## Recent Updates (v2.1)
+
+### Dashboard Page Enhancements
+- **Backend-Powered Analytics**: All dashboard pages now use pre-computed backend data instead of client-side aggregation
+- **Drill-Down Modals**: Click chart segments/rows to see detailed breakdowns:
+  - Pareto Analysis: Supplier drill-down with category breakdown
+  - Spend Stratification: Segment and band drill-downs
+  - Seasonality: Category drill-down with supplier details + heatmap visualization
+  - Year-over-Year: Category and supplier drill-downs with monthly breakdown
+  - Tail Spend: Category and vendor drill-downs with adjustable threshold slider
+- **Organization Context**: All query keys include org ID for proper cache isolation when switching organizations (superuser feature)
+- **AI Insights**: Savings visualization donut chart, sort dropdown (severity/savings/confidence)
+- **Predictive Analytics**: Model accuracy tooltips explaining MAPE/R² metrics in plain English
+- **Contracts**: Contract detail modal with utilization progress, dates, category breakdown, monthly spend
+- **Maverick Spend**: Batch violation resolution (checkbox selection + bulk resolve with single notes modal)
+
+### New Backend Endpoints
+```
+/api/v1/analytics/pareto/detailed/              # Pareto with supplier drill-down
+/api/v1/analytics/stratification/detailed/      # Stratification with segment/band details
+/api/v1/analytics/seasonality/detailed/         # Seasonality with category drill-down
+/api/v1/analytics/year-over-year/detailed/      # YoY with category/supplier drill-down
+/api/v1/analytics/tail-spend/detailed/          # Tail spend with threshold parameter
+/api/v1/analytics/contracts/overview/           # Contract portfolio overview
+/api/v1/analytics/contracts/<id>/               # Contract detail
+/api/v1/analytics/compliance/overview/          # Compliance statistics
+/api/v1/analytics/compliance/violations/        # Policy violations list
+```
+
+### Frontend Hooks
+- `useDetailedPareto()`, `useParetoDrilldown()` - Pareto analysis
+- `useDetailedStratification()`, `useStratificationDrilldown()` - Spend stratification
+- `useDetailedSeasonality()`, `useSeasonalityCategoryDrilldown()` - Seasonality
+- `useDetailedYearOverYear()`, `useYoYCategoryDrilldown()`, `useYoYSupplierDrilldown()` - YoY
+- `useDetailedTailSpend()`, `useTailSpendCategoryDrilldown()`, `useTailSpendVendorDrilldown()` - Tail spend
+- `useContractOverview()`, `useContracts()`, `useContractDetail()` - Contracts
+- `useComplianceOverview()`, `usePolicyViolations()`, `useResolveViolation()` - Compliance
+
+## Previous Updates (v2.0)
 
 ### Dashboard Enhancements
 - **Data Refresh Button**: Manual refresh in header to pull latest data after admin uploads
@@ -252,7 +290,6 @@ Badges:
 - **Skeleton Loaders**: Polished loading states for cards and charts
 - **Dark Mode Improvements**: ECharts fully respects dark/light theme
 - **Mobile Responsiveness**: Bottom sheet filter pane on mobile devices
-- **Drill-Down Charts**: Click chart segments to see detailed breakdowns
 - **Saved Filter Presets**: Save/load filter combinations (localStorage)
 - **Data Polling**: 60-second polling for new data notifications
 - **User Preferences Sync**: Settings sync to backend UserProfile model

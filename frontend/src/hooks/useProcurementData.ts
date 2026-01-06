@@ -58,8 +58,9 @@ export function useProcurementData() {
     queryKey: QUERY_KEY,
     queryFn: async (): Promise<ProcurementRecord[]> => {
       try {
-        // Fetch all transactions from the backend API
-        // Use a large page_size to get all data (pagination handled by backend)
+        // Fetch transactions from the backend API
+        // Note: This fetches a subset for drill-down functionality.
+        // Summary statistics should use backend analytics API hooks instead.
         const response = await procurementAPI.getTransactions({ page_size: 10000 });
         const transactions = response.data.results;
 

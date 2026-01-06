@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -52,6 +53,8 @@ import {
   UserX,
   FileX,
   AlertCircle,
+  CheckSquare,
+  Square,
 } from 'lucide-react';
 import {
   BarChart,
@@ -359,6 +362,10 @@ function ViolationsSection() {
   const [resolvedFilter, setResolvedFilter] = useState<string>('unresolved');
   const [selectedViolation, setSelectedViolation] = useState<PolicyViolation | null>(null);
   const [resolutionNotes, setResolutionNotes] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [isBatchResolveOpen, setIsBatchResolveOpen] = useState(false);
+  const [batchResolutionNotes, setBatchResolutionNotes] = useState('');
+  const [batchResolving, setBatchResolving] = useState(false);
 
   const resolvedParam = resolvedFilter === 'all' ? undefined : resolvedFilter === 'resolved';
   const severityParam = severityFilter === 'all' ? undefined : severityFilter as ViolationSeverity;
@@ -387,6 +394,51 @@ function ViolationsSection() {
   };
 
   const violations = data?.violations ?? [];
+  const unresolvedViolations = violations.filter(v => !v.is_resolved);
+
+  // Handle select all unresolved violations
+  const handleSelectAll = () => {
+    if (selectedIds.size === unresolvedViolations.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(unresolvedViolations.map(v => v.id)));
+    }
+  };
+
+  // Handle individual checkbox toggle
+  const handleToggleSelect = (id: number) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  // Handle batch resolution
+  const handleBatchResolve = async () => {
+    if (selectedIds.size === 0 || !batchResolutionNotes.trim()) return;
+
+    setBatchResolving(true);
+    try {
+      // Resolve violations sequentially to avoid overwhelming the server
+      const idsArray = Array.from(selectedIds);
+      for (let i = 0; i < idsArray.length; i++) {
+        await resolveViolation.mutateAsync({
+          violationId: idsArray[i],
+          resolutionNotes: batchResolutionNotes.trim(),
+        });
+      }
+      setSelectedIds(new Set());
+      setIsBatchResolveOpen(false);
+      setBatchResolutionNotes('');
+    } catch {
+      // Error handled by mutation
+    } finally {
+      setBatchResolving(false);
+    }
+  };
 
   const getViolationIcon = (type: string) => {
     const icons: Record<string, React.ElementType> = {
@@ -420,38 +472,71 @@ function ViolationsSection() {
     <>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <ShieldAlert className="h-5 w-5" />
-                Policy Violations
-              </CardTitle>
-              <CardDescription>{data?.count ?? 0} violations found</CardDescription>
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldAlert className="h-5 w-5" />
+                  Policy Violations
+                </CardTitle>
+                <CardDescription>{data?.count ?? 0} violations found</CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Select value={resolvedFilter} onValueChange={setResolvedFilter}>
+                  <SelectTrigger className="w-[130px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="unresolved">Unresolved</SelectItem>
+                    <SelectItem value="resolved">Resolved</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={severityFilter} onValueChange={setSeverityFilter}>
+                  <SelectTrigger className="w-[130px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Severity</SelectItem>
+                    <SelectItem value="critical">Critical</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Select value={resolvedFilter} onValueChange={setResolvedFilter}>
-                <SelectTrigger className="w-[130px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="unresolved">Unresolved</SelectItem>
-                  <SelectItem value="resolved">Resolved</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={severityFilter} onValueChange={setSeverityFilter}>
-                <SelectTrigger className="w-[130px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Severity</SelectItem>
-                  <SelectItem value="critical">Critical</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Batch selection controls */}
+            {unresolvedViolations.length > 0 && (
+              <div className="flex items-center justify-between bg-muted/50 p-3 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    id="select-all"
+                    checked={selectedIds.size > 0 && selectedIds.size === unresolvedViolations.length}
+                    onCheckedChange={handleSelectAll}
+                  />
+                  <label htmlFor="select-all" className="text-sm font-medium cursor-pointer">
+                    {selectedIds.size === unresolvedViolations.length && unresolvedViolations.length > 0
+                      ? 'Deselect All'
+                      : `Select All (${unresolvedViolations.length})`}
+                  </label>
+                  {selectedIds.size > 0 && (
+                    <Badge variant="secondary" className="ml-2">
+                      {selectedIds.size} selected
+                    </Badge>
+                  )}
+                </div>
+                {selectedIds.size > 0 && (
+                  <Button
+                    size="sm"
+                    onClick={() => setIsBatchResolveOpen(true)}
+                  >
+                    <CheckSquare className="h-4 w-4 mr-2" />
+                    Resolve Selected ({selectedIds.size})
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -470,10 +555,18 @@ function ViolationsSection() {
                 return (
                   <div
                     key={violation.id}
-                    className={`p-4 rounded-lg border ${violation.is_resolved ? 'bg-muted/30' : 'bg-card'}`}
+                    className={`p-4 rounded-lg border ${violation.is_resolved ? 'bg-muted/30' : 'bg-card'} ${selectedIds.has(violation.id) ? 'ring-2 ring-primary' : ''}`}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
+                        {/* Checkbox for unresolved violations */}
+                        {!violation.is_resolved && (
+                          <Checkbox
+                            checked={selectedIds.has(violation.id)}
+                            onCheckedChange={() => handleToggleSelect(violation.id)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        )}
                         <ViolationIcon className={`h-4 w-4 ${severityDisplay.color}`} />
                         <span className="font-medium">{typeDisplay.label}</span>
                         <Badge className={`${severityDisplay.color} ${severityDisplay.bgColor}`}>
@@ -531,6 +624,7 @@ function ViolationsSection() {
         </CardContent>
       </Card>
 
+      {/* Single violation resolve dialog */}
       <Dialog open={!!selectedViolation} onOpenChange={() => setSelectedViolation(null)}>
         <DialogContent>
           <DialogHeader>
@@ -564,6 +658,57 @@ function ViolationsSection() {
               disabled={!resolutionNotes.trim() || resolveViolation.isPending}
             >
               {resolveViolation.isPending ? 'Resolving...' : 'Resolve'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Batch resolve dialog */}
+      <Dialog open={isBatchResolveOpen} onOpenChange={setIsBatchResolveOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckSquare className="h-5 w-5" />
+              Resolve {selectedIds.size} Violations
+            </DialogTitle>
+            <DialogDescription>
+              Apply the same resolution notes to all selected violations.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="max-h-48 overflow-y-auto space-y-2">
+              {Array.from(selectedIds).map((id) => {
+                const violation = violations.find((v) => v.id === id);
+                if (!violation) return null;
+                return (
+                  <div key={id} className="p-2 rounded bg-muted text-sm flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Badge className={`${getViolationSeverityDisplay(violation.severity).bgColor} ${getViolationSeverityDisplay(violation.severity).color} text-xs`}>
+                        {violation.severity}
+                      </Badge>
+                      <span>{getViolationTypeDisplay(violation.violation_type).label}</span>
+                    </div>
+                    <span className="text-muted-foreground">{formatCurrency(violation.transaction_amount)}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <Textarea
+              placeholder="Enter resolution notes for all selected violations..."
+              value={batchResolutionNotes}
+              onChange={(e) => setBatchResolutionNotes(e.target.value)}
+              rows={4}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsBatchResolveOpen(false)} disabled={batchResolving}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleBatchResolve}
+              disabled={!batchResolutionNotes.trim() || batchResolving}
+            >
+              {batchResolving ? `Resolving ${selectedIds.size}...` : `Resolve All (${selectedIds.size})`}
             </Button>
           </DialogFooter>
         </DialogContent>

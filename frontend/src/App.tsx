@@ -9,6 +9,7 @@ import { DashboardLayout } from "./components/DashboardLayout";
 import { lazy, Suspense } from "react";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { PermissionProvider } from "./contexts/PermissionContext";
+import { OrganizationProvider } from "./contexts/OrganizationContext";
 import { Redirect } from "wouter";
 
 // Lazy load pages for code splitting and performance
@@ -227,10 +228,12 @@ function App() {
         <ThemeProvider defaultTheme="light" switchable>
           <AuthProvider>
             <PermissionProvider>
-              <TooltipProvider>
-                <Toaster />
-                <Router />
-              </TooltipProvider>
+              <OrganizationProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  <Router />
+                </TooltipProvider>
+              </OrganizationProvider>
             </PermissionProvider>
           </AuthProvider>
         </ThemeProvider>

@@ -1,46 +1,43 @@
 /**
  * Overview Page Component
- * 
+ *
  * Main dashboard view showing key procurement metrics and statistics.
- * 
+ *
  * Features:
  * - Summary statistics cards (total spend, suppliers, categories, avg transaction)
  * - Four interactive charts (category, trend, suppliers, distribution)
- * - Real-time data from TanStack Query
+ * - Real-time data from TanStack Query via backend analytics API
  * - Responsive grid layout
  * - Loading and empty states
- * 
+ *
  * Security:
  * - All data validated before display
  * - No XSS vulnerabilities
- * 
+ *
  * Performance:
- * - Memoized calculations
- * - Efficient data transformations
+ * - Server-side aggregations (no client-side data truncation)
  * - Lazy-loaded ECharts
  */
 
 import { useState, useMemo } from 'react';
-import { DollarSign, Users, Package, TrendingUp, Filter, ExternalLink } from 'lucide-react';
+import { DollarSign, Users, Package, TrendingUp, ExternalLink } from 'lucide-react';
 import { useFilteredProcurementData, type ProcurementRecord } from '@/hooks/useProcurementData';
+import {
+  useOverviewStats,
+  useSpendByCategory,
+  useSpendBySupplier,
+  useMonthlyTrend,
+} from '@/hooks/useAnalytics';
 import { usePermissions } from '@/contexts/PermissionContext';
-import { useFilters } from '@/hooks/useFilters';
 import { StatCard } from '@/components/StatCard';
 import { Chart } from '@/components/Chart';
 import { SkeletonCard } from '@/components/SkeletonCard';
 import { SkeletonChart } from '@/components/SkeletonChart';
 import { DrillDownModal } from '@/components/DrillDownModal';
 import {
-  calculateTotalSpend,
-  calculateSupplierCount,
-  calculateCategoryCount,
-  calculateAverageTransaction,
-  applyFilters,
-} from '@/lib/analytics';
-import {
-  getSpendByCategoryConfig,
-  getSpendTrendConfig,
-  getTopSuppliersConfig,
+  getCategoryChartFromAPI,
+  getTrendChartFromAPI,
+  getSupplierChartFromAPI,
   getSpendDistributionConfig,
 } from '@/lib/chartConfigs';
 
@@ -52,10 +49,20 @@ interface DrillDownState {
 }
 
 export default function Overview() {
-  const { data: filteredData = [], isLoading } = useFilteredProcurementData();
-  const { data: filters, isLoading: filtersLoading } = useFilters();
+  // Use backend analytics APIs for accurate aggregations (no data truncation)
+  const { data: overviewStats, isLoading: statsLoading } = useOverviewStats();
+  const { data: categoryData = [], isLoading: categoryLoading } = useSpendByCategory();
+  const { data: supplierData = [], isLoading: supplierLoading } = useSpendBySupplier();
+  const { data: trendData = [], isLoading: trendLoading } = useMonthlyTrend(12);
+
+  // Still use procurement data for drill-down modal functionality
+  const { data: filteredData = [], isLoading: dataLoading } = useFilteredProcurementData();
+
   const { hasPermission } = usePermissions();
   const canAccessAdmin = hasPermission('admin_panel');
+
+  // Combined loading state
+  const isLoading = statsLoading || categoryLoading || supplierLoading || trendLoading;
 
   // Drill-down modal state
   const [drillDown, setDrillDown] = useState<DrillDownState>({
@@ -67,11 +74,11 @@ export default function Overview() {
   // Admin panel URL for data upload
   const adminUploadUrl = `${window.location.protocol}//${window.location.hostname}:8001/admin/procurement/dataupload/upload-csv/`;
 
-  // Calculate statistics from filtered data
-  const totalSpend = calculateTotalSpend(filteredData);
-  const supplierCount = calculateSupplierCount(filteredData);
-  const categoryCount = calculateCategoryCount(filteredData);
-  const avgTransaction = calculateAverageTransaction(filteredData);
+  // Use server-side calculated statistics (accurate, no truncation)
+  const totalSpend = overviewStats?.total_spend ?? 0;
+  const supplierCount = overviewStats?.supplier_count ?? 0;
+  const categoryCount = overviewStats?.category_count ?? 0;
+  const avgTransaction = overviewStats?.avg_transaction ?? 0;
 
   // Filter data for drill-down modal
   const drillDownData = useMemo(() => {
@@ -153,8 +160,10 @@ export default function Overview() {
     );
   }
 
-  // Empty state - no data available
-  if (filteredData.length === 0) {
+  // Empty state - no data available (check backend stats, not truncated frontend data)
+  // Only show "No Data" when we have successfully fetched stats AND transaction_count is explicitly 0
+  const hasNoData = overviewStats !== undefined && overviewStats.transaction_count === 0;
+  if (hasNoData) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center max-w-md">
@@ -183,39 +192,11 @@ export default function Overview() {
     );
   }
 
-  // Empty state - all data filtered out
-  if (filteredData.length === 0) {
-    const resetFilters = () => {
-      // Reset will be handled by FilterPane's reset button
-      window.location.reload();
-    };
-
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center max-w-md">
-          <Filter className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            No Results Found
-          </h2>
-          <p className="text-gray-600 mb-6">
-            No procurement records match your current filters. Try adjusting or clearing the filters.
-          </p>
-          <button
-            onClick={resetFilters}
-            className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
-          >
-            Clear Filters
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Generate chart configurations from filtered data
-  const spendByCategoryConfig = getSpendByCategoryConfig(filteredData);
-  const spendTrendConfig = getSpendTrendConfig(filteredData);
-  const topSuppliersConfig = getTopSuppliersConfig(filteredData);
-  const spendDistributionConfig = getSpendDistributionConfig(filteredData);
+  // Generate chart configurations from backend API data (accurate, no truncation)
+  const spendByCategoryConfig = getCategoryChartFromAPI(categoryData);
+  const spendTrendConfig = getTrendChartFromAPI(trendData);
+  const topSuppliersConfig = getSupplierChartFromAPI(supplierData);
+  const spendDistributionConfig = getSpendDistributionConfig(filteredData); // Still uses client data for distribution tiers
 
   return (
     <div className="space-y-8">

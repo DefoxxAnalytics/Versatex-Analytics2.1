@@ -22,11 +22,18 @@ import {
   ArrowDownRight,
   RefreshCw,
   Info,
+  HelpCircle,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { StatCard } from '@/components/StatCard';
 import { SkeletonCard } from '@/components/SkeletonCard';
 import {
@@ -328,9 +335,19 @@ export default function PredictivePage() {
               </CardDescription>
             </div>
             {model_accuracy.mape && (
-              <Badge variant="outline" className="text-xs">
-                Model Accuracy: {100 - model_accuracy.mape}% (MAPE: {model_accuracy.mape}%)
-              </Badge>
+              <TooltipProvider>
+                <UITooltip>
+                  <TooltipTrigger>
+                    <Badge variant="outline" className="text-xs cursor-help">
+                      Model Accuracy: {(100 - model_accuracy.mape).toFixed(0)}%
+                      <HelpCircle className="h-3 w-3 ml-1 inline" />
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p>Based on MAPE of {model_accuracy.mape}%. A {(100 - model_accuracy.mape).toFixed(0)}% accuracy means predictions are typically within {model_accuracy.mape}% of actual values.</p>
+                  </TooltipContent>
+                </UITooltip>
+              </TooltipProvider>
             )}
           </div>
         </CardHeader>
@@ -569,38 +586,94 @@ export default function PredictivePage() {
       )}
 
       {/* Model Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Info className="h-4 w-4" />
-            Model Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div>
-              <span className="text-gray-500">Data Points Used</span>
-              <p className="font-medium">{model_accuracy.data_points_used} months</p>
-            </div>
-            {model_accuracy.mape && (
+      <TooltipProvider>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Info className="h-4 w-4" />
+              Model Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
-                <span className="text-gray-500">Forecast Error (MAPE)</span>
-                <p className="font-medium">{model_accuracy.mape}%</p>
+                <div className="flex items-center gap-1">
+                  <span className="text-gray-500">Data Points Used</span>
+                  <UITooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="h-3 w-3 text-gray-400" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>The number of historical months used to train the prediction model. More data points generally improve accuracy.</p>
+                    </TooltipContent>
+                  </UITooltip>
+                </div>
+                <p className="font-medium">{model_accuracy.data_points_used} months</p>
               </div>
-            )}
-            {model_accuracy.r_squared && (
+              {model_accuracy.mape && (
+                <div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-gray-500">Forecast Error (MAPE)</span>
+                    <UITooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="h-3 w-3 text-gray-400" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p><strong>Mean Absolute Percentage Error</strong></p>
+                        <p className="mt-1">Measures average prediction error as a percentage. Lower is better:</p>
+                        <ul className="mt-1 text-xs space-y-1">
+                          <li>&lt;10%: Excellent accuracy</li>
+                          <li>10-20%: Good accuracy</li>
+                          <li>20-30%: Reasonable accuracy</li>
+                          <li>&gt;30%: Use with caution</li>
+                        </ul>
+                      </TooltipContent>
+                    </UITooltip>
+                  </div>
+                  <p className="font-medium">{model_accuracy.mape}%</p>
+                </div>
+              )}
+              {model_accuracy.r_squared && (
+                <div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-gray-500">Model Fit (R²)</span>
+                    <UITooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="h-3 w-3 text-gray-400" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p><strong>R-squared (Coefficient of Determination)</strong></p>
+                        <p className="mt-1">Measures how well the model explains spending patterns. Higher is better:</p>
+                        <ul className="mt-1 text-xs space-y-1">
+                          <li>&gt;90%: Excellent fit</li>
+                          <li>70-90%: Good fit</li>
+                          <li>50-70%: Moderate fit</li>
+                          <li>&lt;50%: Weak fit</li>
+                        </ul>
+                      </TooltipContent>
+                    </UITooltip>
+                  </div>
+                  <p className="font-medium">{(model_accuracy.r_squared * 100).toFixed(1)}%</p>
+                </div>
+              )}
               <div>
-                <span className="text-gray-500">Model Fit (R²)</span>
-                <p className="font-medium">{(model_accuracy.r_squared * 100).toFixed(1)}%</p>
+                <div className="flex items-center gap-1">
+                  <span className="text-gray-500">Forecast Horizon</span>
+                  <UITooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="h-3 w-3 text-gray-400" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>How far into the future the model is predicting. Shorter horizons are typically more accurate than longer ones.</p>
+                    </TooltipContent>
+                  </UITooltip>
+                </div>
+                <p className="font-medium">{forecastMonths} months</p>
               </div>
-            )}
-            <div>
-              <span className="text-gray-500">Forecast Horizon</span>
-              <p className="font-medium">{forecastMonths} months</p>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </TooltipProvider>
     </div>
   );
 }

@@ -1,13 +1,186 @@
 /**
  * Chart Configuration Utilities
  * Generates ECharts configurations for various chart types
- * 
+ *
  * Security: All data is validated and sanitized
  * Performance: Optimized configurations for fast rendering
  */
 
 import type { EChartsOption } from 'echarts';
 import type { ProcurementRecord } from '../hooks/useProcurementData';
+import type { SpendByCategory, SpendBySupplier, MonthlyTrend } from './api';
+
+// ============================================================
+// API Data Chart Configs (use pre-aggregated server-side data)
+// ============================================================
+
+/**
+ * Generate Spend by Category Bar Chart from API data
+ */
+export function getCategoryChartFromAPI(data: SpendByCategory[]): EChartsOption {
+  // Data is already sorted by backend
+  const categories = data.map((item) => item.category || 'Uncategorized');
+  const amounts = data.map((item) => item.amount || 0);
+
+  return {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'shadow',
+      },
+      formatter: (params: unknown) => {
+        const p = params as { name: string; value: number }[];
+        const d = p[0];
+        return `${d.name}<br/>$${d.value.toLocaleString()}`;
+      },
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      containLabel: true,
+    },
+    xAxis: {
+      type: 'category',
+      data: categories,
+      axisLabel: {
+        rotate: 45,
+        interval: 0,
+      },
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: {
+        formatter: (value: number) => `$${(value / 1000).toFixed(0)}K`,
+      },
+    },
+    series: [
+      {
+        name: 'Spend',
+        type: 'bar',
+        data: amounts,
+        itemStyle: {
+          color: '#3b82f6',
+        },
+      },
+    ],
+  };
+}
+
+/**
+ * Generate Spend Trend Line Chart from API data
+ */
+export function getTrendChartFromAPI(data: MonthlyTrend[]): EChartsOption {
+  const months = data.map((item) => item.month);
+  const amounts = data.map((item) => item.amount || 0);
+
+  return {
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params: unknown) => {
+        const p = params as { name: string; value: number }[];
+        const d = p[0];
+        return `${d.name}<br/>$${d.value.toLocaleString()}`;
+      },
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      containLabel: true,
+    },
+    xAxis: {
+      type: 'category',
+      data: months,
+      boundaryGap: false,
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: {
+        formatter: (value: number) => `$${(value / 1000).toFixed(0)}K`,
+      },
+    },
+    series: [
+      {
+        name: 'Spend',
+        type: 'line',
+        data: amounts,
+        smooth: true,
+        itemStyle: {
+          color: '#10b981',
+        },
+        areaStyle: {
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(16, 185, 129, 0.3)' },
+              { offset: 1, color: 'rgba(16, 185, 129, 0.05)' },
+            ],
+          },
+        },
+      },
+    ],
+  };
+}
+
+/**
+ * Generate Top Suppliers Horizontal Bar Chart from API data
+ */
+export function getSupplierChartFromAPI(data: SpendBySupplier[], limit: number = 10): EChartsOption {
+  // Take top N suppliers (data is already sorted by backend)
+  const topSuppliers = data.slice(0, limit);
+  const suppliers = topSuppliers.map((item) => item.supplier || 'Unknown');
+  const amounts = topSuppliers.map((item) => item.amount || 0);
+
+  return {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'shadow',
+      },
+      formatter: (params: unknown) => {
+        const p = params as { name: string; value: number }[];
+        const d = p[0];
+        return `${d.name}<br/>$${d.value.toLocaleString()}`;
+      },
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      containLabel: true,
+    },
+    xAxis: {
+      type: 'value',
+      axisLabel: {
+        formatter: (value: number) => `$${(value / 1000).toFixed(0)}K`,
+      },
+    },
+    yAxis: {
+      type: 'category',
+      data: suppliers,
+      inverse: true,
+    },
+    series: [
+      {
+        name: 'Spend',
+        type: 'bar',
+        data: amounts,
+        itemStyle: {
+          color: '#8b5cf6',
+        },
+      },
+    ],
+  };
+}
+
+// ============================================================
+// Legacy Client-Side Chart Configs (for drill-down and filtering)
+// ============================================================
 
 /**
  * Generate Spend by Category Bar Chart configuration

@@ -113,10 +113,14 @@ class AuditLog(models.Model):
         'file_name', 'successful', 'failed', 'duplicate', 'batch_id', 'record_id',
         'changes', 'count', 'username', 'error', 'old_value', 'new_value',
         'reason', 'target_id', 'target_type', 'organizations_affected',
+        # Organization switcher (superuser feature)
+        'organization_id',
         # AI & Predictive Analytics keys
         'months', 'category_id', 'supplier_id', 'annual_budget', 'days',
         'contract_id', 'violation_id', 'resolved', 'severity', 'sensitivity',
         'insight_count', 'resolution_notes',
+        # Tail Spend Analysis keys
+        'threshold',
         # Data Upload Center keys
         'organization_name', 'deleted_counts', 'transactions_deleted', 'uploads_deleted',
         'suppliers_deleted', 'categories_deleted', 'templates_deleted', 'contracts_deleted',

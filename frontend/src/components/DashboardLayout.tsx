@@ -29,6 +29,8 @@ import { useProcurementData, useRefreshData } from '@/hooks/useProcurementData';
 import { procurementAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import { CanExport } from './PermissionGate';
+import { OrganizationSwitcher } from './OrganizationSwitcher';
+import { OrganizationBadge } from './OrganizationBadge';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -469,6 +471,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Organization Switcher (superusers only) */}
+            <OrganizationSwitcher colorScheme={colorScheme} />
+
+            {/* Organization Badge (when viewing another org) */}
+            <OrganizationBadge colorScheme={colorScheme} />
+
             {/* User Display */}
             <UserDisplay colorScheme={colorScheme} />
 

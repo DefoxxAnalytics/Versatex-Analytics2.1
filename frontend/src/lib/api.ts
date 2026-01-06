@@ -234,10 +234,62 @@ export interface SpendByCategory {
   count: number;
 }
 
+// Detailed category analysis with subcategories and risk levels
+export interface SubcategoryDetail {
+  name: string;
+  spend: number;
+  transaction_count: number;
+  supplier_count: number;
+  percent_of_category: number;
+}
+
+export interface CategoryDetail {
+  category: string;
+  category_id: number;
+  total_spend: number;
+  percent_of_total: number;
+  transaction_count: number;
+  subcategory_count: number;
+  supplier_count: number;
+  avg_spend_per_supplier: number;
+  top_subcategory: string;
+  top_subcategory_spend: number;
+  concentration: number;
+  risk_level: 'high' | 'medium' | 'low';
+  subcategories: SubcategoryDetail[];
+}
+
 export interface SpendBySupplier {
   supplier: string;
   amount: number;
   count: number;
+}
+
+// Detailed supplier analysis with HHI score and concentration metrics
+export interface SupplierDetail {
+  supplier: string;
+  supplier_id: number;
+  total_spend: number;
+  percent_of_total: number;
+  transaction_count: number;
+  avg_transaction: number;
+  category_count: number;
+  rank: number;
+}
+
+export interface SupplierSummary {
+  total_suppliers: number;
+  total_spend: number;
+  hhi_score: number;
+  hhi_risk_level: 'low' | 'moderate' | 'high';
+  top3_concentration: number;
+  top_supplier: string | null;
+  top_supplier_spend: number;
+}
+
+export interface SupplierAnalysis {
+  summary: SupplierSummary;
+  suppliers: SupplierDetail[];
 }
 
 export interface MonthlyTrend {
@@ -248,8 +300,32 @@ export interface MonthlyTrend {
 
 export interface ParetoItem {
   supplier: string;
+  supplier_id: number;
   amount: number;
   cumulative_percentage: number;
+}
+
+// Supplier drill-down for Pareto Analysis
+export interface DrilldownBreakdownItem {
+  name: string;
+  spend: number;
+  transaction_count: number;
+  percent_of_total: number;
+}
+
+export interface SupplierDrilldown {
+  supplier_id: number;
+  supplier_name: string;
+  total_spend: number;
+  transaction_count: number;
+  avg_transaction: number;
+  date_range: {
+    min: string | null;
+    max: string | null;
+  };
+  categories: DrilldownBreakdownItem[];
+  subcategories: DrilldownBreakdownItem[];
+  locations: DrilldownBreakdownItem[];
 }
 
 export interface TailSpendSupplier {
@@ -266,6 +342,145 @@ export interface TailSpendAnalysis {
   tail_percentage: number;
 }
 
+// Detailed Tail Spend Types (for TailSpend page)
+export interface TailSpendSummary {
+  total_vendors: number;
+  tail_vendor_count: number;
+  tail_spend: number;
+  tail_percentage: number;
+  total_spend: number;
+  savings_opportunity: number;
+  vendor_ratio: number;
+}
+
+export interface TailSpendSegment {
+  count: number;
+  spend: number;
+  transactions: number;
+  avg_spend_per_vendor: number;
+}
+
+export interface TailSpendSegments {
+  micro: TailSpendSegment;
+  small: TailSpendSegment;
+  non_tail: TailSpendSegment;
+}
+
+export interface TailSpendParetoItem {
+  supplier: string;
+  supplier_id: number;
+  spend: number;
+  cumulative_pct: number;
+  is_tail: boolean;
+}
+
+export interface TailSpendCategoryItem {
+  category: string;
+  category_id: number | null;
+  tail_spend: number;
+  tail_vendors: number;
+  total_spend: number;
+  total_vendors: number;
+  tail_percentage: number;
+  vendor_percentage: number;
+}
+
+export interface TailSpendMultiCategoryVendor {
+  supplier: string;
+  supplier_id: number;
+  categories: string[];
+  category_count: number;
+  total_spend: number;
+  savings_potential: number;
+}
+
+export interface TailSpendCategoryConsolidation {
+  category: string;
+  category_id: number | null;
+  tail_vendors: number;
+  total_vendors: number;
+  tail_spend: number;
+  top_vendor: string;
+  savings_potential: number;
+}
+
+export interface TailSpendGeographicConsolidation {
+  location: string;
+  tail_vendors: number;
+  total_vendors: number;
+  tail_spend: number;
+  top_vendor: string;
+  savings_potential: number;
+}
+
+export interface TailSpendConsolidation {
+  total_opportunities: number;
+  total_savings: number;
+  top_type: string;
+  multi_category: TailSpendMultiCategoryVendor[];
+  category: TailSpendCategoryConsolidation[];
+  geographic: TailSpendGeographicConsolidation[];
+}
+
+export interface DetailedTailSpend {
+  summary: TailSpendSummary;
+  segments: TailSpendSegments;
+  pareto_data: TailSpendParetoItem[];
+  category_analysis: TailSpendCategoryItem[];
+  consolidation_opportunities: TailSpendConsolidation;
+}
+
+// Tail Spend Category Drilldown
+export interface TailSpendVendorItem {
+  name: string;
+  supplier_id: number;
+  spend: number;
+  transaction_count: number;
+  is_tail: boolean;
+  percent_of_category: number;
+}
+
+export interface TailSpendCategoryDrilldown {
+  category: string;
+  category_id: number;
+  total_spend: number;
+  tail_spend: number;
+  tail_percentage: number;
+  vendors: TailSpendVendorItem[];
+  recommendations: string[];
+}
+
+// Tail Spend Vendor Drilldown
+export interface TailSpendVendorCategory {
+  name: string;
+  category_id: number | null;
+  spend: number;
+  transaction_count: number;
+  percent_of_vendor: number;
+}
+
+export interface TailSpendVendorLocation {
+  name: string;
+  spend: number;
+  transaction_count: number;
+}
+
+export interface TailSpendVendorMonthly {
+  month: string;
+  spend: number;
+}
+
+export interface TailSpendVendorDrilldown {
+  supplier: string;
+  supplier_id: number;
+  total_spend: number;
+  transaction_count: number;
+  is_tail: boolean;
+  categories: TailSpendVendorCategory[];
+  locations: TailSpendVendorLocation[];
+  monthly_spend: TailSpendVendorMonthly[];
+}
+
 export interface StratificationCategory {
   category: string;
   spend: number;
@@ -280,10 +495,179 @@ export interface SpendStratification {
   tactical: StratificationCategory[];
 }
 
+// Detailed Stratification Types (for SpendStratification page)
+export interface SpendBandData {
+  band: string;
+  label: string;
+  min: number;
+  max: number | null;
+  total_spend: number;
+  percent_of_total: number;
+  suppliers: number;
+  transactions: number;
+  avg_spend_per_supplier: number;
+  strategic_importance: 'Tactical' | 'Strategic' | 'Critical';
+  risk_level: 'Low' | 'Medium' | 'High';
+}
+
+export interface SegmentData {
+  segment: 'Strategic' | 'Leverage' | 'Routine' | 'Tactical';
+  spend_range: string;
+  min: number;
+  max: number | null;
+  total_spend: number;
+  percent_of_total: number;
+  suppliers: number;
+  transactions: number;
+  strategy: string;
+}
+
+export interface StratificationSummary {
+  total_spend: number;
+  active_spend_bands: number;
+  strategic_bands: number;
+  high_risk_bands: number;
+  complex_bands: number;
+  highest_impact_band: string;
+  highest_impact_percent: number;
+  most_fragmented_band: string;
+  most_fragmented_suppliers: number;
+  avg_suppliers_per_band: number;
+  overall_risk: string;
+  recommendations: string[];
+}
+
+export interface DetailedStratification {
+  summary: StratificationSummary;
+  spend_bands: SpendBandData[];
+  segments: SegmentData[];
+}
+
+export interface SegmentSupplier {
+  name: string;
+  supplier_id: number;
+  total_spend: number;
+  percent_of_segment: number;
+  transactions: number;
+  subcategory_count: number;
+  location_count: number;
+}
+
+export interface SegmentBreakdownItem {
+  name: string;
+  spend: number;
+  percent_of_segment: number;
+  transactions: number;
+}
+
+export interface SegmentDrilldown {
+  segment: string;
+  total_spend: number;
+  supplier_count: number;
+  transaction_count: number;
+  avg_spend_per_supplier: number;
+  suppliers: SegmentSupplier[];
+  subcategories: SegmentBreakdownItem[];
+  locations: SegmentBreakdownItem[];
+}
+
+// Band drill-down for SpendStratification (spend band level)
+export interface BandSupplier {
+  name: string;
+  supplier_id: number;
+  total_spend: number;
+  percent_of_band: number;
+  transactions: number;
+  subcategory_count: number;
+  location_count: number;
+}
+
+export interface BandBreakdownItem {
+  name: string;
+  spend: number;
+  percent_of_band: number;
+  transactions: number;
+}
+
+export interface BandDrilldown {
+  band: string;
+  total_spend: number;
+  supplier_count: number;
+  transaction_count: number;
+  avg_spend_per_supplier: number;
+  suppliers: BandSupplier[];
+  subcategories: BandBreakdownItem[];
+  locations: BandBreakdownItem[];
+}
+
 export interface SeasonalityData {
   month: string;
   average_spend: number;
   occurrences: number;
+}
+
+// Detailed Seasonality types for Seasonality dashboard page
+export interface SeasonalityMonthData {
+  month: string;
+  fiscal_month: number;
+  years: Record<string, number>;  // e.g., { 'FY2024': 1500000, 'FY2025': 1650000 }
+  average: number;
+}
+
+export interface CategorySeasonality {
+  category: string;
+  category_id: number | null;
+  total_spend: number;
+  peak_month: string;
+  low_month: string;
+  seasonality_strength: number;
+  impact_level: 'High' | 'Medium' | 'Low';
+  savings_potential: number;
+  yoy_growth: number;
+  fy_totals: Record<string, number>;  // e.g., { 'FY2024': 2200000, 'FY2025': 2800000 }
+  monthly_spend: number[];  // 12 values for each fiscal month
+  seasonal_indices: number[];  // 12 values normalized to 100
+}
+
+export interface DetailedSeasonalitySummary {
+  categories_analyzed: number;
+  opportunities_found: number;
+  high_impact_count: number;
+  total_savings_potential: number;
+  avg_yoy_growth: number;
+  available_years: number[];
+}
+
+export interface DetailedSeasonality {
+  summary: DetailedSeasonalitySummary;
+  monthly_data: SeasonalityMonthData[];
+  category_seasonality: CategorySeasonality[];
+}
+
+// Seasonality category drill-down types
+export interface SeasonalitySupplier {
+  name: string;
+  supplier_id: number;
+  total_spend: number;
+  percent_of_category: number;
+  monthly_spend: number[];  // 12 values
+  peak_month: string;
+  low_month: string;
+  seasonality_strength: number;
+}
+
+export interface SeasonalityMonthTotal {
+  month: string;
+  spend: number;
+}
+
+export interface SeasonalityCategoryDrilldown {
+  category: string;
+  category_id: number;
+  total_spend: number;
+  supplier_count: number;
+  suppliers: SeasonalitySupplier[];
+  monthly_totals: SeasonalityMonthTotal[];
 }
 
 export interface YearOverYearData {
@@ -292,6 +676,112 @@ export interface YearOverYearData {
   transaction_count: number;
   avg_transaction: number;
   growth_percentage?: number;
+}
+
+// Detailed Year-over-Year types
+export interface YoYSummary {
+  year1: string;
+  year2: string;
+  year1_total_spend: number;
+  year2_total_spend: number;
+  spend_change: number;
+  spend_change_pct: number;
+  year1_transactions: number;
+  year2_transactions: number;
+  year1_suppliers: number;
+  year2_suppliers: number;
+  year1_avg_transaction: number;
+  year2_avg_transaction: number;
+}
+
+export interface YoYMonthlyComparison {
+  month: string;
+  fiscal_month: number;
+  year1_spend: number;
+  year2_spend: number;
+  change_pct: number;
+}
+
+export interface YoYCategoryComparison {
+  category: string;
+  category_id: number | null;
+  year1_spend: number;
+  year2_spend: number;
+  change: number;
+  change_pct: number;
+  year1_pct_of_total: number;
+  year2_pct_of_total: number;
+}
+
+export interface YoYSupplierComparison {
+  supplier: string;
+  supplier_id: number | null;
+  year1_spend: number;
+  year2_spend: number;
+  change: number;
+  change_pct: number;
+  year1_transactions: number;
+  year2_transactions: number;
+}
+
+export interface DetailedYearOverYear {
+  summary: YoYSummary;
+  monthly_comparison: YoYMonthlyComparison[];
+  category_comparison: YoYCategoryComparison[];
+  supplier_comparison: YoYSupplierComparison[];
+  top_gainers: YoYCategoryComparison[];
+  top_decliners: YoYCategoryComparison[];
+  available_years: number[];
+}
+
+// YoY Category Drilldown types
+export interface YoYCategorySupplier {
+  name: string;
+  supplier_id: number | null;
+  year1_spend: number;
+  year2_spend: number;
+  change: number;
+  change_pct: number;
+}
+
+export interface YoYMonthlyBreakdown {
+  month: string;
+  year1_spend: number;
+  year2_spend: number;
+}
+
+export interface YoYCategoryDrilldown {
+  category: string;
+  category_id: number;
+  year1: string;
+  year2: string;
+  year1_total: number;
+  year2_total: number;
+  change_pct: number;
+  suppliers: YoYCategorySupplier[];
+  monthly_breakdown: YoYMonthlyBreakdown[];
+}
+
+// YoY Supplier Drilldown types
+export interface YoYSupplierCategory {
+  name: string;
+  category_id: number | null;
+  year1_spend: number;
+  year2_spend: number;
+  change: number;
+  change_pct: number;
+}
+
+export interface YoYSupplierDrilldown {
+  supplier: string;
+  supplier_id: number;
+  year1: string;
+  year2: string;
+  year1_total: number;
+  year2_total: number;
+  change_pct: number;
+  categories: YoYSupplierCategory[];
+  monthly_breakdown: YoYMonthlyBreakdown[];
 }
 
 export interface ConsolidationSupplier {
@@ -792,6 +1282,18 @@ api.interceptors.response.use(
 // API Functions
 // =====================
 
+// Organization param storage key (used by OrganizationContext)
+const ORG_STORAGE_KEY = 'active_organization_id';
+
+/**
+ * Get organization_id parameter for API calls.
+ * Returns empty object if viewing user's own org (default behavior).
+ */
+export function getOrganizationParam(): { organization_id?: number } {
+  const stored = localStorage.getItem(ORG_STORAGE_KEY);
+  return stored ? { organization_id: parseInt(stored, 10) } : {};
+}
+
 // Authentication API
 // Note: JWT tokens are managed via HTTP-only cookies for XSS protection
 export const authAPI = {
@@ -824,16 +1326,24 @@ export const authAPI = {
 
   replacePreferences: (data: UserPreferences): Promise<AxiosResponse<UserPreferences>> =>
     api.put('/auth/preferences/', data),
+
+  // Organizations (superusers get all, others get their own)
+  getOrganizations: (): Promise<AxiosResponse<PaginatedResponse<Organization>>> =>
+    api.get('/auth/organizations/'),
+
+  getOrganization: (id: number): Promise<AxiosResponse<Organization>> =>
+    api.get(`/auth/organizations/${id}/`),
 };
 
 // Procurement API
+// Read endpoints support organization_id param for superuser org switching
 export const procurementAPI = {
   // Suppliers
   getSuppliers: (params?: SupplierQueryParams): Promise<AxiosResponse<PaginatedResponse<Supplier>>> =>
-    api.get('/procurement/suppliers/', { params }),
+    api.get('/procurement/suppliers/', { params: { ...params, ...getOrganizationParam() } }),
 
   getSupplier: (id: number): Promise<AxiosResponse<Supplier>> =>
-    api.get(`/procurement/suppliers/${id}/`),
+    api.get(`/procurement/suppliers/${id}/`, { params: getOrganizationParam() }),
 
   createSupplier: (data: SupplierCreateRequest): Promise<AxiosResponse<Supplier>> =>
     api.post('/procurement/suppliers/', data),
@@ -846,10 +1356,10 @@ export const procurementAPI = {
 
   // Categories
   getCategories: (params?: CategoryQueryParams): Promise<AxiosResponse<PaginatedResponse<Category>>> =>
-    api.get('/procurement/categories/', { params }),
+    api.get('/procurement/categories/', { params: { ...params, ...getOrganizationParam() } }),
 
   getCategory: (id: number): Promise<AxiosResponse<Category>> =>
-    api.get(`/procurement/categories/${id}/`),
+    api.get(`/procurement/categories/${id}/`, { params: getOrganizationParam() }),
 
   createCategory: (data: CategoryCreateRequest): Promise<AxiosResponse<Category>> =>
     api.post('/procurement/categories/', data),
@@ -862,10 +1372,10 @@ export const procurementAPI = {
 
   // Transactions
   getTransactions: (params?: TransactionQueryParams): Promise<AxiosResponse<PaginatedResponse<Transaction>>> =>
-    api.get('/procurement/transactions/', { params }),
+    api.get('/procurement/transactions/', { params: { ...params, ...getOrganizationParam() } }),
 
   getTransaction: (id: number): Promise<AxiosResponse<Transaction>> =>
-    api.get(`/procurement/transactions/${id}/`),
+    api.get(`/procurement/transactions/${id}/`, { params: getOrganizationParam() }),
 
   createTransaction: (data: TransactionCreateRequest): Promise<AxiosResponse<Transaction>> =>
     api.post('/procurement/transactions/', data),
@@ -890,122 +1400,175 @@ export const procurementAPI = {
 
   exportCSV: (params?: ExportParams): Promise<AxiosResponse<Blob>> =>
     api.get('/procurement/transactions/export/', {
-      params,
+      params: { ...params, ...getOrganizationParam() },
       responseType: 'blob',
     }),
 
   // Uploads
   getUploads: (params?: PaginationParams): Promise<AxiosResponse<PaginatedResponse<DataUpload>>> =>
-    api.get('/procurement/uploads/', { params }),
+    api.get('/procurement/uploads/', { params: { ...params, ...getOrganizationParam() } }),
 };
 
 // Analytics API
+// All endpoints support organization_id param for superuser org switching
 export const analyticsAPI = {
   getOverview: (): Promise<AxiosResponse<OverviewStats>> =>
-    api.get('/analytics/overview/'),
+    api.get('/analytics/overview/', { params: getOrganizationParam() }),
 
   getSpendByCategory: (): Promise<AxiosResponse<SpendByCategory[]>> =>
-    api.get('/analytics/spend-by-category/'),
+    api.get('/analytics/spend-by-category/', { params: getOrganizationParam() }),
+
+  getCategoryDetails: (): Promise<AxiosResponse<CategoryDetail[]>> =>
+    api.get('/analytics/categories/detailed/', { params: getOrganizationParam() }),
 
   getSpendBySupplier: (): Promise<AxiosResponse<SpendBySupplier[]>> =>
-    api.get('/analytics/spend-by-supplier/'),
+    api.get('/analytics/spend-by-supplier/', { params: getOrganizationParam() }),
+
+  getSupplierDetails: (): Promise<AxiosResponse<SupplierAnalysis>> =>
+    api.get('/analytics/suppliers/detailed/', { params: getOrganizationParam() }),
 
   getMonthlyTrend: (months: number = 12): Promise<AxiosResponse<MonthlyTrend[]>> =>
-    api.get('/analytics/monthly-trend/', { params: { months } }),
+    api.get('/analytics/monthly-trend/', { params: { months, ...getOrganizationParam() } }),
 
   getParetoAnalysis: (): Promise<AxiosResponse<ParetoItem[]>> =>
-    api.get('/analytics/pareto/'),
+    api.get('/analytics/pareto/', { params: getOrganizationParam() }),
+
+  getSupplierDrilldown: (supplierId: number): Promise<AxiosResponse<SupplierDrilldown>> =>
+    api.get(`/analytics/pareto/supplier/${supplierId}/`, { params: getOrganizationParam() }),
 
   getTailSpend: (threshold: number = 20): Promise<AxiosResponse<TailSpendAnalysis>> =>
-    api.get('/analytics/tail-spend/', { params: { threshold } }),
+    api.get('/analytics/tail-spend/', { params: { threshold, ...getOrganizationParam() } }),
+
+  getDetailedTailSpend: (threshold: number = 50000): Promise<AxiosResponse<DetailedTailSpend>> =>
+    api.get('/analytics/tail-spend/detailed/', { params: { threshold, ...getOrganizationParam() } }),
+
+  getTailSpendCategoryDrilldown: (categoryId: number, threshold: number = 50000): Promise<AxiosResponse<TailSpendCategoryDrilldown>> =>
+    api.get(`/analytics/tail-spend/category/${categoryId}/`, { params: { threshold, ...getOrganizationParam() } }),
+
+  getTailSpendVendorDrilldown: (supplierId: number, threshold: number = 50000): Promise<AxiosResponse<TailSpendVendorDrilldown>> =>
+    api.get(`/analytics/tail-spend/vendor/${supplierId}/`, { params: { threshold, ...getOrganizationParam() } }),
 
   getStratification: (): Promise<AxiosResponse<SpendStratification>> =>
-    api.get('/analytics/stratification/'),
+    api.get('/analytics/stratification/', { params: getOrganizationParam() }),
+
+  getDetailedStratification: (): Promise<AxiosResponse<DetailedStratification>> =>
+    api.get('/analytics/stratification/detailed/', { params: getOrganizationParam() }),
+
+  getSegmentDrilldown: (segmentName: string): Promise<AxiosResponse<SegmentDrilldown>> =>
+    api.get(`/analytics/stratification/segment/${segmentName}/`, { params: getOrganizationParam() }),
+
+  getBandDrilldown: (bandName: string): Promise<AxiosResponse<BandDrilldown>> =>
+    api.get(`/analytics/stratification/band/${encodeURIComponent(bandName)}/`, { params: getOrganizationParam() }),
 
   getSeasonality: (): Promise<AxiosResponse<SeasonalityData[]>> =>
-    api.get('/analytics/seasonality/'),
+    api.get('/analytics/seasonality/', { params: getOrganizationParam() }),
+
+  getDetailedSeasonality: (useFiscalYear: boolean = true): Promise<AxiosResponse<DetailedSeasonality>> =>
+    api.get('/analytics/seasonality/detailed/', {
+      params: { ...getOrganizationParam(), use_fiscal_year: useFiscalYear }
+    }),
+
+  getSeasonalityCategoryDrilldown: (categoryId: number, useFiscalYear: boolean = true): Promise<AxiosResponse<SeasonalityCategoryDrilldown>> =>
+    api.get(`/analytics/seasonality/category/${categoryId}/`, {
+      params: { ...getOrganizationParam(), use_fiscal_year: useFiscalYear }
+    }),
 
   getYearOverYear: (): Promise<AxiosResponse<YearOverYearData[]>> =>
-    api.get('/analytics/year-over-year/'),
+    api.get('/analytics/year-over-year/', { params: getOrganizationParam() }),
+
+  getDetailedYearOverYear: (useFiscalYear: boolean = true, year1?: number, year2?: number): Promise<AxiosResponse<DetailedYearOverYear>> =>
+    api.get('/analytics/year-over-year/detailed/', {
+      params: { ...getOrganizationParam(), use_fiscal_year: useFiscalYear, year1, year2 }
+    }),
+
+  getYoYCategoryDrilldown: (categoryId: number, useFiscalYear: boolean = true, year1?: number, year2?: number): Promise<AxiosResponse<YoYCategoryDrilldown>> =>
+    api.get(`/analytics/year-over-year/category/${categoryId}/`, {
+      params: { ...getOrganizationParam(), use_fiscal_year: useFiscalYear, year1, year2 }
+    }),
+
+  getYoYSupplierDrilldown: (supplierId: number, useFiscalYear: boolean = true, year1?: number, year2?: number): Promise<AxiosResponse<YoYSupplierDrilldown>> =>
+    api.get(`/analytics/year-over-year/supplier/${supplierId}/`, {
+      params: { ...getOrganizationParam(), use_fiscal_year: useFiscalYear, year1, year2 }
+    }),
 
   getConsolidation: (): Promise<AxiosResponse<ConsolidationOpportunity[]>> =>
-    api.get('/analytics/consolidation/'),
+    api.get('/analytics/consolidation/', { params: getOrganizationParam() }),
 
   // AI Insights endpoints
   getAIInsights: (): Promise<AxiosResponse<AIInsightsResponse>> =>
-    api.get('/analytics/ai-insights/'),
+    api.get('/analytics/ai-insights/', { params: getOrganizationParam() }),
 
   getAIInsightsCost: (): Promise<AxiosResponse<AIInsightsListResponse>> =>
-    api.get('/analytics/ai-insights/cost/'),
+    api.get('/analytics/ai-insights/cost/', { params: getOrganizationParam() }),
 
   getAIInsightsRisk: (): Promise<AxiosResponse<AIInsightsListResponse>> =>
-    api.get('/analytics/ai-insights/risk/'),
+    api.get('/analytics/ai-insights/risk/', { params: getOrganizationParam() }),
 
   getAIInsightsAnomalies: (sensitivity: number = 2.0): Promise<AxiosResponse<AIInsightsListResponse>> =>
-    api.get('/analytics/ai-insights/anomalies/', { params: { sensitivity } }),
+    api.get('/analytics/ai-insights/anomalies/', { params: { sensitivity, ...getOrganizationParam() } }),
 
   // Predictive Analytics endpoints
   getSpendingForecast: (months: number = 6): Promise<AxiosResponse<SpendingForecastResponse>> =>
-    api.get('/analytics/predictions/spending/', { params: { months } }),
+    api.get('/analytics/predictions/spending/', { params: { months, ...getOrganizationParam() } }),
 
   getCategoryForecast: (categoryId: number, months: number = 6): Promise<AxiosResponse<CategoryForecastResponse>> =>
-    api.get(`/analytics/predictions/category/${categoryId}/`, { params: { months } }),
+    api.get(`/analytics/predictions/category/${categoryId}/`, { params: { months, ...getOrganizationParam() } }),
 
   getSupplierForecast: (supplierId: number, months: number = 6): Promise<AxiosResponse<SupplierForecastResponse>> =>
-    api.get(`/analytics/predictions/supplier/${supplierId}/`, { params: { months } }),
+    api.get(`/analytics/predictions/supplier/${supplierId}/`, { params: { months, ...getOrganizationParam() } }),
 
   getTrendAnalysis: (): Promise<AxiosResponse<TrendAnalysisResponse>> =>
-    api.get('/analytics/predictions/trends/'),
+    api.get('/analytics/predictions/trends/', { params: getOrganizationParam() }),
 
   getBudgetProjection: (annualBudget: number): Promise<AxiosResponse<BudgetProjectionResponse>> =>
-    api.get('/analytics/predictions/budget/', { params: { annual_budget: annualBudget } }),
+    api.get('/analytics/predictions/budget/', { params: { annual_budget: annualBudget, ...getOrganizationParam() } }),
 
   // Contract Analytics endpoints
   getContractOverview: (): Promise<AxiosResponse<ContractOverview>> =>
-    api.get('/analytics/contracts/overview/'),
+    api.get('/analytics/contracts/overview/', { params: getOrganizationParam() }),
 
   getContracts: (): Promise<AxiosResponse<{ contracts: ContractListItem[]; count: number }>> =>
-    api.get('/analytics/contracts/'),
+    api.get('/analytics/contracts/', { params: getOrganizationParam() }),
 
   getContractDetail: (contractId: number): Promise<AxiosResponse<ContractDetail>> =>
-    api.get(`/analytics/contracts/${contractId}/`),
+    api.get(`/analytics/contracts/${contractId}/`, { params: getOrganizationParam() }),
 
   getExpiringContracts: (days: number = 90): Promise<AxiosResponse<{ contracts: ExpiringContract[]; count: number; days_threshold: number }>> =>
-    api.get('/analytics/contracts/expiring/', { params: { days } }),
+    api.get('/analytics/contracts/expiring/', { params: { days, ...getOrganizationParam() } }),
 
   getContractPerformance: (contractId: number): Promise<AxiosResponse<ContractPerformance>> =>
-    api.get(`/analytics/contracts/${contractId}/performance/`),
+    api.get(`/analytics/contracts/${contractId}/performance/`, { params: getOrganizationParam() }),
 
   getContractSavings: (): Promise<AxiosResponse<ContractSavingsResponse>> =>
-    api.get('/analytics/contracts/savings/'),
+    api.get('/analytics/contracts/savings/', { params: getOrganizationParam() }),
 
   getContractRenewals: (): Promise<AxiosResponse<{ recommendations: RenewalRecommendation[]; count: number }>> =>
-    api.get('/analytics/contracts/renewals/'),
+    api.get('/analytics/contracts/renewals/', { params: getOrganizationParam() }),
 
   getContractVsActual: (contractId?: number): Promise<AxiosResponse<ContractVsActualResponse>> =>
-    api.get('/analytics/contracts/vs-actual/', { params: contractId ? { contract_id: contractId } : {} }),
+    api.get('/analytics/contracts/vs-actual/', { params: { ...(contractId ? { contract_id: contractId } : {}), ...getOrganizationParam() } }),
 
   // Compliance & Maverick Spend endpoints
   getComplianceOverview: (): Promise<AxiosResponse<ComplianceOverview>> =>
-    api.get('/analytics/compliance/overview/'),
+    api.get('/analytics/compliance/overview/', { params: getOrganizationParam() }),
 
   getMaverickSpendAnalysis: (): Promise<AxiosResponse<MaverickSpendAnalysis>> =>
-    api.get('/analytics/compliance/maverick-spend/'),
+    api.get('/analytics/compliance/maverick-spend/', { params: getOrganizationParam() }),
 
   getPolicyViolations: (params?: { resolved?: boolean; severity?: ViolationSeverity; limit?: number }): Promise<AxiosResponse<{ violations: PolicyViolation[]; count: number }>> =>
-    api.get('/analytics/compliance/violations/', { params }),
+    api.get('/analytics/compliance/violations/', { params: { ...params, ...getOrganizationParam() } }),
 
   resolveViolation: (violationId: number, resolutionNotes: string): Promise<AxiosResponse<{ id: number; is_resolved: boolean; resolved_at: string; resolution_notes: string }>> =>
-    api.post(`/analytics/compliance/violations/${violationId}/resolve/`, { resolution_notes: resolutionNotes }),
+    api.post(`/analytics/compliance/violations/${violationId}/resolve/`, { resolution_notes: resolutionNotes }, { params: getOrganizationParam() }),
 
   getViolationTrends: (months: number = 12): Promise<AxiosResponse<ViolationTrends>> =>
-    api.get('/analytics/compliance/trends/', { params: { months } }),
+    api.get('/analytics/compliance/trends/', { params: { months, ...getOrganizationParam() } }),
 
   getSupplierComplianceScores: (): Promise<AxiosResponse<{ suppliers: SupplierComplianceScore[]; count: number }>> =>
-    api.get('/analytics/compliance/supplier-scores/'),
+    api.get('/analytics/compliance/supplier-scores/', { params: getOrganizationParam() }),
 
   getSpendingPolicies: (): Promise<AxiosResponse<{ policies: SpendingPolicy[]; count: number }>> =>
-    api.get('/analytics/compliance/policies/'),
+    api.get('/analytics/compliance/policies/', { params: getOrganizationParam() }),
 };
 
 export default api;

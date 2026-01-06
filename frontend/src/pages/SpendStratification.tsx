@@ -1,271 +1,270 @@
-import { useMemo, useState } from 'react';
-import { useFilteredProcurementData } from '@/hooks/useProcurementData';
+import { useState, useMemo } from 'react';
+import { useDetailedStratification, useSegmentDrilldown, useBandDrilldown } from '@/hooks/useAnalytics';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { 
-  Layers, 
-  TrendingUp, 
-  AlertTriangle, 
+import {
+  Layers,
+  TrendingUp,
+  AlertTriangle,
   Target,
   Users,
   DollarSign,
   Eye,
   Package,
-  Calendar,
-  MapPin
+  Loader2,
+  Search,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  ChevronDown,
+  ChevronUp,
+  Lightbulb,
+  Shield,
+  Zap,
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
-// Spend band definitions
-const SPEND_BANDS = [
-  { name: '0 - 1K', min: 0, max: 1000, label: '0-1K' },
-  { name: '1K - 2K', min: 1000, max: 2000, label: '1K-2K' },
-  { name: '2K - 5K', min: 2000, max: 5000, label: '2K-5K' },
-  { name: '5K - 10K', min: 5000, max: 10000, label: '5K-10K' },
-  { name: '10K - 25K', min: 10000, max: 25000, label: '10K-25K' },
-  { name: '25K - 50K', min: 25000, max: 50000, label: '25K-50K' },
-  { name: '50K - 100K', min: 50000, max: 100000, label: '50K-100K' },
-  { name: '100K - 500K', min: 100000, max: 500000, label: '100K-500K' },
-  { name: '500K - 1M', min: 500000, max: 1000000, label: '500K-1M' },
-  { name: '1M and Above', min: 1000000, max: Infinity, label: '1M+' },
-];
-
-// Segment definitions
-const SEGMENTS = [
-  { name: 'Strategic', min: 1000000, max: Infinity, color: '#ef4444', strategy: 'Partnership & Innovation' },
-  { name: 'Leverage', min: 100000, max: 1000000, color: '#f59e0b', strategy: 'Competitive Bidding' },
-  { name: 'Routine', min: 10000, max: 100000, color: '#eab308', strategy: 'Efficiency & Automation' },
-  { name: 'Tactical', min: 0, max: 10000, color: '#10b981', strategy: 'Consolidation' },
-];
-
-const SEGMENT_COLORS = {
+// Segment colors for charts
+const SEGMENT_COLORS: Record<string, string> = {
   'Strategic': '#ef4444',
   'Leverage': '#f59e0b',
   'Routine': '#eab308',
   'Tactical': '#10b981',
 };
 
+// Sort field type
+type SortField = 'band' | 'total_spend' | 'percent_of_total' | 'suppliers' | 'transactions';
+type SortDirection = 'asc' | 'desc';
+
 export default function SpendStratification() {
-  const { data = [], isLoading } = useFilteredProcurementData();
+  const { data, isLoading, error } = useDetailedStratification();
   const [selectedSegment, setSelectedSegment] = useState<string | null>(null);
+  const [selectedBand, setSelectedBand] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortField, setSortField] = useState<SortField>('total_spend');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [recommendationsExpanded, setRecommendationsExpanded] = useState(true);
 
-  // Calculate spend band analysis using spendBand field from dataset
-  const spendBandAnalysis = useMemo(() => {
-    // Group records by spendBand
-    const bandMap = new Map<string, { records: typeof data; suppliers: Set<string> }>();
-    
-    data.forEach(record => {
-      const band = record.spendBand || 'Unknown';
-      if (!bandMap.has(band)) {
-        bandMap.set(band, { records: [], suppliers: new Set() });
+  // Fetch drill-down data on-demand
+  const { data: segmentDrilldownData, isLoading: segmentDrilldownLoading } = useSegmentDrilldown(selectedSegment);
+  const { data: bandDrilldownData, isLoading: bandDrilldownLoading } = useBandDrilldown(selectedBand);
+
+  // Sorted and filtered spend bands
+  const sortedBands = useMemo(() => {
+    if (!data?.spend_bands) return [];
+
+    let filtered = data.spend_bands.filter(band =>
+      band.band.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return filtered.sort((a, b) => {
+      let aVal: number | string;
+      let bVal: number | string;
+
+      switch (sortField) {
+        case 'band':
+          // Sort by min value for proper band ordering
+          aVal = a.min;
+          bVal = b.min;
+          break;
+        case 'total_spend':
+          aVal = a.total_spend;
+          bVal = b.total_spend;
+          break;
+        case 'percent_of_total':
+          aVal = a.percent_of_total;
+          bVal = b.percent_of_total;
+          break;
+        case 'suppliers':
+          aVal = a.suppliers;
+          bVal = b.suppliers;
+          break;
+        case 'transactions':
+          aVal = a.transactions;
+          bVal = b.transactions;
+          break;
+        default:
+          aVal = a.total_spend;
+          bVal = b.total_spend;
       }
-      const existing = bandMap.get(band)!;
-      existing.records.push(record);
-      existing.suppliers.add(record.supplier);
-    });
-    
-    // Create analysis for each spend band
-    return SPEND_BANDS.map(band => {
-      const bandData = bandMap.get(band.name) || { records: [], suppliers: new Set() };
-      const totalSpend = bandData.records.reduce((sum, r) => sum + r.amount, 0);
-      const supplierCount = bandData.suppliers.size;
-      const avgSpendPerSupplier = supplierCount > 0 ? totalSpend / supplierCount : 0;
-      
-      return {
-        band: band.name,
-        label: band.label,
-        spendRange: band.name,
-        totalSpend,
-        percentOfTotal: 0, // Will calculate after
-        suppliers: supplierCount,
-        transactions: bandData.records.length,
-        avgSpendPerSupplier,
-      };
-    });
-  }, [data]);
 
-  // Calculate percentages
-  const totalSpend = useMemo(() => 
-    spendBandAnalysis.reduce((sum, band) => sum + band.totalSpend, 0),
-    [spendBandAnalysis]
-  );
-
-  const spendBandWithPercent = useMemo(() => 
-    spendBandAnalysis.map(band => {
-      const percentOfTotal = totalSpend > 0 ? (band.totalSpend / totalSpend) * 100 : 0;
-      
-      // Classify strategic importance based on spend percentage
-      let strategicImportance: 'Tactical' | 'Strategic' | 'Critical' = 'Tactical';
-      let riskLevel: 'Low' | 'Medium' | 'High' = 'Low';
-      
-      if (percentOfTotal > 30) {
-        strategicImportance = 'Critical';
-        riskLevel = 'High';
-      } else if (percentOfTotal > 15) {
-        strategicImportance = 'Strategic';
-        riskLevel = 'Medium';
+      if (sortDirection === 'asc') {
+        return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+      } else {
+        return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
       }
-      
-      return {
-        ...band,
-        percentOfTotal,
-        strategicImportance,
-        riskLevel,
-      };
-    }),
-    [spendBandAnalysis, totalSpend]
-  );
-
-  // Calculate segment analysis based on spend bands
-  const segmentAnalysis = useMemo(() => {
-    return SEGMENTS.map(segment => {
-      // Find spend bands that fall within this segment
-      const bandsInSegment = spendBandWithPercent.filter(band => {
-        const bandMin = SPEND_BANDS.find(b => b.name === band.band)?.min || 0;
-        return bandMin >= segment.min && bandMin < segment.max;
-      });
-      
-      const segmentTotalSpend = bandsInSegment.reduce((sum, band) => sum + band.totalSpend, 0);
-      const suppliers = bandsInSegment.reduce((sum, band) => sum + band.suppliers, 0);
-      const percentOfTotal = totalSpend > 0 ? (segmentTotalSpend / totalSpend) * 100 : 0;
-      
-      return {
-        segment: segment.name,
-        spendRange: segment.min === 0 ? `<$${(segment.max / 1000).toFixed(0)}K` : 
-                    segment.max === Infinity ? `>$${(segment.min / 1000000).toFixed(0)}M` :
-                    `$${(segment.min / 1000).toFixed(0)}K-$${(segment.max / 1000).toFixed(0)}K`,
-        totalSpend: segmentTotalSpend,
-        percentOfTotal,
-        suppliers,
-        strategy: segment.strategy,
-        color: segment.color,
-      };
     });
-  }, [spendBandWithPercent]);
+  }, [data?.spend_bands, searchTerm, sortField, sortDirection]);
 
-  // Calculate metrics for top cards
-  const metrics = useMemo(() => {
-    const activeSpendBands = spendBandWithPercent.filter(b => b.suppliers > 0).length;
-    const strategicBands = spendBandWithPercent.filter(b => 
-      (b.strategicImportance === 'Strategic' || b.strategicImportance === 'Critical') && b.suppliers > 0
-    ).length;
-    const highestImpactBand = spendBandWithPercent.reduce((max, band) => 
-      band.percentOfTotal > max.percentOfTotal ? band : max
-    , spendBandWithPercent[0]);
-    const mostFragmented = spendBandWithPercent.reduce((max, band) => 
-      band.suppliers > max.suppliers ? band : max
-    , spendBandWithPercent[0]);
-    const complexBands = spendBandWithPercent.filter(b => b.suppliers >= 50).length;
-    const highRiskBands = spendBandWithPercent.filter(b => 
-      b.riskLevel === 'High' && b.suppliers > 0
-    ).length;
-
-    return {
-      activeSpendBands,
-      strategicBands,
-      highestImpactBand,
-      mostFragmented,
-      complexBands,
-      highRiskBands,
-    };
-  }, [spendBandWithPercent, segmentAnalysis]);
-
-  // Strategic analysis
-  const strategicAnalysis = useMemo(() => {
-    const strategicSegment = segmentAnalysis.find(s => s.segment === 'Strategic');
-    const avgSuppliersPerBand = spendBandWithPercent.reduce((sum, b) => sum + b.suppliers, 0) / spendBandWithPercent.length;
-    
-    let riskLevel = 'LOW';
-    let riskColor = 'bg-green-100 text-green-800 border-green-300';
-    
-    if (strategicSegment && strategicSegment.percentOfTotal > 60) {
-      riskLevel = 'HIGH - CONCENTRATION RISK REQUIRES IMMEDIATE ATTENTION';
-      riskColor = 'bg-red-100 text-red-800 border-red-300';
-    } else if (strategicSegment && strategicSegment.percentOfTotal > 40) {
-      riskLevel = 'MEDIUM - MONITOR CONCENTRATION';
-      riskColor = 'bg-yellow-100 text-yellow-800 border-yellow-300';
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
     }
-    
-    const recommendations = [];
-    
-    if (strategicSegment && strategicSegment.percentOfTotal > 50) {
-      recommendations.push('Implement supplier diversification strategy within the dominant spend band');
-      recommendations.push('Evaluate supplier consolidation opportunities to reduce administrative burden');
-    }
-    
-    // Add band-specific recommendations
-    spendBandWithPercent.forEach(band => {
-      if (band.suppliers > 100 && band.label.includes('K') && !band.label.includes('M')) {
-        recommendations.push(`${band.label}: Consider supplier consolidation to improve efficiency`);
-      }
-      if (band.percentOfTotal > 10 && band.suppliers < 5) {
-        recommendations.push(`${band.label}: Consider supplier consolidation to improve efficiency`);
-      }
-    });
-    
-    return {
-      riskLevel,
-      riskColor,
-      recommendations: recommendations.slice(0, 5), // Limit to 5 recommendations
-      concentration: strategicSegment?.percentOfTotal || 0,
-      avgSuppliersPerBand: Math.round(avgSuppliersPerBand),
-    };
-  }, [segmentAnalysis, spendBandWithPercent]);
+  };
 
-  // Chart data with percentage calculation
-  const chartDataTotalSpend = segmentAnalysis.reduce((sum, seg) => sum + seg.totalSpend, 0);
-  const chartData = segmentAnalysis.map(seg => ({
-    name: `${seg.segment} (${seg.spendRange})`,
-    value: seg.totalSpend,
-    color: seg.color,
-    percentage: chartDataTotalSpend > 0 ? (seg.totalSpend / chartDataTotalSpend) * 100 : 0,
-  }));
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="h-4 w-4 ml-1 opacity-50" />;
+    }
+    return sortDirection === 'asc'
+      ? <ArrowUp className="h-4 w-4 ml-1" />
+      : <ArrowDown className="h-4 w-4 ml-1" />;
+  };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading spend stratification data...</p>
+          <Loader2 className="h-12 w-12 text-blue-600 mx-auto mb-4 animate-spin" />
+          <p className="text-gray-600 dark:text-gray-400">Loading spend stratification data...</p>
         </div>
       </div>
     );
   }
 
-  if (data.length === 0) {
+  if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-96 text-center">
-        <Layers className="h-16 w-16 text-gray-400 mb-4" />
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">No Data Available</h3>
-        <p className="text-gray-600">Upload your procurement data to see spend stratification analysis.</p>
+        <AlertTriangle className="h-16 w-16 text-red-500 mb-4" />
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Error Loading Data</h3>
+        <p className="text-gray-600 dark:text-gray-400">Failed to load spend stratification analysis. Please try again.</p>
       </div>
     );
   }
+
+  if (!data || data.spend_bands.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 text-center">
+        <Layers className="h-16 w-16 text-gray-400 mb-4" />
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">No Data Available</h3>
+        <p className="text-gray-600 dark:text-gray-400">Upload your procurement data to see spend stratification analysis.</p>
+      </div>
+    );
+  }
+
+  const { summary, spend_bands, segments } = data;
+
+  // Calculate strategic and tactical spend from segments
+  const strategicSegment = segments.find(s => s.segment === 'Strategic');
+  const tacticalSegment = segments.find(s => s.segment === 'Tactical');
+
+  // Risk color mapping
+  const getRiskColor = (risk: string) => {
+    if (risk.includes('HIGH')) return 'bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-300';
+    if (risk.includes('MEDIUM')) return 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-300';
+    return 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-300';
+  };
+
+  // Risk badge component
+  const getRiskBadge = (risk: string) => {
+    const colors: Record<string, string> = {
+      High: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+      Medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+      Low: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+    };
+    return <Badge className={colors[risk] || colors.Low}>{risk}</Badge>;
+  };
+
+  // Strategic importance badge
+  const getImportanceBadge = (importance: string) => {
+    const colors: Record<string, string> = {
+      Critical: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+      Strategic: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+      Tactical: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300',
+    };
+    return <Badge className={colors[importance] || colors.Tactical}>{importance}</Badge>;
+  };
+
+  // Prepare chart data with segment reference for click handling
+  const chartData = segments.map(seg => ({
+    name: `${seg.segment} (${seg.spend_range})`,
+    segment: seg.segment,
+    value: seg.total_spend,
+    color: SEGMENT_COLORS[seg.segment] || '#6b7280',
+    percentage: seg.percent_of_total,
+  }));
+
+  // Handle pie chart click
+  const handlePieClick = (data: { segment?: string }) => {
+    if (data?.segment) {
+      setSelectedSegment(data.segment);
+    }
+  };
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
           <Layers className="h-8 w-8 text-blue-600" />
           Spend Stratification
         </h1>
-        <p className="text-gray-600 mt-1">
+        <p className="text-gray-600 dark:text-gray-400 mt-1">
           Analyze spending patterns across different spend bands and supplier segments
         </p>
       </div>
 
+      {/* Key Metrics Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="dark:bg-gray-800 dark:border-gray-700">
+          <CardContent className="pt-6 text-center">
+            <DollarSign className="h-8 w-8 mx-auto mb-2 text-blue-600" />
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              ${summary.total_spend.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            </div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">Total Spend</div>
+          </CardContent>
+        </Card>
+
+        <Card className="dark:bg-gray-800 dark:border-gray-700">
+          <CardContent className="pt-6 text-center">
+            <Target className="h-8 w-8 mx-auto mb-2 text-red-500" />
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              ${(strategicSegment?.total_spend || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            </div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">Strategic Spend</div>
+            <div className="text-xs text-red-500 mt-1">{strategicSegment?.percent_of_total.toFixed(1)}% of total</div>
+          </CardContent>
+        </Card>
+
+        <Card className="dark:bg-gray-800 dark:border-gray-700">
+          <CardContent className="pt-6 text-center">
+            <Zap className="h-8 w-8 mx-auto mb-2 text-green-500" />
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              ${(tacticalSegment?.total_spend || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            </div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">Consolidation Opportunity</div>
+            <div className="text-xs text-green-500 mt-1">{tacticalSegment?.suppliers || 0} fragmented suppliers</div>
+          </CardContent>
+        </Card>
+
+        <Card className="dark:bg-gray-800 dark:border-gray-700">
+          <CardContent className="pt-6 text-center">
+            <Shield className="h-8 w-8 mx-auto mb-2 text-orange-500" />
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              {summary.high_risk_bands}
+            </div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">High Risk Bands</div>
+            <div className="text-xs text-orange-500 mt-1">Concentration concerns</div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* SpendBand Analysis & Strategic Intelligence Card */}
-      <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50">
+      <Card className="border-2 border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20">
         <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-blue-900">
+          <CardTitle className="flex items-center gap-2 text-blue-900 dark:text-blue-100">
             <Target className="h-5 w-5" />
             Procurement Specialist SpendBand Analysis & Strategic Intelligence
           </CardTitle>
@@ -273,65 +272,65 @@ export default function SpendStratification() {
         <CardContent className="space-y-6">
           {/* Metrics Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <Card className="bg-white/80 border-blue-200">
+            <Card className="bg-white/80 dark:bg-gray-800/80 border-blue-200 dark:border-blue-700">
               <CardContent className="pt-6 text-center">
                 <div className="text-3xl font-bold text-blue-600 mb-1">
-                  {metrics.activeSpendBands}
+                  {summary.active_spend_bands}
                 </div>
-                <div className="text-xs font-semibold text-gray-700 mb-1">Active SpendBands</div>
-                <div className="text-xs text-gray-500">Segmentation complexity</div>
+                <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Active SpendBands</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Segmentation complexity</div>
               </CardContent>
             </Card>
 
-            <Card className="bg-white/80 border-blue-200">
+            <Card className="bg-white/80 dark:bg-gray-800/80 border-blue-200 dark:border-blue-700">
               <CardContent className="pt-6 text-center">
                 <div className="text-3xl font-bold text-blue-600 mb-1">
-                  {metrics.strategicBands}
+                  {summary.strategic_bands}
                 </div>
-                <div className="text-xs font-semibold text-gray-700 mb-1">Strategic Bands</div>
-                <div className="text-xs text-gray-500">Requiring executive attention</div>
+                <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Strategic Bands</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Requiring executive attention</div>
               </CardContent>
             </Card>
 
-            <Card className="bg-white/80 border-blue-200">
+            <Card className="bg-white/80 dark:bg-gray-800/80 border-blue-200 dark:border-blue-700">
               <CardContent className="pt-6 text-center">
                 <div className="text-3xl font-bold text-blue-600 mb-1">
-                  {metrics.highestImpactBand.label}
+                  {summary.highest_impact_band}
                 </div>
-                <div className="text-xs font-semibold text-gray-700 mb-1">Highest Impact Band</div>
-                <div className="text-xs text-gray-500">
-                  {metrics.highestImpactBand.percentOfTotal.toFixed(1)}% of total spend
+                <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Highest Impact Band</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  {summary.highest_impact_percent.toFixed(1)}% of total spend
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-white/80 border-blue-200">
+            <Card className="bg-white/80 dark:bg-gray-800/80 border-blue-200 dark:border-blue-700">
               <CardContent className="pt-6 text-center">
                 <div className="text-3xl font-bold text-blue-600 mb-1">
-                  {metrics.highRiskBands}
+                  {summary.high_risk_bands}
                 </div>
-                <div className="text-xs font-semibold text-gray-700 mb-1">High Risk Bands</div>
-                <div className="text-xs text-gray-500">Concentration concerns</div>
+                <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">High Risk Bands</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Concentration concerns</div>
               </CardContent>
             </Card>
 
-            <Card className="bg-white/80 border-blue-200">
+            <Card className="bg-white/80 dark:bg-gray-800/80 border-blue-200 dark:border-blue-700">
               <CardContent className="pt-6 text-center">
                 <div className="text-3xl font-bold text-blue-600 mb-1">
-                  {metrics.mostFragmented.label}
+                  {summary.most_fragmented_band}
                 </div>
-                <div className="text-xs font-semibold text-gray-700 mb-1">Most Fragmented</div>
-                <div className="text-xs text-gray-500">{metrics.mostFragmented.suppliers} suppliers</div>
+                <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Most Fragmented</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{summary.most_fragmented_suppliers} suppliers</div>
               </CardContent>
             </Card>
 
-            <Card className="bg-white/80 border-blue-200">
+            <Card className="bg-white/80 dark:bg-gray-800/80 border-blue-200 dark:border-blue-700">
               <CardContent className="pt-6 text-center">
                 <div className="text-3xl font-bold text-blue-600 mb-1">
-                  {metrics.complexBands}
+                  {summary.complex_bands}
                 </div>
-                <div className="text-xs font-semibold text-gray-700 mb-1">Complex Bands</div>
-                <div className="text-xs text-gray-500">Management intensive</div>
+                <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Complex Bands</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Management intensive</div>
               </CardContent>
             </Card>
           </div>
@@ -341,47 +340,63 @@ export default function SpendStratification() {
             <div className="flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">Procurement Specialist Strategic Analysis</h3>
-                <p className="text-sm text-gray-700 leading-relaxed">
-                  <strong>High Concentration Risk:</strong> The {metrics.highestImpactBand.label} band represents{' '}
-                  {metrics.highestImpactBand.percentOfTotal.toFixed(1)}% of total spend, creating significant exposure.{' '}
-                  <strong>Supplier Base Complexity:</strong> Average of {strategicAnalysis.avgSuppliersPerBand} suppliers per
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Procurement Specialist Strategic Analysis</h3>
+                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                  <strong>High Concentration Risk:</strong> The {summary.highest_impact_band} band represents{' '}
+                  {summary.highest_impact_percent.toFixed(1)}% of total spend, creating significant exposure.{' '}
+                  <strong>Supplier Base Complexity:</strong> Average of {summary.avg_suppliers_per_band} suppliers per
                   band indicates high management complexity.
                 </p>
               </div>
             </div>
 
             <div className="flex items-start gap-2">
-              <span className="text-sm font-semibold text-gray-700 whitespace-nowrap">Overall Risk Assessment:</span>
-              <Badge className={`${strategicAnalysis.riskColor} border px-3 py-1`}>
-                {strategicAnalysis.riskLevel}
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">Overall Risk Assessment:</span>
+              <Badge className={`${getRiskColor(summary.overall_risk)} border px-3 py-1`}>
+                {summary.overall_risk}
               </Badge>
             </div>
 
-            <div className="border-l-4 border-blue-400 pl-4 py-2 bg-white/50 rounded-r">
-              <div className="flex items-start gap-2 mb-2">
-                <TrendingUp className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                <h4 className="font-semibold text-gray-900 text-sm">Strategic Recommendations</h4>
+            {/* Collapsible Recommendations Panel */}
+            {summary.recommendations.length > 0 && (
+              <div className="border-l-4 border-blue-400 pl-4 py-2 bg-white/50 dark:bg-gray-800/50 rounded-r">
+                <button
+                  onClick={() => setRecommendationsExpanded(!recommendationsExpanded)}
+                  className="flex items-center gap-2 mb-2 w-full text-left"
+                >
+                  <Lightbulb className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                  <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm flex-1">
+                    Strategic Recommendations ({summary.recommendations.length})
+                  </h4>
+                  {recommendationsExpanded ? (
+                    <ChevronUp className="h-4 w-4 text-gray-500" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-gray-500" />
+                  )}
+                </button>
+                {recommendationsExpanded && (
+                  <ul className="space-y-1.5 text-sm text-gray-700 dark:text-gray-300">
+                    {summary.recommendations.map((rec, idx) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <span className="text-blue-600 mt-0.5">—</span>
+                        <span>{rec}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
-              <ul className="space-y-1.5 text-sm text-gray-700">
-                {strategicAnalysis.recommendations.map((rec, idx) => (
-                  <li key={idx} className="flex items-start gap-2">
-                    <span className="text-blue-600 mt-0.5">—</span>
-                    <span>{rec}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
       {/* Spend Stratification Chart */}
-      <Card>
+      <Card className="dark:bg-gray-800 dark:border-gray-700">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 dark:text-gray-100">
             <Layers className="h-5 w-5 text-blue-600" />
             Spend Stratification by Supplier Segments
+            <span className="text-sm font-normal text-gray-500 ml-2">(Click a segment to drill down)</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="overflow-visible">
@@ -395,13 +410,15 @@ export default function SpendStratification() {
                 outerRadius={160}
                 paddingAngle={2}
                 dataKey="value"
+                onClick={(_, index) => handlePieClick(chartData[index])}
+                style={{ cursor: 'pointer' }}
               >
                 {chartData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
               <Tooltip
-                formatter={(value: number, name: string, props: any) => {
+                formatter={(value: number, _name: string, props: { payload?: { percentage?: number } }) => {
                   const percentage = props.payload?.percentage || 0;
                   return [
                     `$${value.toLocaleString()} (${percentage.toFixed(2)}% of total spend)`,
@@ -417,13 +434,12 @@ export default function SpendStratification() {
                   zIndex: 1000
                 }}
                 wrapperStyle={{ zIndex: 1000 }}
-                labelStyle={{ fontWeight: 'bold', marginBottom: '4px' }}
               />
               <Legend
                 verticalAlign="bottom"
                 height={36}
                 iconType="circle"
-                formatter={(value) => <span className="text-sm">{value}</span>}
+                formatter={(value) => <span className="text-sm dark:text-gray-300">{value}</span>}
               />
             </PieChart>
           </ResponsiveContainer>
@@ -431,9 +447,9 @@ export default function SpendStratification() {
       </Card>
 
       {/* Stratification Details Table */}
-      <Card>
+      <Card className="dark:bg-gray-800 dark:border-gray-700">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 dark:text-gray-100">
             <Target className="h-5 w-5 text-blue-600" />
             Stratification Details
           </CardTitle>
@@ -442,7 +458,7 @@ export default function SpendStratification() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b-2 border-gray-300 bg-gray-800 text-white">
+                <tr className="border-b-2 border-gray-300 dark:border-gray-600 bg-gray-800 text-white">
                   <th className="text-left p-3 font-semibold">Segment</th>
                   <th className="text-left p-3 font-semibold">Spend Range</th>
                   <th className="text-right p-3 font-semibold">Total Spend</th>
@@ -453,16 +469,16 @@ export default function SpendStratification() {
                 </tr>
               </thead>
               <tbody>
-                {segmentAnalysis.map((segment, idx) => (
-                  <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
-                    <td className="p-3 font-medium">{segment.segment}</td>
-                    <td className="p-3">{segment.spendRange}</td>
-                    <td className="p-3 text-right font-semibold">
-                      ${segment.totalSpend.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                {segments.map((segment, idx) => (
+                  <tr key={idx} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <td className="p-3 font-medium text-gray-900 dark:text-gray-100">{segment.segment}</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-300">{segment.spend_range}</td>
+                    <td className="p-3 text-right font-semibold text-gray-900 dark:text-gray-100">
+                      ${segment.total_spend.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </td>
-                    <td className="p-3 text-right">{segment.percentOfTotal.toFixed(2)}%</td>
-                    <td className="p-3 text-right">{segment.suppliers}</td>
-                    <td className="p-3">{segment.strategy}</td>
+                    <td className="p-3 text-right text-gray-600 dark:text-gray-300">{segment.percent_of_total.toFixed(2)}%</td>
+                    <td className="p-3 text-right text-gray-600 dark:text-gray-300">{segment.suppliers}</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-300">{segment.strategy}</td>
                     <td className="p-3 text-center">
                       <Button
                         variant="outline"
@@ -482,39 +498,109 @@ export default function SpendStratification() {
         </CardContent>
       </Card>
 
-      {/* SpendBand Analysis Table */}
-      <Card>
+      {/* SpendBand Analysis Table with Search and Sorting */}
+      <Card className="dark:bg-gray-800 dark:border-gray-700">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-blue-600" />
-            SpendBand Analysis (Sorted by SpendBand)
-          </CardTitle>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <CardTitle className="flex items-center gap-2 dark:text-gray-100">
+              <DollarSign className="h-5 w-5 text-blue-600" />
+              SpendBand Analysis
+            </CardTitle>
+            <div className="relative w-full md:w-64">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search spend bands..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
             <table className="w-full">
               <thead className="sticky top-0 bg-gray-800 text-white z-10">
-                <tr className="border-b-2 border-gray-300">
-                  <th className="text-left p-3 font-semibold">SpendBand</th>
-                  <th className="text-right p-3 font-semibold">Total Spend</th>
-                  <th className="text-right p-3 font-semibold">% of Total</th>
-                  <th className="text-right p-3 font-semibold">Suppliers</th>
-                  <th className="text-right p-3 font-semibold">Transactions</th>
-                  <th className="text-right p-3 font-semibold">Avg Spend per Supplier</th>
+                <tr className="border-b-2 border-gray-300 dark:border-gray-600">
+                  <th
+                    className="text-left p-3 font-semibold cursor-pointer hover:bg-gray-700"
+                    onClick={() => handleSort('band')}
+                  >
+                    <div className="flex items-center">
+                      SpendBand
+                      {getSortIcon('band')}
+                    </div>
+                  </th>
+                  <th
+                    className="text-right p-3 font-semibold cursor-pointer hover:bg-gray-700"
+                    onClick={() => handleSort('total_spend')}
+                  >
+                    <div className="flex items-center justify-end">
+                      Total Spend
+                      {getSortIcon('total_spend')}
+                    </div>
+                  </th>
+                  <th
+                    className="text-right p-3 font-semibold cursor-pointer hover:bg-gray-700"
+                    onClick={() => handleSort('percent_of_total')}
+                  >
+                    <div className="flex items-center justify-end">
+                      % of Total
+                      {getSortIcon('percent_of_total')}
+                    </div>
+                  </th>
+                  <th
+                    className="text-right p-3 font-semibold cursor-pointer hover:bg-gray-700"
+                    onClick={() => handleSort('suppliers')}
+                  >
+                    <div className="flex items-center justify-end">
+                      Suppliers
+                      {getSortIcon('suppliers')}
+                    </div>
+                  </th>
+                  <th
+                    className="text-right p-3 font-semibold cursor-pointer hover:bg-gray-700"
+                    onClick={() => handleSort('transactions')}
+                  >
+                    <div className="flex items-center justify-end">
+                      Transactions
+                      {getSortIcon('transactions')}
+                    </div>
+                  </th>
+                  <th className="text-center p-3 font-semibold">Risk Level</th>
+                  <th className="text-center p-3 font-semibold">Importance</th>
+                  <th className="text-center p-3 font-semibold">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {spendBandWithPercent.map((band, idx) => (
-                  <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
-                    <td className="p-3 font-medium">{band.band}</td>
-                    <td className="p-3 text-right font-semibold">
-                      ${band.totalSpend.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                {sortedBands.map((band, idx) => (
+                  <tr
+                    key={idx}
+                    className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
+                    onClick={() => setSelectedBand(band.band)}
+                  >
+                    <td className="p-3 font-medium text-gray-900 dark:text-gray-100">{band.band}</td>
+                    <td className="p-3 text-right font-semibold text-gray-900 dark:text-gray-100">
+                      ${band.total_spend.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </td>
-                    <td className="p-3 text-right">{band.percentOfTotal.toFixed(2)}%</td>
-                    <td className="p-3 text-right">{band.suppliers}</td>
-                    <td className="p-3 text-right">{band.transactions.toLocaleString()}</td>
-                    <td className="p-3 text-right">
-                      ${band.avgSpendPerSupplier.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    <td className="p-3 text-right text-gray-600 dark:text-gray-300">{band.percent_of_total.toFixed(2)}%</td>
+                    <td className="p-3 text-right text-gray-600 dark:text-gray-300">{band.suppliers}</td>
+                    <td className="p-3 text-right text-gray-600 dark:text-gray-300">{band.transactions.toLocaleString()}</td>
+                    <td className="p-3 text-center">{getRiskBadge(band.risk_level)}</td>
+                    <td className="p-3 text-center">{getImportanceBadge(band.strategic_importance)}</td>
+                    <td className="p-3 text-center">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedBand(band.band);
+                        }}
+                        className="gap-1"
+                      >
+                        <Eye className="h-4 w-4" />
+                        Details
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -526,231 +612,325 @@ export default function SpendStratification() {
 
       {/* Segment Drill-Through Modal */}
       <Dialog open={!!selectedSegment} onOpenChange={() => setSelectedSegment(null)}>
-        <DialogContent className="!max-w-7xl max-h-[90vh] overflow-y-auto">
+        <DialogContent size="xl" className="max-h-[90vh] overflow-y-auto dark:bg-gray-800">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-2xl">
+            <DialogTitle className="flex items-center gap-2 text-2xl dark:text-gray-100">
               <Target className="h-6 w-6 text-blue-600" />
               {selectedSegment} Segment Analysis
             </DialogTitle>
           </DialogHeader>
-          {selectedSegment && (() => {
-            // Get segment definition
-            const segmentDef = SEGMENTS.find(s => s.name === selectedSegment);
-            if (!segmentDef) return null;
 
-            // Find spend bands that belong to this segment (same logic as table)
-            const bandsInSegment = spendBandWithPercent.filter(band => {
-              const bandMin = SPEND_BANDS.find(b => b.name === band.band)?.min || 0;
-              return bandMin >= segmentDef.min && bandMin < segmentDef.max;
-            });
+          {segmentDrilldownLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <Loader2 className="h-12 w-12 text-blue-600 mx-auto mb-4 animate-spin" />
+                <p className="text-gray-600 dark:text-gray-400">Loading segment details...</p>
+              </div>
+            </div>
+          ) : segmentDrilldownData ? (
+            <div className="space-y-6 mt-4">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-4 gap-4">
+                <Card className="dark:bg-gray-700 dark:border-gray-600">
+                  <CardContent className="pt-6 text-center">
+                    <DollarSign className="h-8 w-8 mx-auto mb-2 text-blue-600" />
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                      ${segmentDrilldownData.total_spend.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Total Spend</div>
+                  </CardContent>
+                </Card>
 
-            // Get the spend band names for this segment
-            const segmentBandNames = new Set(bandsInSegment.map(b => b.band));
+                <Card className="dark:bg-gray-700 dark:border-gray-600">
+                  <CardContent className="pt-6 text-center">
+                    <Users className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{segmentDrilldownData.supplier_count}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Suppliers</div>
+                  </CardContent>
+                </Card>
 
-            // Filter records that have SpendBand belonging to this segment
-            const segmentRecords = data.filter(record => 
-              record.spendBand && segmentBandNames.has(record.spendBand)
-            );
+                <Card className="dark:bg-gray-700 dark:border-gray-600">
+                  <CardContent className="pt-6 text-center">
+                    <TrendingUp className="h-8 w-8 mx-auto mb-2 text-purple-600" />
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                      ${segmentDrilldownData.avg_spend_per_supplier.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Avg Spend/Supplier</div>
+                  </CardContent>
+                </Card>
 
-            // Group by supplier to get supplier-level metrics
-            const supplierSpendMap = new Map<string, { total: number; records: typeof data }>();
-            segmentRecords.forEach(record => {
-              if (!supplierSpendMap.has(record.supplier)) {
-                supplierSpendMap.set(record.supplier, { total: 0, records: [] });
-              }
-              const existing = supplierSpendMap.get(record.supplier)!;
-              existing.total += record.amount;
-              existing.records.push(record);
-            });
+                <Card className="dark:bg-gray-700 dark:border-gray-600">
+                  <CardContent className="pt-6 text-center">
+                    <Package className="h-8 w-8 mx-auto mb-2 text-orange-600" />
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{segmentDrilldownData.transaction_count.toLocaleString()}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Transactions</div>
+                  </CardContent>
+                </Card>
+              </div>
 
-            // Convert to array and sort by total spend
-            const segmentSuppliers = Array.from(supplierSpendMap.entries())
-              .map(([supplier, data]) => ({ supplier, ...data }))
-              .sort((a, b) => b.total - a.total);
+              {/* Supplier List Table */}
+              <Card className="dark:bg-gray-700 dark:border-gray-600">
+                <CardHeader>
+                  <CardTitle className="text-lg dark:text-gray-100">Supplier Details</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+                    <table className="w-full">
+                      <thead className="sticky top-0 bg-gray-800 text-white z-10">
+                        <tr className="border-b-2 border-gray-300 dark:border-gray-600">
+                          <th className="text-left p-3 font-semibold">Rank</th>
+                          <th className="text-left p-3 font-semibold">Supplier</th>
+                          <th className="text-right p-3 font-semibold">Total Spend</th>
+                          <th className="text-right p-3 font-semibold">% of Segment</th>
+                          <th className="text-right p-3 font-semibold">Transactions</th>
+                          <th className="text-right p-3 font-semibold">Subcategories</th>
+                          <th className="text-right p-3 font-semibold">Locations</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {segmentDrilldownData.suppliers.map((supplier, idx) => (
+                          <tr key={idx} className="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600/50">
+                            <td className="p-3 text-gray-600 dark:text-gray-400">{idx + 1}</td>
+                            <td className="p-3 font-medium text-gray-900 dark:text-gray-100">{supplier.name}</td>
+                            <td className="p-3 text-right font-semibold text-gray-900 dark:text-gray-100">
+                              ${supplier.total_spend.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            </td>
+                            <td className="p-3 text-right text-gray-600 dark:text-gray-300">{supplier.percent_of_segment.toFixed(2)}%</td>
+                            <td className="p-3 text-right text-gray-600 dark:text-gray-300">{supplier.transactions}</td>
+                            <td className="p-3 text-right text-gray-600 dark:text-gray-300">{supplier.subcategory_count}</td>
+                            <td className="p-3 text-right text-gray-600 dark:text-gray-300">{supplier.location_count}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
 
-            // Calculate metrics
-            const totalSpend = segmentSuppliers.reduce((sum, s) => sum + s.total, 0);
-            const supplierCount = segmentSuppliers.length;
-            const transactionCount = segmentRecords.length;
-            const avgSpend = supplierCount > 0 ? totalSpend / supplierCount : 0;
-
-            // Subcategory breakdown
-            const subcategoryMap = new Map<string, number>();
-            segmentRecords.forEach(record => {
-              subcategoryMap.set(
-                record.subcategory,
-                (subcategoryMap.get(record.subcategory) || 0) + record.amount
-              );
-            });
-            const subcategoryData = Array.from(subcategoryMap.entries())
-              .map(([name, value]) => ({ name, value }))
-              .sort((a, b) => b.value - a.value)
-              .slice(0, 10);
-
-            // Location breakdown
-            const locationMap = new Map<string, number>();
-            segmentRecords.forEach(record => {
-              locationMap.set(
-                record.location,
-                (locationMap.get(record.location) || 0) + record.amount
-              );
-            });
-            const locationData = Array.from(locationMap.entries())
-              .map(([name, value]) => ({ name, value }))
-              .sort((a, b) => b.value - a.value)
-              .slice(0, 10);
-
-            return (
-              <div className="space-y-6 mt-4">
-                {/* Summary Cards */}
-                <div className="grid grid-cols-4 gap-4">
-                  <Card>
-                    <CardContent className="pt-6 text-center">
-                      <DollarSign className="h-8 w-8 mx-auto mb-2 text-blue-600" />
-                      <div className="text-2xl font-bold text-gray-900">
-                        ${totalSpend.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                      </div>
-                      <div className="text-sm text-gray-600 mt-1">Total Spend</div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardContent className="pt-6 text-center">
-                      <Users className="h-8 w-8 mx-auto mb-2 text-green-600" />
-                      <div className="text-2xl font-bold text-gray-900">{supplierCount}</div>
-                      <div className="text-sm text-gray-600 mt-1">Suppliers</div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardContent className="pt-6 text-center">
-                      <TrendingUp className="h-8 w-8 mx-auto mb-2 text-purple-600" />
-                      <div className="text-2xl font-bold text-gray-900">
-                        ${avgSpend.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                      </div>
-                      <div className="text-sm text-gray-600 mt-1">Avg Spend/Supplier</div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardContent className="pt-6 text-center">
-                      <Package className="h-8 w-8 mx-auto mb-2 text-orange-600" />
-                      <div className="text-2xl font-bold text-gray-900">{transactionCount.toLocaleString()}</div>
-                      <div className="text-sm text-gray-600 mt-1">Transactions</div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Supplier List Table */}
-                <Card>
+              {/* Subcategory and Location Breakdown */}
+              <div className="grid grid-cols-2 gap-6">
+                {/* Top 10 Subcategories */}
+                <Card className="dark:bg-gray-700 dark:border-gray-600">
                   <CardHeader>
-                    <CardTitle className="text-lg">Supplier Details</CardTitle>
+                    <CardTitle className="text-lg dark:text-gray-100">Top 10 Subcategories</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
-                      <table className="w-full">
-                        <thead className="sticky top-0 bg-gray-800 text-white z-10">
-                          <tr className="border-b-2 border-gray-300">
-                            <th className="text-left p-3 font-semibold">Rank</th>
-                            <th className="text-left p-3 font-semibold">Supplier</th>
-                            <th className="text-right p-3 font-semibold">Total Spend</th>
-                            <th className="text-right p-3 font-semibold">% of Segment</th>
-                            <th className="text-right p-3 font-semibold">Transactions</th>
-                            <th className="text-right p-3 font-semibold">Subcategories</th>
-                            <th className="text-right p-3 font-semibold">Locations</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {segmentSuppliers.map((supplier, idx) => {
-                            const subcategoryCount = new Set(supplier.records.map(r => r.subcategory)).size;
-                            const locationCount = new Set(supplier.records.map(r => r.location)).size;
-                            const percentOfSegment = totalSpend > 0 ? (supplier.total / totalSpend) * 100 : 0;
-
-                            return (
-                              <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
-                                <td className="p-3 text-gray-600">{idx + 1}</td>
-                                <td className="p-3 font-medium">{supplier.supplier}</td>
-                                <td className="p-3 text-right font-semibold">
-                                  ${supplier.total.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                </td>
-                                <td className="p-3 text-right">{percentOfSegment.toFixed(2)}%</td>
-                                <td className="p-3 text-right">{supplier.records.length}</td>
-                                <td className="p-3 text-right">{subcategoryCount}</td>
-                                <td className="p-3 text-right">{locationCount}</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                    <div className="space-y-3">
+                      {segmentDrilldownData.subcategories.map((item, idx) => (
+                        <div key={idx} className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="font-medium text-gray-900 dark:text-gray-100">{item.name}</span>
+                            <span className="text-gray-600 dark:text-gray-400">
+                              ${item.spend.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ({item.percent_of_segment.toFixed(1)}%)
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                            <div
+                              className="bg-blue-600 h-2 rounded-full"
+                              style={{ width: `${Math.min(item.percent_of_segment, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Subcategory and Location Breakdown */}
-                <div className="grid grid-cols-2 gap-6">
-                  {/* Top 10 Subcategories */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Top 10 Subcategories</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {subcategoryData.map((item, idx) => {
-                          const percentage = totalSpend > 0 ? (item.value / totalSpend) * 100 : 0;
-                          return (
-                            <div key={idx} className="space-y-1">
-                              <div className="flex justify-between text-sm">
-                                <span className="font-medium">{item.name}</span>
-                                <span className="text-gray-600">
-                                  ${item.value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ({percentage.toFixed(1)}%)
-                                </span>
-                              </div>
-                              <div className="w-full bg-gray-200 rounded-full h-2">
-                                <div
-                                  className="bg-blue-600 h-2 rounded-full"
-                                  style={{ width: `${percentage}%` }}
-                                />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Top 10 Locations */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Top 10 Locations</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {locationData.map((item, idx) => {
-                          const percentage = totalSpend > 0 ? (item.value / totalSpend) * 100 : 0;
-                          return (
-                            <div key={idx} className="space-y-1">
-                              <div className="flex justify-between text-sm">
-                                <span className="font-medium">{item.name}</span>
-                                <span className="text-gray-600">
-                                  ${item.value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ({percentage.toFixed(1)}%)
-                                </span>
-                              </div>
-                              <div className="w-full bg-gray-200 rounded-full h-2">
-                                <div
-                                  className="bg-purple-600 h-2 rounded-full"
-                                  style={{ width: `${percentage}%` }}
-                                />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                {/* Top 10 Locations */}
+                <Card className="dark:bg-gray-700 dark:border-gray-600">
+                  <CardHeader>
+                    <CardTitle className="text-lg dark:text-gray-100">Top 10 Locations</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {segmentDrilldownData.locations.map((item, idx) => (
+                        <div key={idx} className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="font-medium text-gray-900 dark:text-gray-100">{item.name}</span>
+                            <span className="text-gray-600 dark:text-gray-400">
+                              ${item.spend.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ({item.percent_of_segment.toFixed(1)}%)
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                            <div
+                              className="bg-purple-600 h-2 rounded-full"
+                              style={{ width: `${Math.min(item.percent_of_segment, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            );
-          })()}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-12">
+              <p className="text-gray-600 dark:text-gray-400">No data available for this segment.</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Band Drill-Through Modal */}
+      <Dialog open={!!selectedBand} onOpenChange={() => setSelectedBand(null)}>
+        <DialogContent size="xl" className="max-h-[90vh] overflow-y-auto dark:bg-gray-800">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-2xl dark:text-gray-100">
+              <DollarSign className="h-6 w-6 text-blue-600" />
+              {selectedBand} Spend Band Analysis
+            </DialogTitle>
+          </DialogHeader>
+
+          {bandDrilldownLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <Loader2 className="h-12 w-12 text-blue-600 mx-auto mb-4 animate-spin" />
+                <p className="text-gray-600 dark:text-gray-400">Loading spend band details...</p>
+              </div>
+            </div>
+          ) : bandDrilldownData ? (
+            <div className="space-y-6 mt-4">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-4 gap-4">
+                <Card className="dark:bg-gray-700 dark:border-gray-600">
+                  <CardContent className="pt-6 text-center">
+                    <DollarSign className="h-8 w-8 mx-auto mb-2 text-blue-600" />
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                      ${bandDrilldownData.total_spend.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Total Spend</div>
+                  </CardContent>
+                </Card>
+
+                <Card className="dark:bg-gray-700 dark:border-gray-600">
+                  <CardContent className="pt-6 text-center">
+                    <Users className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{bandDrilldownData.supplier_count}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Suppliers</div>
+                  </CardContent>
+                </Card>
+
+                <Card className="dark:bg-gray-700 dark:border-gray-600">
+                  <CardContent className="pt-6 text-center">
+                    <TrendingUp className="h-8 w-8 mx-auto mb-2 text-purple-600" />
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                      ${bandDrilldownData.avg_spend_per_supplier.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Avg Spend/Supplier</div>
+                  </CardContent>
+                </Card>
+
+                <Card className="dark:bg-gray-700 dark:border-gray-600">
+                  <CardContent className="pt-6 text-center">
+                    <Package className="h-8 w-8 mx-auto mb-2 text-orange-600" />
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{bandDrilldownData.transaction_count.toLocaleString()}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Transactions</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Supplier List Table */}
+              <Card className="dark:bg-gray-700 dark:border-gray-600">
+                <CardHeader>
+                  <CardTitle className="text-lg dark:text-gray-100">Supplier Details</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+                    <table className="w-full">
+                      <thead className="sticky top-0 bg-gray-800 text-white z-10">
+                        <tr className="border-b-2 border-gray-300 dark:border-gray-600">
+                          <th className="text-left p-3 font-semibold">Rank</th>
+                          <th className="text-left p-3 font-semibold">Supplier</th>
+                          <th className="text-right p-3 font-semibold">Total Spend</th>
+                          <th className="text-right p-3 font-semibold">% of Band</th>
+                          <th className="text-right p-3 font-semibold">Transactions</th>
+                          <th className="text-right p-3 font-semibold">Subcategories</th>
+                          <th className="text-right p-3 font-semibold">Locations</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bandDrilldownData.suppliers.map((supplier, idx) => (
+                          <tr key={idx} className="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600/50">
+                            <td className="p-3 text-gray-600 dark:text-gray-400">{idx + 1}</td>
+                            <td className="p-3 font-medium text-gray-900 dark:text-gray-100">{supplier.name}</td>
+                            <td className="p-3 text-right font-semibold text-gray-900 dark:text-gray-100">
+                              ${supplier.total_spend.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            </td>
+                            <td className="p-3 text-right text-gray-600 dark:text-gray-300">{supplier.percent_of_band.toFixed(2)}%</td>
+                            <td className="p-3 text-right text-gray-600 dark:text-gray-300">{supplier.transactions}</td>
+                            <td className="p-3 text-right text-gray-600 dark:text-gray-300">{supplier.subcategory_count}</td>
+                            <td className="p-3 text-right text-gray-600 dark:text-gray-300">{supplier.location_count}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Subcategory and Location Breakdown */}
+              <div className="grid grid-cols-2 gap-6">
+                {/* Top 10 Subcategories */}
+                <Card className="dark:bg-gray-700 dark:border-gray-600">
+                  <CardHeader>
+                    <CardTitle className="text-lg dark:text-gray-100">Top 10 Subcategories</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {bandDrilldownData.subcategories.map((item, idx) => (
+                        <div key={idx} className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="font-medium text-gray-900 dark:text-gray-100">{item.name}</span>
+                            <span className="text-gray-600 dark:text-gray-400">
+                              ${item.spend.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ({item.percent_of_band.toFixed(1)}%)
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                            <div
+                              className="bg-blue-600 h-2 rounded-full"
+                              style={{ width: `${Math.min(item.percent_of_band, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Top 10 Locations */}
+                <Card className="dark:bg-gray-700 dark:border-gray-600">
+                  <CardHeader>
+                    <CardTitle className="text-lg dark:text-gray-100">Top 10 Locations</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {bandDrilldownData.locations.map((item, idx) => (
+                        <div key={idx} className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="font-medium text-gray-900 dark:text-gray-100">{item.name}</span>
+                            <span className="text-gray-600 dark:text-gray-400">
+                              ${item.spend.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ({item.percent_of_band.toFixed(1)}%)
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                            <div
+                              className="bg-purple-600 h-2 rounded-full"
+                              style={{ width: `${Math.min(item.percent_of_band, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-12">
+              <p className="text-gray-600 dark:text-gray-400">No data available for this spend band.</p>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

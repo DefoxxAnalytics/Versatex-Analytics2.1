@@ -49,9 +49,9 @@ class ContractAnalyticsService:
 
         # Value statistics
         value_stats = self.contracts.filter(status='active').aggregate(
-            total_value=Sum('total_value'),
-            total_annual_value=Sum('annual_value'),
-            avg_value=Avg('total_value')
+            sum_total_value=Sum('total_value'),
+            sum_annual_value=Sum('annual_value'),
+            avg_contract_value=Avg('total_value')
         )
 
         # Expiring soon (within 90 days)
@@ -87,9 +87,9 @@ class ContractAnalyticsService:
             'active_contracts': active_contracts,
             'expiring_soon': expiring_soon,
             'expired': expired,
-            'total_value': float(value_stats['total_value'] or 0),
-            'total_annual_value': float(value_stats['total_annual_value'] or 0),
-            'avg_contract_value': float(value_stats['avg_value'] or 0),
+            'total_value': float(value_stats['sum_total_value'] or 0),
+            'total_annual_value': float(value_stats['sum_annual_value'] or 0),
+            'avg_contract_value': float(value_stats['avg_contract_value'] or 0),
             'contract_coverage_percentage': round(coverage_percentage, 1),
             'contracted_spend': float(contracted_spend),
             'total_spend': float(total_spend)

@@ -243,6 +243,42 @@
     font-weight: 400;
 }
 
+/* Selection display label for column mapping dropdowns */
+.mapping-selection-display {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: #166534;
+    font-weight: 600;
+    display: none;
+}
+
+.mapping-selection-display.visible {
+    display: block;
+}
+
+.mapping-selection-display::before {
+    content: "Mapped to: ";
+    color: #15803d;
+    font-weight: 400;
+}
+
+/* Style for unmapped selection display (when no column selected) */
+.mapping-item.required .mapping-selection-display:not(.visible) + .mapping-warning {
+    display: block;
+}
+
+/* Ensure mapping selects have proper styling */
+.mapping-select {
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    color-scheme: light !important;
+    -webkit-text-fill-color: #1f2937 !important;
+}
+
 .form-select:focus {
     outline: none;
     border-color: #1e40af;

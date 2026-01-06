@@ -1,85 +1,67 @@
 import { useState } from 'react';
-import { useFilteredProcurementData } from '@/hooks/useProcurementData';
+import { useSupplierDetails } from '@/hooks/useAnalytics';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Users, TrendingUp, DollarSign, Percent, AlertTriangle, Shield, ShieldAlert, Search, X } from 'lucide-react';
+import { Users, TrendingUp, DollarSign, Percent, AlertTriangle, Shield, ShieldAlert, Search, X, Loader2 } from 'lucide-react';
 
 export default function Suppliers() {
-  const { data = [] } = useFilteredProcurementData();
+  const { data, isLoading, error } = useSupplierDetails();
   const [searchQuery, setSearchQuery] = useState('');
 
-  if (data.length === 0) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-200px)]">
         <div className="text-center">
-          <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">No Data Available</h2>
-          <p className="text-gray-600">Upload your procurement data to see supplier analysis.</p>
+          <Loader2 className="h-16 w-16 text-blue-500 mx-auto mb-4 animate-spin" />
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Loading Supplier Data</h2>
+          <p className="text-gray-600 dark:text-gray-400">Analyzing supplier metrics...</p>
         </div>
       </div>
     );
   }
 
-  // Calculate supplier metrics
-  const supplierData = data.reduce((acc, record) => {
-    const supplier = record.supplier || 'Unknown';
-    if (!acc[supplier]) {
-      acc[supplier] = {
-        supplier,
-        totalSpend: 0,
-        transactionCount: 0,
-        avgTransaction: 0,
-        categories: new Set<string>(),
-      };
-    }
-    acc[supplier].totalSpend += record.amount;
-    acc[supplier].transactionCount += 1;
-    acc[supplier].categories.add(record.category);
-    return acc;
-  }, {} as Record<string, { supplier: string; totalSpend: number; transactionCount: number; avgTransaction: number; categories: Set<string> }>);
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-200px)]">
+        <div className="text-center">
+          <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Error Loading Data</h2>
+          <p className="text-gray-600 dark:text-gray-400">Failed to load supplier analysis. Please try again.</p>
+        </div>
+      </div>
+    );
+  }
 
-  // Calculate averages and sort
-  const suppliers = Object.values(supplierData)
-    .map(sup => ({
-      ...sup,
-      avgTransaction: sup.totalSpend / sup.transactionCount,
-      categoryCount: sup.categories.size,
-      percentage: (sup.totalSpend / data.reduce((sum, r) => sum + r.amount, 0)) * 100,
-    }))
-    .sort((a, b) => b.totalSpend - a.totalSpend);
+  if (!data || data.suppliers.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-200px)]">
+        <div className="text-center">
+          <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">No Data Available</h2>
+          <p className="text-gray-600 dark:text-gray-400">Upload your procurement data to see supplier analysis.</p>
+        </div>
+      </div>
+    );
+  }
 
-  const totalSpend = suppliers.reduce((sum, sup) => sum + sup.totalSpend, 0);
-  const topSuppliers = suppliers.slice(0, 10);
+  const { summary, suppliers } = data;
 
   // Filter suppliers based on search query
   const filteredSuppliers = searchQuery.trim()
-    ? suppliers.filter(sup => 
+    ? suppliers.filter(sup =>
         sup.supplier.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : suppliers;
 
-  // Calculate Herfindahl-Hirschman Index (HHI) for supplier concentration
-  // HHI = Σ(market share%)²
-  // Range: 0-10,000
-  // < 1,500 = Low concentration (competitive)
-  // 1,500-2,500 = Moderate concentration
-  // > 2,500 = High concentration (risk)
-  const hhi = suppliers.reduce((sum, sup) => {
-    const marketShare = sup.percentage; // Already in percentage
-    return sum + (marketShare * marketShare);
-  }, 0);
-
-  const getHHIRiskLevel = (hhi: number) => {
-    if (hhi < 1500) return { level: 'Low', color: 'text-green-600', bgColor: 'bg-green-50', icon: Shield };
-    if (hhi < 2500) return { level: 'Moderate', color: 'text-yellow-600', bgColor: 'bg-yellow-50', icon: AlertTriangle };
-    return { level: 'High', color: 'text-red-600', bgColor: 'bg-red-50', icon: ShieldAlert };
+  // Get HHI risk styling
+  const getHHIRiskStyling = (riskLevel: 'low' | 'moderate' | 'high') => {
+    if (riskLevel === 'low') return { color: 'text-green-600', bgColor: 'bg-green-50 dark:bg-green-900/20', icon: Shield };
+    if (riskLevel === 'moderate') return { color: 'text-yellow-600', bgColor: 'bg-yellow-50 dark:bg-yellow-900/20', icon: AlertTriangle };
+    return { color: 'text-red-600', bgColor: 'bg-red-50 dark:bg-red-900/20', icon: ShieldAlert };
   };
 
-  const hhiRisk = getHHIRiskLevel(hhi);
-
-  // Calculate concentration risk (top 3 suppliers)
-  const top3Concentration = (suppliers.slice(0, 3).reduce((sum, sup) => sum + sup.totalSpend, 0) / totalSpend) * 100;
+  const hhiRisk = getHHIRiskStyling(summary.hhi_risk_level);
 
   // Colors for charts
   const COLORS = [
@@ -87,25 +69,26 @@ export default function Suppliers() {
     '#06b6d4', '#6366f1', '#f43f5e', '#84cc16', '#14b8a6'
   ];
 
-  // Prepare data for pie chart
+  // Prepare data for pie chart (top 10 suppliers)
+  const topSuppliers = suppliers.slice(0, 10);
   const pieData = topSuppliers.map(sup => ({
     name: sup.supplier,
-    value: sup.totalSpend,
+    value: sup.total_spend,
   }));
 
   // Prepare data for bar chart
   const barData = topSuppliers.map(sup => ({
     supplier: sup.supplier.length > 20 ? sup.supplier.substring(0, 20) + '...' : sup.supplier,
-    spend: sup.totalSpend,
-    transactions: sup.transactionCount,
+    spend: sup.total_spend,
+    transactions: sup.transaction_count,
   }));
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Supplier Analysis</h1>
-        <p className="text-gray-600 mt-1">Analyze vendor performance and spending patterns</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Supplier Analysis</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">Analyze vendor performance and spending patterns</p>
       </div>
 
       {/* Summary Cards */}
@@ -113,53 +96,53 @@ export default function Suppliers() {
         <Card className="border-0 shadow-lg">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-gray-600">Total Suppliers</CardTitle>
+              <CardTitle className="text-sm font-semibold text-gray-600 dark:text-gray-400">Total Suppliers</CardTitle>
               <Users className="h-5 w-5 text-blue-500" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{suppliers.length}</div>
-            <p className="text-xs text-gray-500 mt-1">Active vendors</p>
+            <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{summary.total_suppliers}</div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Active vendors</p>
           </CardContent>
         </Card>
 
         <Card className="border-0 shadow-lg">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-gray-600">Total Spend</CardTitle>
+              <CardTitle className="text-sm font-semibold text-gray-600 dark:text-gray-400">Total Spend</CardTitle>
               <DollarSign className="h-5 w-5 text-green-500" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-900">
-              ${(totalSpend / 1000000).toFixed(1)}M
+            <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+              ${(summary.total_spend / 1000000).toFixed(1)}M
             </div>
-            <p className="text-xs text-gray-500 mt-1">Across all suppliers</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Across all suppliers</p>
           </CardContent>
         </Card>
 
         <Card className="border-0 shadow-lg">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-gray-600">Top Supplier</CardTitle>
+              <CardTitle className="text-sm font-semibold text-gray-600 dark:text-gray-400">Top Supplier</CardTitle>
               <TrendingUp className="h-5 w-5 text-purple-500" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold text-gray-900 truncate">
-              {suppliers[0]?.supplier}
+            <div className="text-xl font-bold text-gray-900 dark:text-gray-100 truncate">
+              {summary.top_supplier || 'N/A'}
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              ${(suppliers[0]?.totalSpend / 1000).toFixed(0)}K spend
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              ${(summary.top_supplier_spend / 1000).toFixed(0)}K spend
             </p>
           </CardContent>
         </Card>
 
-        <Card className={`border-0 shadow-lg ${top3Concentration > 50 ? 'bg-red-50' : ''}`}>
+        <Card className={`border-0 shadow-lg ${summary.top3_concentration > 50 ? 'bg-red-50 dark:bg-red-900/20' : ''}`}>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-gray-600">Concentration Risk</CardTitle>
-              {top3Concentration > 50 ? (
+              <CardTitle className="text-sm font-semibold text-gray-600 dark:text-gray-400">Concentration Risk</CardTitle>
+              {summary.top3_concentration > 50 ? (
                 <AlertTriangle className="h-5 w-5 text-red-500" />
               ) : (
                 <Percent className="h-5 w-5 text-orange-500" />
@@ -167,26 +150,26 @@ export default function Suppliers() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className={`text-3xl font-bold ${top3Concentration > 50 ? 'text-red-600' : 'text-gray-900'}`}>
-              {top3Concentration.toFixed(1)}%
+            <div className={`text-3xl font-bold ${summary.top3_concentration > 50 ? 'text-red-600' : 'text-gray-900 dark:text-gray-100'}`}>
+              {summary.top3_concentration.toFixed(1)}%
             </div>
-            <p className="text-xs text-gray-500 mt-1">Top 3 suppliers</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Top 3 suppliers</p>
           </CardContent>
         </Card>
 
         <Card className={`border-0 shadow-lg ${hhiRisk.bgColor}`}>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-gray-600">HHI Score</CardTitle>
+              <CardTitle className="text-sm font-semibold text-gray-600 dark:text-gray-400">HHI Score</CardTitle>
               <hhiRisk.icon className={`h-5 w-5 ${hhiRisk.color}`} />
             </div>
           </CardHeader>
           <CardContent>
             <div className={`text-3xl font-bold ${hhiRisk.color}`}>
-              {hhi.toFixed(0)}
+              {summary.hhi_score.toFixed(0)}
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              <span className={`font-semibold ${hhiRisk.color}`}>{hhiRisk.level}</span> concentration
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <span className={`font-semibold ${hhiRisk.color}`}>{summary.hhi_risk_level.charAt(0).toUpperCase() + summary.hhi_risk_level.slice(1)}</span> concentration
             </p>
           </CardContent>
         </Card>
@@ -212,16 +195,16 @@ export default function Suppliers() {
                   dataKey="value"
                   label={false}
                 >
-                  {pieData.map((entry, index) => (
+                  {pieData.map((_entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip 
+                <Tooltip
                   formatter={(value: number) => `$${value.toLocaleString()}`}
                   contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '8px' }}
                 />
-                <Legend 
-                  verticalAlign="bottom" 
+                <Legend
+                  verticalAlign="bottom"
                   height={60}
                   iconType="circle"
                   wrapperStyle={{ fontSize: '12px' }}
@@ -256,7 +239,7 @@ export default function Suppliers() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Supplier Details</CardTitle>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
               {searchQuery && (
                 <span>
                   {filteredSuppliers.length} of {suppliers.length} suppliers
@@ -286,45 +269,45 @@ export default function Suppliers() {
         <CardContent className="p-0">
           <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b-2 border-gray-200">
+              <thead className="bg-gray-50 dark:bg-gray-800 border-b-2 border-gray-200 dark:border-gray-700">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase">Rank</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase">Supplier</th>
-                  <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase">Total Spend</th>
-                  <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase">% of Total</th>
-                  <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase">Transactions</th>
-                  <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase">Avg Transaction</th>
-                  <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase">Categories</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">Rank</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">Supplier</th>
+                  <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">Total Spend</th>
+                  <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">% of Total</th>
+                  <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">Transactions</th>
+                  <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">Avg Transaction</th>
+                  <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">Categories</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {filteredSuppliers.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-6 py-12 text-center">
                       <Search className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                      <p className="text-gray-500 font-medium">No suppliers found</p>
-                      <p className="text-sm text-gray-400 mt-1">Try adjusting your search query</p>
+                      <p className="text-gray-500 dark:text-gray-400 font-medium">No suppliers found</p>
+                      <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Try adjusting your search query</p>
                     </td>
                   </tr>
                 ) : (
-                  filteredSuppliers.map((sup, index) => (
-                  <tr key={sup.supplier} className="hover:bg-blue-50/50 transition-colors">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{index + 1}</td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{sup.supplier}</td>
-                    <td className="px-6 py-4 text-sm text-right font-semibold text-gray-900">
-                      ${sup.totalSpend.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  filteredSuppliers.map((sup) => (
+                  <tr key={sup.supplier_id} className="hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-colors">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">{sup.rank}</td>
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">{sup.supplier}</td>
+                    <td className="px-6 py-4 text-sm text-right font-semibold text-gray-900 dark:text-gray-100">
+                      ${sup.total_spend.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="px-6 py-4 text-sm text-right text-gray-600">
-                      {sup.percentage.toFixed(1)}%
+                    <td className="px-6 py-4 text-sm text-right text-gray-600 dark:text-gray-400">
+                      {sup.percent_of_total.toFixed(1)}%
                     </td>
-                    <td className="px-6 py-4 text-sm text-right text-gray-600">
-                      {sup.transactionCount.toLocaleString()}
+                    <td className="px-6 py-4 text-sm text-right text-gray-600 dark:text-gray-400">
+                      {sup.transaction_count.toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 text-sm text-right text-gray-600">
-                      ${sup.avgTransaction.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    <td className="px-6 py-4 text-sm text-right text-gray-600 dark:text-gray-400">
+                      ${sup.avg_transaction.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="px-6 py-4 text-sm text-right text-gray-600">
-                      {sup.categoryCount}
+                    <td className="px-6 py-4 text-sm text-right text-gray-600 dark:text-gray-400">
+                      {sup.category_count}
                     </td>
                   </tr>
                   ))

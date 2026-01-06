@@ -151,6 +151,8 @@ class CSVProcessor:
         try:
             # Read CSV
             df = pd.read_csv(self.file)
+            # Strip whitespace from column names to handle columns like " amount "
+            df.columns = df.columns.str.strip()
             self.stats['total'] = len(df)
 
             # Check row limit
