@@ -1,17 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import {
-  calculateTotalSpend,
-  calculateSupplierCount,
-  calculateCategoryCount,
-  calculateAverageTransaction,
-  getTopSuppliers,
-  getSpendByCategory,
-  getLargestTransaction,
-  getMostFrequentSupplier,
-  getHighestSpendingCategory,
-  applyFilters,
-} from '../analytics';
-import type { ProcurementRecord } from '../csvParser';
+import { applyFilters } from '../analytics';
+import type { ProcurementRecord } from '../../hooks/useProcurementData';
 import type { Filters } from '../../hooks/useFilters';
 
 /**
@@ -31,8 +20,10 @@ function createFilters(partial: Partial<Filters> = {}): Filters {
 }
 
 /**
- * Test suite for analytics utilities
- * Validates all calculation functions for procurement data
+ * Test suite for applyFilters utility
+ *
+ * Note: Other analytics calculations (totals, averages, aggregations)
+ * are now handled by backend APIs and tested via API integration tests.
  */
 
 const mockData: ProcurementRecord[] = [
@@ -72,204 +63,6 @@ const mockData: ProcurementRecord[] = [
     description: 'Monitors',
   },
 ];
-
-describe('Analytics Utilities', () => {
-  describe('calculateTotalSpend', () => {
-    it('should calculate total spend correctly', () => {
-      const total = calculateTotalSpend(mockData);
-      expect(total).toBe(11500);
-    });
-
-    it('should return 0 for empty data', () => {
-      const total = calculateTotalSpend([]);
-      expect(total).toBe(0);
-    });
-
-    it('should handle single record', () => {
-      const total = calculateTotalSpend([mockData[0]]);
-      expect(total).toBe(1500);
-    });
-  });
-
-  describe('calculateSupplierCount', () => {
-    it('should count unique suppliers correctly', () => {
-      const count = calculateSupplierCount(mockData);
-      expect(count).toBe(3); // Acme Corp, Tech Solutions, Office Depot
-    });
-
-    it('should return 0 for empty data', () => {
-      const count = calculateSupplierCount([]);
-      expect(count).toBe(0);
-    });
-
-    it('should handle duplicate suppliers', () => {
-      const duplicates: ProcurementRecord[] = [
-        { ...mockData[0] },
-        { ...mockData[0] },
-      ];
-      const count = calculateSupplierCount(duplicates);
-      expect(count).toBe(1);
-    });
-  });
-
-  describe('calculateCategoryCount', () => {
-    it('should count unique categories correctly', () => {
-      const count = calculateCategoryCount(mockData);
-      expect(count).toBe(2); // Office Supplies, IT Equipment
-    });
-
-    it('should return 0 for empty data', () => {
-      const count = calculateCategoryCount([]);
-      expect(count).toBe(0);
-    });
-  });
-
-  describe('calculateAverageTransaction', () => {
-    it('should calculate average transaction correctly', () => {
-      const avg = calculateAverageTransaction(mockData);
-      expect(avg).toBe(2300); // 11500 / 5
-    });
-
-    it('should return 0 for empty data', () => {
-      const avg = calculateAverageTransaction([]);
-      expect(avg).toBe(0);
-    });
-
-    it('should round to 2 decimal places', () => {
-      const data: ProcurementRecord[] = [
-        { ...mockData[0], amount: 100 },
-        { ...mockData[1], amount: 150 },
-        { ...mockData[2], amount: 175 },
-      ];
-      const avg = calculateAverageTransaction(data);
-      expect(avg).toBe(141.67);
-    });
-  });
-
-  describe('getTopSuppliers', () => {
-    it('should return top suppliers by spend', () => {
-      const top = getTopSuppliers(mockData, 2);
-      expect(top).toHaveLength(2);
-      expect(top[0].supplier).toBe('Tech Solutions');
-      expect(top[0].totalSpend).toBe(8000);
-      expect(top[1].supplier).toBe('Acme Corp');
-      expect(top[1].totalSpend).toBe(2300);
-    });
-
-    it('should return all suppliers if limit exceeds count', () => {
-      const top = getTopSuppliers(mockData, 10);
-      expect(top).toHaveLength(3);
-    });
-
-    it('should return empty array for empty data', () => {
-      const top = getTopSuppliers([], 5);
-      expect(top).toEqual([]);
-    });
-
-    it('should include transaction count', () => {
-      const top = getTopSuppliers(mockData, 3);
-      expect(top[0].transactionCount).toBe(2); // Tech Solutions
-      expect(top[1].transactionCount).toBe(2); // Acme Corp
-    });
-  });
-
-  describe('getSpendByCategory', () => {
-    it('should group spend by category', () => {
-      const byCategory = getSpendByCategory(mockData);
-      expect(byCategory).toHaveLength(2);
-      
-      const itEquipment = byCategory.find(c => c.category === 'IT Equipment');
-      expect(itEquipment?.totalSpend).toBe(8000);
-      expect(itEquipment?.percentage).toBeCloseTo(69.57, 1);
-      
-      const officeSupplies = byCategory.find(c => c.category === 'Office Supplies');
-      expect(officeSupplies?.totalSpend).toBe(3500);
-      expect(officeSupplies?.percentage).toBeCloseTo(30.43, 1);
-    });
-
-    it('should return empty array for empty data', () => {
-      const byCategory = getSpendByCategory([]);
-      expect(byCategory).toEqual([]);
-    });
-
-    it('should sort by spend descending', () => {
-      const byCategory = getSpendByCategory(mockData);
-      expect(byCategory[0].totalSpend).toBeGreaterThanOrEqual(byCategory[1].totalSpend);
-    });
-  });
-
-  describe('getLargestTransaction', () => {
-    it('should return the largest transaction', () => {
-      const largest = getLargestTransaction(mockData);
-      expect(largest).toBeDefined();
-      expect(largest?.amount).toBe(5000);
-      expect(largest?.supplier).toBe('Tech Solutions');
-    });
-
-    it('should return null for empty data', () => {
-      const largest = getLargestTransaction([]);
-      expect(largest).toBeNull();
-    });
-  });
-
-  describe('getMostFrequentSupplier', () => {
-    it('should return the most frequent supplier', () => {
-      const frequent = getMostFrequentSupplier(mockData);
-      expect(frequent).toBeDefined();
-      // Both Acme Corp and Tech Solutions have 2 transactions
-      expect(['Acme Corp', 'Tech Solutions']).toContain(frequent?.supplier);
-      expect(frequent?.count).toBe(2);
-    });
-
-    it('should return null for empty data', () => {
-      const frequent = getMostFrequentSupplier([]);
-      expect(frequent).toBeNull();
-    });
-  });
-
-  describe('getHighestSpendingCategory', () => {
-    it('should return the highest spending category', () => {
-      const highest = getHighestSpendingCategory(mockData);
-      expect(highest).toBeDefined();
-      expect(highest?.category).toBe('IT Equipment');
-      expect(highest?.totalSpend).toBe(8000);
-    });
-
-    it('should return null for empty data', () => {
-      const highest = getHighestSpendingCategory([]);
-      expect(highest).toBeNull();
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle zero amounts', () => {
-      const dataWithZero: ProcurementRecord[] = [
-        { ...mockData[0], amount: 0 },
-        { ...mockData[1], amount: 100 },
-      ];
-      const total = calculateTotalSpend(dataWithZero);
-      expect(total).toBe(100);
-    });
-
-    it('should handle negative amounts', () => {
-      const dataWithNegative: ProcurementRecord[] = [
-        { ...mockData[0], amount: -500 }, // refund
-        { ...mockData[1], amount: 1000 },
-      ];
-      const total = calculateTotalSpend(dataWithNegative);
-      expect(total).toBe(500);
-    });
-
-    it('should handle very large numbers', () => {
-      const dataWithLarge: ProcurementRecord[] = [
-        { ...mockData[0], amount: 999999999 },
-        { ...mockData[1], amount: 1 },
-      ];
-      const total = calculateTotalSpend(dataWithLarge);
-      expect(total).toBe(1000000000);
-    });
-  });
-});
 
 describe('applyFilters', () => {
 
