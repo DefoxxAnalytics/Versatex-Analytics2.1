@@ -95,7 +95,11 @@ backend/
 ├── apps/
 │   ├── authentication/     # User, Organization, UserProfile, AuditLog models
 │   ├── procurement/        # Supplier, Category, Transaction, DataUpload models
-│   └── analytics/          # AnalyticsService - all analytics calculations
+│   ├── analytics/          # AnalyticsService - all analytics calculations
+│   └── reports/            # Report generation, scheduling, and export
+│       ├── generators/     # 6 report generators (executive, spend, supplier, pareto, compliance, savings)
+│       ├── renderers/      # PDF (ReportLab), Excel (openpyxl), CSV (pandas)
+│       └── tasks.py        # Celery tasks for async generation
 ├── config/                 # Django settings, URLs, Celery config
 └── templates/admin/        # Custom Django admin templates (navy theme)
 ```
@@ -121,7 +125,8 @@ src/
 ├── hooks/
 │   ├── useAnalytics.ts     # Analytics data fetching
 │   ├── useFilters.ts       # Filter state management
-│   └── useProcurementData.ts # Transaction data fetching
+│   ├── useProcurementData.ts # Transaction data fetching
+│   └── useReports.ts       # Report generation, scheduling, downloads
 ├── lib/
 │   ├── api.ts              # Axios client with auth interceptors
 │   ├── auth.ts             # Auth API functions
@@ -144,11 +149,12 @@ src/
 /api/v1/auth/          # login, register, logout, token/refresh, user, change-password
 /api/v1/procurement/   # suppliers, categories, transactions (CRUD + upload_csv, bulk_delete, export), uploads
 /api/v1/analytics/     # overview, spend-by-category, spend-by-supplier, pareto, tail-spend, monthly-trend, stratification, seasonality, year-over-year, consolidation
+/api/v1/reports/       # Report generation, scheduling, and downloads (see Reports Module below)
 ```
 
 Legacy endpoints (`/api/auth/`, `/api/procurement/`, `/api/analytics/`) are supported for backwards compatibility.
 
-**Frontend API Client:** All API calls use typed interfaces in `frontend/src/lib/api.ts`. This file contains `authAPI`, `procurementAPI`, and `analyticsAPI` objects with typed request/response interfaces.
+**Frontend API Client:** All API calls use typed interfaces in `frontend/src/lib/api.ts`. This file contains `authAPI`, `procurementAPI`, `analyticsAPI`, and `reportsAPI` objects with typed request/response interfaces.
 
 ## Port Configuration
 
@@ -243,7 +249,52 @@ GitHub Actions workflow runs on push/PR to master:
 Badges:
 - [![CI](https://github.com/DefoxxAnalytics/Versatex_Analytics2.0/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/DefoxxAnalytics/Versatex_Analytics2.0/actions/workflows/ci.yml)
 
-## Recent Updates (v2.1)
+## Recent Updates (v2.2)
+
+### Reports Module
+- **Report Generation**: Generate procurement reports in PDF, Excel (XLSX), or CSV formats
+- **6 Report Types**: Executive Summary, Spend Analysis, Supplier Performance, Pareto Analysis, Contract Compliance, Savings Opportunities
+- **Async Generation**: Large reports generated via Celery with real-time status polling
+- **Report Scheduling**: Create recurring reports (daily, weekly, bi-weekly, monthly, quarterly)
+- **Multi-tenant**: All reports scoped by organization
+
+### Reports API Endpoints
+```
+GET    /api/v1/reports/templates/                    # List available report templates
+GET    /api/v1/reports/templates/<id>/               # Get template details
+POST   /api/v1/reports/generate/                     # Generate a report (sync or async)
+GET    /api/v1/reports/                              # List generated reports
+GET    /api/v1/reports/<id>/                         # Get report details
+GET    /api/v1/reports/<id>/status/                  # Poll generation status
+GET    /api/v1/reports/<id>/download/?output_format= # Download report (pdf/xlsx/csv)
+DELETE /api/v1/reports/<id>/                         # Delete report
+POST   /api/v1/reports/<id>/share/                   # Share report with users
+GET    /api/v1/reports/schedules/                    # List scheduled reports
+POST   /api/v1/reports/schedules/                    # Create schedule
+GET    /api/v1/reports/schedules/<id>/               # Get schedule details
+PUT    /api/v1/reports/schedules/<id>/               # Update schedule
+DELETE /api/v1/reports/schedules/<id>/               # Delete schedule
+POST   /api/v1/reports/schedules/<id>/run-now/       # Trigger immediate generation
+```
+
+### Reports Frontend Hooks
+- `useReportTemplates()` - List available report templates
+- `useReportHistory()` - List generated reports with pagination
+- `useReportStatus(id)` - Poll generation status (2s interval while generating)
+- `useGenerateReport()` - Mutation to generate report
+- `useDownloadReport()` - Mutation to download report file
+- `useReportSchedules()` - List scheduled reports
+- `useCreateSchedule()`, `useUpdateSchedule()`, `useDeleteSchedule()` - Schedule CRUD
+- `useRunScheduleNow()` - Trigger immediate schedule execution
+
+### Reports Page Features
+- **Generate Tab**: Click report type cards to configure and generate
+- **History Tab**: View past reports with status badges, download/delete actions
+- **Schedules Tab**: Create/edit/delete recurring report schedules
+
+---
+
+## Previous Updates (v2.1)
 
 ### Dashboard Page Enhancements
 - **Backend-Powered Analytics**: All dashboard pages now use pre-computed backend data instead of client-side aggregation
