@@ -249,7 +249,106 @@ GitHub Actions workflow runs on push/PR to master:
 Badges:
 - [![CI](https://github.com/DefoxxAnalytics/Versatex_Analytics2.0/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/DefoxxAnalytics/Versatex_Analytics2.0/actions/workflows/ci.yml)
 
-## Recent Updates (v2.4)
+## Recent Updates (v2.5)
+
+### P2P (Procure-to-Pay) Analytics Module
+
+Complete procure-to-pay analytics suite tracking the full document lifecycle: PR → PO → GR → Invoice → Payment.
+
+#### P2P Models (in `apps/procurement/models.py`)
+- **PurchaseRequisition**: Internal purchase requests with approval workflow
+- **PurchaseOrder**: Orders sent to suppliers with contract backing
+- **GoodsReceipt**: Receipt confirmation for ordered goods
+- **Invoice**: Supplier invoices with 3-way matching support
+
+#### P2P Analytics Features
+| Feature | Description |
+|---------|-------------|
+| **Cycle Time Analysis** | Stage-by-stage timing (PR→PO→GR→Invoice→Payment) with bottleneck detection |
+| **3-Way Matching** | PO vs GR vs Invoice matching with exception management |
+| **Invoice Aging** | AP aging buckets (Current, 31-60, 61-90, 90+ days) with DPO trends |
+| **Requisition Tracking** | PR volume, approval rates, rejection analysis by department |
+| **PO Analytics** | Contract coverage, maverick spend, amendment analysis |
+| **Supplier Payments** | Payment performance scorecards with risk levels |
+
+#### P2P API Endpoints
+```
+# P2P Cycle Time
+GET /api/v1/analytics/p2p/cycle-overview/       # Stage timings and bottlenecks
+GET /api/v1/analytics/p2p/cycle-by-category/    # Cycle times by category
+GET /api/v1/analytics/p2p/cycle-by-supplier/    # Cycle times by supplier
+GET /api/v1/analytics/p2p/cycle-trends/         # Monthly trend data
+GET /api/v1/analytics/p2p/bottlenecks/          # Bottleneck analysis
+GET /api/v1/analytics/p2p/process-funnel/       # PR→PO→GR→Invoice funnel
+GET /api/v1/analytics/p2p/stage-drilldown/<stage>/  # Slowest docs per stage
+
+# 3-Way Matching
+GET /api/v1/analytics/matching/overview/        # Match rates and exceptions
+GET /api/v1/analytics/matching/exceptions/      # List exceptions
+GET /api/v1/analytics/matching/exceptions-by-type/    # Group by exception type
+GET /api/v1/analytics/matching/exceptions-by-supplier/ # Group by supplier
+GET /api/v1/analytics/matching/price-variance/  # Price variance details
+GET /api/v1/analytics/matching/quantity-variance/ # Quantity variance details
+GET /api/v1/analytics/matching/invoice/<id>/    # Invoice match detail
+POST /api/v1/analytics/matching/invoice/<id>/resolve/  # Resolve exception
+POST /api/v1/analytics/matching/exceptions/bulk-resolve/  # Bulk resolve
+
+# Invoice Aging
+GET /api/v1/analytics/aging/overview/           # AP totals, DPO, aging buckets
+GET /api/v1/analytics/aging/by-supplier/        # Aging by supplier
+GET /api/v1/analytics/aging/payment-terms-compliance/  # Payment terms analysis
+GET /api/v1/analytics/aging/dpo-trends/         # DPO over time
+GET /api/v1/analytics/aging/cash-forecast/      # Cash flow forecast
+
+# Purchase Requisitions
+GET /api/v1/analytics/requisitions/overview/    # PR metrics
+GET /api/v1/analytics/requisitions/approval-analysis/  # Approval times
+GET /api/v1/analytics/requisitions/by-department/  # By department
+GET /api/v1/analytics/requisitions/pending/     # Pending approvals
+GET /api/v1/analytics/requisitions/<id>/        # PR detail
+
+# Purchase Orders
+GET /api/v1/analytics/purchase-orders/overview/  # PO metrics
+GET /api/v1/analytics/purchase-orders/leakage/   # Maverick spend
+GET /api/v1/analytics/purchase-orders/amendments/ # Amendment analysis
+GET /api/v1/analytics/purchase-orders/by-supplier/ # By supplier
+GET /api/v1/analytics/purchase-orders/<id>/      # PO detail
+
+# Supplier Payments
+GET /api/v1/analytics/supplier-payments/overview/  # Payment metrics
+GET /api/v1/analytics/supplier-payments/scorecard/ # Supplier scores
+GET /api/v1/analytics/supplier-payments/<id>/      # Supplier detail
+GET /api/v1/analytics/supplier-payments/<id>/history/ # Payment history
+```
+
+#### P2P Frontend Pages
+- `/p2p-cycle` - Cycle time analysis dashboard
+- `/matching` - 3-way matching with exception resolution
+- `/invoice-aging` - AP aging analysis
+- `/requisitions` - Purchase requisition tracking
+- `/purchase-orders` - PO analytics
+- `/supplier-payments` - Supplier payment performance
+
+#### P2P Frontend Hooks (`useP2PAnalytics.ts`)
+- Cycle: `useP2PCycleOverview()`, `useP2PCycleByCategory()`, `useP2PCycleBySupplier()`, `useP2PCycleTrends()`, `useP2PBottlenecks()`, `useP2PProcessFunnel()`, `useP2PStageDrilldown()`
+- Matching: `useMatchingOverview()`, `useMatchingExceptions()`, `useExceptionsByType()`, `useExceptionsBySupplier()`, `usePriceVarianceAnalysis()`, `useQuantityVarianceAnalysis()`, `useInvoiceMatchDetail()`, `useResolveException()`, `useBulkResolveExceptions()`
+- Aging: `useAgingOverview()`, `useAgingBySupplier()`, `usePaymentTermsCompliance()`, `useDPOTrends()`, `useCashFlowForecast()`
+- PRs: `usePROverview()`, `usePRApprovalAnalysis()`, `usePRByDepartment()`, `usePRPending()`, `usePRDetail()`
+- POs: `usePOOverview()`, `usePOLeakage()`, `usePOAmendments()`, `usePOBySupplier()`, `usePODetail()`
+- Payments: `useSupplierPaymentsOverview()`, `useSupplierPaymentsScorecard()`, `useSupplierPaymentDetail()`, `useSupplierPaymentHistory()`
+
+#### P2P Data Import
+**Via Django Admin:** Each P2P model has "Import CSV" and "Download Template" buttons
+**Via Management Command:**
+```bash
+docker-compose exec backend python manage.py import_p2p_data \
+  --org-slug <slug> --type <pr|po|gr|invoice> --file <path.csv> \
+  [--skip-errors] [--dry-run]
+```
+
+---
+
+## Previous Updates (v2.4)
 
 ### Reports UI Enhancements
 - **Categorized Report Generation**: Reports organized into categories (Executive & Overview, Supplier Intelligence, Trends & Patterns, Optimization & Compliance)

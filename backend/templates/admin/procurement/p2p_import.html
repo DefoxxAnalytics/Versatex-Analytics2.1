@@ -1,0 +1,177 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+    .p2p-import-form {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 24px;
+    }
+    .form-section {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .form-section h3 {
+        margin-top: 0;
+        color: #1e293b;
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 12px;
+    }
+    .columns-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .column-tag {
+        background: #4f46e5;
+        color: white;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 13px;
+        font-family: monospace;
+    }
+    .column-tag.required {
+        background: #dc2626;
+    }
+    .file-input-wrapper {
+        margin-bottom: 16px;
+    }
+    .file-input-wrapper label {
+        display: block;
+        font-weight: 500;
+        margin-bottom: 8px;
+        color: #374151;
+    }
+    .file-input-wrapper input[type="file"] {
+        width: 100%;
+        padding: 10px;
+        border: 2px dashed #cbd5e1;
+        border-radius: 8px;
+        background: white;
+    }
+    .file-input-wrapper input[type="file"]:hover {
+        border-color: #4f46e5;
+    }
+    .submit-btn {
+        background: #4f46e5;
+        color: white;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 6px;
+        font-size: 15px;
+        font-weight: 500;
+        cursor: pointer;
+        margin-right: 12px;
+    }
+    .submit-btn:hover {
+        background: #4338ca;
+    }
+    .cancel-btn {
+        background: #6b7280;
+        color: white;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 6px;
+        font-size: 15px;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: none;
+    }
+    .cancel-btn:hover {
+        background: #4b5563;
+    }
+    .info-box {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 6px;
+        padding: 16px;
+        margin-bottom: 20px;
+    }
+    .info-box h4 {
+        margin: 0 0 8px 0;
+        color: #1e40af;
+        font-size: 14px;
+    }
+    .info-box p {
+        margin: 0;
+        color: #3b82f6;
+        font-size: 13px;
+    }
+    .legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-right: 16px;
+        font-size: 13px;
+        color: #64748b;
+    }
+    .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+    .legend-dot.required {
+        background: #dc2626;
+    }
+    .legend-dot.optional {
+        background: #4f46e5;
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_label|capfirst|escape }}</a>
+    &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+    &rsaquo; Import CSV
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="p2p-import-form">
+    <h1>Import {{ opts.verbose_name_plural|capfirst }}</h1>
+
+    <div class="info-box">
+        <h4>Import Instructions</h4>
+        <p>Upload a CSV file with the columns listed below. Required columns are marked in red.
+        The system will automatically skip duplicate records based on the document number.</p>
+    </div>
+
+    <div class="form-section">
+        <h3>Expected CSV Columns</h3>
+        <div style="margin-bottom: 12px;">
+            <span class="legend-item"><span class="legend-dot required"></span> Required</span>
+            <span class="legend-item"><span class="legend-dot optional"></span> Optional</span>
+        </div>
+        <div class="columns-list">
+            {% for col in expected_columns %}
+            <span class="column-tag {% if forloop.counter <= 5 %}required{% endif %}">{{ col }}</span>
+            {% endfor %}
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="form-section">
+            <h3>Select CSV File</h3>
+            <div class="file-input-wrapper">
+                <label for="file">CSV File</label>
+                <input type="file" name="file" id="file" accept=".csv" required>
+            </div>
+        </div>
+
+        <div style="margin-top: 24px;">
+            <button type="submit" class="submit-btn">Import Data</button>
+            <a href=".." class="cancel-btn">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

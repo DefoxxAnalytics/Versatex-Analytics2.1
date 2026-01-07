@@ -6,6 +6,10 @@ from .supplier import SupplierPerformanceGenerator
 from .pareto import ParetoReportGenerator
 from .compliance import ComplianceReportGenerator
 from .savings import SavingsOpportunitiesGenerator
+from .stratification import StratificationReportGenerator
+from .seasonality import SeasonalityReportGenerator
+from .yoy import YearOverYearReportGenerator
+from .tail_spend import TailSpendReportGenerator
 
 __all__ = [
     'BaseReportGenerator',
@@ -15,4 +19,8 @@ __all__ = [
     'ParetoReportGenerator',
     'ComplianceReportGenerator',
     'SavingsOpportunitiesGenerator',
+    'StratificationReportGenerator',
+    'SeasonalityReportGenerator',
+    'YearOverYearReportGenerator',
+    'TailSpendReportGenerator',
 ]
