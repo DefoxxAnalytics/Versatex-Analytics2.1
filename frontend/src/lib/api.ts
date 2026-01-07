@@ -1268,6 +1268,43 @@ export interface ReportGenerateResponse {
   message?: string;
 }
 
+// Report Preview Data (from preview endpoint)
+export interface ReportPreviewData {
+  metadata?: {
+    report_type?: string;
+    report_title?: string;
+    organization?: string;
+    period_start?: string;
+    period_end?: string;
+    generated_at?: string;
+    filters_applied?: Record<string, unknown>;
+  };
+  overview?: {
+    total_spend?: number;
+    transaction_count?: number;
+    supplier_count?: number;
+    category_count?: number;
+    avg_transaction?: number;
+  };
+  spend_by_category?: Array<{
+    category: string;
+    amount: number;
+    count: number;
+    percentage?: number;
+  }>;
+  spend_by_supplier?: Array<{
+    supplier: string;
+    amount: number;
+    count: number;
+    percentage?: number;
+  }>;
+  // Preview metadata
+  _preview?: boolean;
+  _truncated?: boolean;
+  // Allow additional fields from different report types
+  [key: string]: unknown;
+}
+
 export interface ReportScheduleRequest {
   name: string;
   report_type: ReportType;
@@ -1695,6 +1732,10 @@ export const reportsAPI = {
   // Report Generation
   generate: (data: ReportGenerateRequest): Promise<AxiosResponse<ReportDetail | ReportGenerateResponse>> =>
     api.post('/reports/generate/', data, { params: getOrganizationParam() }),
+
+  // Report Preview (lightweight preview without creating a Report record)
+  preview: (data: ReportGenerateRequest): Promise<AxiosResponse<ReportPreviewData>> =>
+    api.post('/reports/preview/', data, { params: getOrganizationParam() }),
 
   // Report List and Detail
   getReports: (params?: { status?: ReportStatus; report_type?: ReportType; limit?: number; offset?: number }): Promise<AxiosResponse<ReportListResponse>> =>

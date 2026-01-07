@@ -14,13 +14,17 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import {
   FileText, PieChart, Users, BarChart2, Shield, TrendingDown,
   Download, Clock, Calendar, Trash2, Eye, Share2, PlayCircle,
   Loader2, FileSpreadsheet, FileType2, CheckCircle2, XCircle,
-  AlertCircle, RefreshCw, Plus, Edit2
+  AlertCircle, RefreshCw, Plus, Edit2, ChevronDown, Filter, DollarSign
 } from 'lucide-react';
+import { useSuppliers, useCategories } from '@/hooks/useAnalytics';
 import {
   useReportTemplates,
   useReportHistory,
@@ -33,6 +37,7 @@ import {
   useUpdateSchedule,
   useDeleteSchedule,
   useRunScheduleNow,
+  useReportPreview,
 } from '@/hooks/useReports';
 import {
   ReportTemplate,
@@ -42,6 +47,7 @@ import {
   ReportStatus,
   ScheduleFrequency,
   ReportScheduleRequest,
+  ReportPreviewData,
 } from '@/lib/api';
 import { SkeletonCard } from '@/components/SkeletonCard';
 
@@ -86,6 +92,17 @@ export default function ReportsPage() {
   const [periodStart, setPeriodStart] = useState('');
   const [periodEnd, setPeriodEnd] = useState('');
 
+  // Advanced filters state
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [selectedSupplierIds, setSelectedSupplierIds] = useState<number[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+  const [minAmount, setMinAmount] = useState('');
+  const [maxAmount, setMaxAmount] = useState('');
+
+  // Preview dialog state
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [previewData, setPreviewData] = useState<ReportPreviewData | null>(null);
+
   // Schedule dialog state
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<ReportListItem | null>(null);
@@ -98,6 +115,8 @@ export default function ReportsPage() {
   const { data: templates = [], isLoading: templatesLoading } = useReportTemplates();
   const { data: historyData, isLoading: historyLoading, refetch: refetchHistory } = useReportHistory({ limit: 50 });
   const { data: schedules = [], isLoading: schedulesLoading, refetch: refetchSchedules } = useReportSchedules();
+  const { data: suppliers } = useSuppliers();
+  const { data: categories } = useCategories();
 
   // Poll for status when generating
   const { data: reportStatus } = useReportStatus(generatingReportId, !!generatingReportId);
@@ -110,6 +129,7 @@ export default function ReportsPage() {
   const updateSchedule = useUpdateSchedule();
   const deleteSchedule = useDeleteSchedule();
   const runScheduleNow = useRunScheduleNow();
+  const reportPreview = useReportPreview();
 
   // Effect to handle generation completion
   useEffect(() => {
@@ -131,7 +151,83 @@ export default function ReportsPage() {
     setReportFormat('pdf');
     setPeriodStart('');
     setPeriodEnd('');
+    // Reset advanced filters
+    setFiltersOpen(false);
+    setSelectedSupplierIds([]);
+    setSelectedCategoryIds([]);
+    setMinAmount('');
+    setMaxAmount('');
     setGenerateDialogOpen(true);
+  };
+
+  // Build filters object from current state
+  const buildFilters = () => {
+    const filters: Record<string, unknown> = {};
+    if (selectedSupplierIds.length > 0) {
+      filters.supplier_ids = selectedSupplierIds;
+    }
+    if (selectedCategoryIds.length > 0) {
+      filters.category_ids = selectedCategoryIds;
+    }
+    if (minAmount) {
+      filters.min_amount = parseFloat(minAmount);
+    }
+    if (maxAmount) {
+      filters.max_amount = parseFloat(maxAmount);
+    }
+    return Object.keys(filters).length > 0 ? filters : undefined;
+  };
+
+  const handlePreview = async () => {
+    if (!selectedTemplate) return;
+
+    try {
+      const data = await reportPreview.mutateAsync({
+        report_type: selectedTemplate.report_type,
+        report_format: reportFormat,
+        name: reportName,
+        period_start: periodStart || undefined,
+        period_end: periodEnd || undefined,
+        filters: buildFilters(),
+      });
+      setPreviewData(data);
+      setGenerateDialogOpen(false);
+      setPreviewDialogOpen(true);
+    } catch (error) {
+      toast.error('Failed to generate preview');
+    }
+  };
+
+  const handleGenerateFromPreview = async () => {
+    if (!selectedTemplate) return;
+
+    try {
+      const result = await generateReport.mutateAsync({
+        report_type: selectedTemplate.report_type,
+        report_format: reportFormat,
+        name: reportName,
+        description: reportDescription,
+        period_start: periodStart || undefined,
+        period_end: periodEnd || undefined,
+        filters: buildFilters(),
+        async_generation: true,
+      });
+
+      setPreviewDialogOpen(false);
+      setPreviewData(null);
+
+      if ('message' in result && result.id) {
+        setGeneratingReportId(result.id);
+        toast.info('Report generation started. This may take a moment...');
+        setActiveTab('history');
+      } else {
+        toast.success('Report generated successfully');
+        refetchHistory();
+        setActiveTab('history');
+      }
+    } catch (error) {
+      toast.error('Failed to generate report');
+    }
   };
 
   const handleGenerate = async () => {
@@ -145,6 +241,7 @@ export default function ReportsPage() {
         description: reportDescription,
         period_start: periodStart || undefined,
         period_end: periodEnd || undefined,
+        filters: buildFilters(),
         async_generation: true,
       });
 
@@ -595,12 +692,166 @@ export default function ReportsPage() {
                 />
               </div>
             </div>
+
+            {/* Advanced Filters */}
+            <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="w-full justify-between px-0 hover:bg-transparent">
+                  <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Filter className="h-4 w-4" />
+                    Advanced Filters
+                    {(selectedSupplierIds.length > 0 || selectedCategoryIds.length > 0 || minAmount || maxAmount) && (
+                      <Badge variant="secondary" className="ml-2">
+                        {selectedSupplierIds.length + selectedCategoryIds.length + (minAmount ? 1 : 0) + (maxAmount ? 1 : 0)} active
+                      </Badge>
+                    )}
+                  </span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 pt-2">
+                {/* Suppliers Filter */}
+                <div className="grid gap-2">
+                  <Label className="text-sm">Filter by Suppliers</Label>
+                  <ScrollArea className="h-[120px] rounded-md border p-2">
+                    <div className="space-y-2">
+                      {(!suppliers?.results || suppliers.results.length === 0) ? (
+                        <p className="text-sm text-muted-foreground">No suppliers available</p>
+                      ) : (
+                        suppliers.results.slice(0, 20).map((supplier) => (
+                          <div key={supplier.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`supplier-${supplier.id}`}
+                              checked={selectedSupplierIds.includes(supplier.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedSupplierIds([...selectedSupplierIds, supplier.id]);
+                                } else {
+                                  setSelectedSupplierIds(selectedSupplierIds.filter(id => id !== supplier.id));
+                                }
+                              }}
+                            />
+                            <label
+                              htmlFor={`supplier-${supplier.id}`}
+                              className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                            >
+                              {supplier.name}
+                            </label>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </ScrollArea>
+                  {selectedSupplierIds.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto py-1 px-2 text-xs"
+                      onClick={() => setSelectedSupplierIds([])}
+                    >
+                      Clear ({selectedSupplierIds.length} selected)
+                    </Button>
+                  )}
+                </div>
+
+                {/* Categories Filter */}
+                <div className="grid gap-2">
+                  <Label className="text-sm">Filter by Categories</Label>
+                  <ScrollArea className="h-[100px] rounded-md border p-2">
+                    <div className="space-y-2">
+                      {(!categories?.results || categories.results.length === 0) ? (
+                        <p className="text-sm text-muted-foreground">No categories available</p>
+                      ) : (
+                        categories.results.map((category) => (
+                          <div key={category.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`category-${category.id}`}
+                              checked={selectedCategoryIds.includes(category.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedCategoryIds([...selectedCategoryIds, category.id]);
+                                } else {
+                                  setSelectedCategoryIds(selectedCategoryIds.filter(id => id !== category.id));
+                                }
+                              }}
+                            />
+                            <label
+                              htmlFor={`category-${category.id}`}
+                              className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                            >
+                              {category.name}
+                            </label>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </ScrollArea>
+                  {selectedCategoryIds.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto py-1 px-2 text-xs"
+                      onClick={() => setSelectedCategoryIds([])}
+                    >
+                      Clear ({selectedCategoryIds.length} selected)
+                    </Button>
+                  )}
+                </div>
+
+                {/* Amount Range Filter */}
+                <div className="grid gap-2">
+                  <Label className="text-sm flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    Amount Range
+                  </Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Input
+                        type="number"
+                        placeholder="Min amount"
+                        value={minAmount}
+                        onChange={(e) => setMinAmount(e.target.value)}
+                        min="0"
+                        step="100"
+                      />
+                    </div>
+                    <div>
+                      <Input
+                        type="number"
+                        placeholder="Max amount"
+                        value={maxAmount}
+                        onChange={(e) => setMaxAmount(e.target.value)}
+                        min="0"
+                        step="100"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setGenerateDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleGenerate} disabled={generateReport.isPending}>
+            <Button
+              variant="secondary"
+              onClick={handlePreview}
+              disabled={reportPreview.isPending || generateReport.isPending}
+            >
+              {reportPreview.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                <>
+                  <Eye className="h-4 w-4 mr-2" />
+                  Preview
+                </>
+              )}
+            </Button>
+            <Button onClick={handleGenerate} disabled={generateReport.isPending || reportPreview.isPending}>
               {generateReport.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -713,6 +964,194 @@ export default function ReportsPage() {
                 <>
                   <Calendar className="h-4 w-4 mr-2" />
                   {editingSchedule ? 'Update Schedule' : 'Create Schedule'}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Dialog */}
+      <Dialog open={previewDialogOpen} onOpenChange={(open) => {
+        setPreviewDialogOpen(open);
+        if (!open) setPreviewData(null);
+      }}>
+        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Report Preview: {selectedTemplate?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="flex-1 pr-4">
+            <div className="space-y-6 py-4">
+              {/* Metadata Section */}
+              {previewData?.metadata && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Report Info</h4>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Organization:</span>
+                      <span className="font-medium">{previewData.metadata.organization}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Period:</span>
+                      <span className="font-medium">
+                        {previewData.metadata.period_start} - {previewData.metadata.period_end}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Overview KPIs */}
+              {previewData?.overview && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Key Metrics</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {previewData.overview.total_spend !== undefined && (
+                      <Card className="p-3">
+                        <div className="text-xs text-muted-foreground">Total Spend</div>
+                        <div className="text-lg font-bold text-primary">
+                          ${Number(previewData.overview.total_spend).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </div>
+                      </Card>
+                    )}
+                    {previewData.overview.transaction_count !== undefined && (
+                      <Card className="p-3">
+                        <div className="text-xs text-muted-foreground">Transactions</div>
+                        <div className="text-lg font-bold">
+                          {Number(previewData.overview.transaction_count).toLocaleString()}
+                        </div>
+                      </Card>
+                    )}
+                    {previewData.overview.supplier_count !== undefined && (
+                      <Card className="p-3">
+                        <div className="text-xs text-muted-foreground">Suppliers</div>
+                        <div className="text-lg font-bold">
+                          {previewData.overview.supplier_count}
+                        </div>
+                      </Card>
+                    )}
+                    {previewData.overview.category_count !== undefined && (
+                      <Card className="p-3">
+                        <div className="text-xs text-muted-foreground">Categories</div>
+                        <div className="text-lg font-bold">
+                          {previewData.overview.category_count}
+                        </div>
+                      </Card>
+                    )}
+                    {previewData.overview.avg_transaction !== undefined && (
+                      <Card className="p-3">
+                        <div className="text-xs text-muted-foreground">Avg Transaction</div>
+                        <div className="text-lg font-bold">
+                          ${Number(previewData.overview.avg_transaction).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </div>
+                      </Card>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Spend by Category */}
+              {previewData?.spend_by_category && previewData.spend_by_category.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">
+                    Top Categories {previewData._truncated && '(Preview)'}
+                  </h4>
+                  <div className="border rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/50">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-medium">Category</th>
+                          <th className="px-3 py-2 text-right font-medium">Amount</th>
+                          <th className="px-3 py-2 text-right font-medium">%</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {previewData.spend_by_category.map((item, idx) => (
+                          <tr key={idx} className="border-t">
+                            <td className="px-3 py-2">{item.category}</td>
+                            <td className="px-3 py-2 text-right">
+                              ${Number(item.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            </td>
+                            <td className="px-3 py-2 text-right text-muted-foreground">
+                              {Number(item.percentage).toFixed(1)}%
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Spend by Supplier */}
+              {previewData?.spend_by_supplier && previewData.spend_by_supplier.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">
+                    Top Suppliers {previewData._truncated && '(Preview)'}
+                  </h4>
+                  <div className="border rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/50">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-medium">Supplier</th>
+                          <th className="px-3 py-2 text-right font-medium">Amount</th>
+                          <th className="px-3 py-2 text-right font-medium">%</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {previewData.spend_by_supplier.map((item, idx) => (
+                          <tr key={idx} className="border-t">
+                            <td className="px-3 py-2">{item.supplier}</td>
+                            <td className="px-3 py-2 text-right">
+                              ${Number(item.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            </td>
+                            <td className="px-3 py-2 text-right text-muted-foreground">
+                              {Number(item.percentage).toFixed(1)}%
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Truncation notice */}
+              {previewData?._truncated && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-lg p-3">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>This preview shows a limited dataset. Generate the full report for complete data.</span>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+          <DialogFooter className="border-t pt-4">
+            <Button variant="outline" onClick={() => {
+              setPreviewDialogOpen(false);
+              setPreviewData(null);
+            }}>
+              Close
+            </Button>
+            <Button variant="outline" onClick={() => {
+              setPreviewDialogOpen(false);
+              setGenerateDialogOpen(true);
+            }}>
+              <Edit2 className="h-4 w-4 mr-2" />
+              Edit Options
+            </Button>
+            <Button onClick={handleGenerateFromPreview} disabled={generateReport.isPending}>
+              {generateReport.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Generate Full Report
                 </>
               )}
             </Button>

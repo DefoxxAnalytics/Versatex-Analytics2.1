@@ -20,13 +20,18 @@ class BaseReportGenerator(ABC):
 
         Args:
             organization: Organization instance
-            filters: Dict of filter parameters (date_range, categories, suppliers, etc.)
+            filters: Dict of filter parameters:
+                - date_from/date_to: Date range for transactions
+                - supplier_ids: List of supplier IDs to include
+                - category_ids: List of category IDs to include
+                - min_amount/max_amount: Amount range filter
             parameters: Dict of additional parameters (include_charts, sections, etc.)
         """
         self.organization = organization
         self.filters = filters or {}
         self.parameters = parameters or {}
-        self.analytics = AnalyticsService(organization)
+        # Pass filters to analytics service for filtered queries
+        self.analytics = AnalyticsService(organization, filters=self.filters)
 
     @property
     @abstractmethod

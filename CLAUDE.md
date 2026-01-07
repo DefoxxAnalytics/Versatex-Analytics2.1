@@ -257,12 +257,16 @@ Badges:
 - **Async Generation**: Large reports generated via Celery with real-time status polling
 - **Report Scheduling**: Create recurring reports (daily, weekly, bi-weekly, monthly, quarterly)
 - **Multi-tenant**: All reports scoped by organization
+- **Report Preview**: Preview report data before generating the full report
+- **Advanced Filtering**: Filter reports by suppliers, categories, and amount ranges
+- **Professional PDF Styling**: Executive headers, KPI cards with auto-sizing, smart table column widths, page numbers
 
 ### Reports API Endpoints
 ```
 GET    /api/v1/reports/templates/                    # List available report templates
 GET    /api/v1/reports/templates/<id>/               # Get template details
 POST   /api/v1/reports/generate/                     # Generate a report (sync or async)
+POST   /api/v1/reports/preview/                      # Generate lightweight preview data
 GET    /api/v1/reports/                              # List generated reports
 GET    /api/v1/reports/<id>/                         # Get report details
 GET    /api/v1/reports/<id>/status/                  # Poll generation status
@@ -277,11 +281,24 @@ DELETE /api/v1/reports/schedules/<id>/               # Delete schedule
 POST   /api/v1/reports/schedules/<id>/run-now/       # Trigger immediate generation
 ```
 
+### Report Generation Filters
+Reports support advanced filtering via the `filters` parameter:
+```json
+{
+  "supplier_ids": [1, 2, 3],      // Filter by specific suppliers
+  "category_ids": [1, 2],          // Filter by specific categories
+  "min_amount": 1000.00,           // Minimum transaction amount
+  "max_amount": 50000.00           // Maximum transaction amount
+}
+```
+Date filtering is handled via `period_start` and `period_end` fields.
+
 ### Reports Frontend Hooks
 - `useReportTemplates()` - List available report templates
 - `useReportHistory()` - List generated reports with pagination
 - `useReportStatus(id)` - Poll generation status (2s interval while generating)
 - `useGenerateReport()` - Mutation to generate report
+- `useReportPreview()` - Mutation to generate lightweight preview data
 - `useDownloadReport()` - Mutation to download report file
 - `useReportSchedules()` - List scheduled reports
 - `useCreateSchedule()`, `useUpdateSchedule()`, `useDeleteSchedule()` - Schedule CRUD
@@ -289,6 +306,9 @@ POST   /api/v1/reports/schedules/<id>/run-now/       # Trigger immediate generat
 
 ### Reports Page Features
 - **Generate Tab**: Click report type cards to configure and generate
+- **Preview Button**: Preview report data before full generation
+- **Advanced Filters**: Filter by suppliers, categories, and amount range (collapsible UI)
+- **Preview Dialog**: Shows key metrics, top categories/suppliers before generating
 - **History Tab**: View past reports with status badges, download/delete actions
 - **Schedules Tab**: Create/edit/delete recurring report schedules
 

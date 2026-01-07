@@ -12,10 +12,58 @@ class AnalyticsService:
     """
     Service class for analytics calculations
     """
-    
-    def __init__(self, organization):
+
+    def __init__(self, organization, filters=None):
+        """
+        Initialize analytics service with optional filters.
+
+        Args:
+            organization: Organization instance
+            filters: Optional dict with filter parameters:
+                - date_from: Start date (str 'YYYY-MM-DD' or date)
+                - date_to: End date (str 'YYYY-MM-DD' or date)
+                - supplier_ids: List of supplier IDs to include
+                - category_ids: List of category IDs to include
+                - min_amount: Minimum transaction amount
+                - max_amount: Maximum transaction amount
+        """
         self.organization = organization
-        self.transactions = Transaction.objects.filter(organization=organization)
+        self.filters = filters or {}
+        self.transactions = self._build_filtered_queryset()
+
+    def _build_filtered_queryset(self):
+        """Build transaction queryset with applied filters."""
+        qs = Transaction.objects.filter(organization=self.organization)
+
+        # Date range filters
+        if date_from := self.filters.get('date_from'):
+            if isinstance(date_from, str):
+                date_from = datetime.strptime(date_from, '%Y-%m-%d').date()
+            qs = qs.filter(date__gte=date_from)
+
+        if date_to := self.filters.get('date_to'):
+            if isinstance(date_to, str):
+                date_to = datetime.strptime(date_to, '%Y-%m-%d').date()
+            qs = qs.filter(date__lte=date_to)
+
+        # Supplier filter
+        if supplier_ids := self.filters.get('supplier_ids'):
+            if isinstance(supplier_ids, list) and supplier_ids:
+                qs = qs.filter(supplier_id__in=supplier_ids)
+
+        # Category filter
+        if category_ids := self.filters.get('category_ids'):
+            if isinstance(category_ids, list) and category_ids:
+                qs = qs.filter(category_id__in=category_ids)
+
+        # Amount range filters
+        if min_amount := self.filters.get('min_amount'):
+            qs = qs.filter(amount__gte=min_amount)
+
+        if max_amount := self.filters.get('max_amount'):
+            qs = qs.filter(amount__lte=max_amount)
+
+        return qs
     
     def get_overview_stats(self):
         """

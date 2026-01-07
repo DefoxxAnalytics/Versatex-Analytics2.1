@@ -14,6 +14,7 @@ import {
   ReportGenerateRequest,
   ReportScheduleRequest,
   ReportShareRequest,
+  ReportPreviewData,
 } from '@/lib/api';
 
 /**
@@ -308,6 +309,19 @@ export function useRunScheduleNow() {
       // Refresh reports list to show generating report
       queryClient.invalidateQueries({ queryKey: ['reports'] });
       queryClient.invalidateQueries({ queryKey: ['report-schedules'] });
+    },
+  });
+}
+
+/**
+ * Generate a lightweight preview of report data.
+ * Returns truncated data for display before full generation.
+ */
+export function useReportPreview() {
+  return useMutation({
+    mutationFn: async (data: ReportGenerateRequest): Promise<ReportPreviewData> => {
+      const response = await reportsAPI.preview(data);
+      return response.data;
     },
   });
 }

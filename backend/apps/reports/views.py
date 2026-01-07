@@ -246,6 +246,72 @@ def generate_report(request):
         )
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def report_preview(request):
+    """
+    Generate a lightweight preview of report data without creating a Report record.
+
+    Returns JSON summary data for client-side preview rendering.
+    The preview is limited to first 5-10 items per section for performance.
+
+    Request body (same as generate_report):
+    - report_type: Type of report (required)
+    - period_start: Start date for data (optional)
+    - period_end: End date for data (optional)
+    - filters: Additional filters as JSON (optional)
+    - parameters: Report-specific parameters as JSON (optional)
+    """
+    organization = get_user_organization(request)
+    if organization is None:
+        return Response(
+            {'error': 'User profile not found'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    serializer = ReportGenerateSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    data = serializer.validated_data
+
+    # Create report service
+    service = ReportingService(organization, request.user)
+
+    try:
+        # Generate preview data (using the same generation logic)
+        preview_data = service._generate_data(
+            report_type=data['report_type'],
+            period_start=data.get('period_start'),
+            period_end=data.get('period_end'),
+            filters=data.get('filters', {}),
+            parameters=data.get('parameters', {}),
+        )
+
+        # Truncate lists to max 5 items for preview
+        def truncate_lists(obj, max_items=5):
+            if isinstance(obj, dict):
+                return {k: truncate_lists(v, max_items) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return obj[:max_items]
+            return obj
+
+        preview_data = truncate_lists(preview_data)
+
+        # Add preview metadata
+        preview_data['_preview'] = True
+        preview_data['_truncated'] = True
+
+        return Response(preview_data)
+
+    except Exception as e:
+        logger.exception(f"Error generating preview: {e}")
+        return Response(
+            {'error': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def report_list(request):

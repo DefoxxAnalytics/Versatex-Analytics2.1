@@ -89,6 +89,15 @@ class ReportDetailSerializer(serializers.ModelSerializer):
 class ReportGenerateSerializer(serializers.Serializer):
     """
     Serializer for generating a new report.
+
+    Filters schema:
+        {
+            "supplier_ids": [1, 2, 3],      # List of supplier IDs to include
+            "category_ids": [1, 2],          # List of category IDs to include
+            "min_amount": 1000.00,           # Minimum transaction amount
+            "max_amount": 50000.00           # Maximum transaction amount
+        }
+    Note: Date filtering is handled via period_start/period_end fields.
     """
     report_type = serializers.ChoiceField(choices=Report.REPORT_TYPE_CHOICES)
     report_format = serializers.ChoiceField(
@@ -99,9 +108,50 @@ class ReportGenerateSerializer(serializers.Serializer):
     description = serializers.CharField(required=False, allow_blank=True)
     period_start = serializers.DateField(required=False, allow_null=True)
     period_end = serializers.DateField(required=False, allow_null=True)
-    filters = serializers.JSONField(required=False, default=dict)
+    filters = serializers.JSONField(
+        required=False,
+        default=dict,
+        help_text="Advanced filters: supplier_ids, category_ids, min_amount, max_amount"
+    )
     parameters = serializers.JSONField(required=False, default=dict)
     async_generation = serializers.BooleanField(default=False)
+
+    def validate_filters(self, value):
+        """Validate filter structure."""
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("Filters must be a dictionary")
+
+        allowed_keys = {'supplier_ids', 'category_ids', 'min_amount', 'max_amount'}
+        for key in value.keys():
+            if key not in allowed_keys:
+                raise serializers.ValidationError(f"Unknown filter key: {key}")
+
+        # Validate supplier_ids
+        if 'supplier_ids' in value:
+            if not isinstance(value['supplier_ids'], list):
+                raise serializers.ValidationError("supplier_ids must be a list")
+            if not all(isinstance(x, int) for x in value['supplier_ids']):
+                raise serializers.ValidationError("supplier_ids must contain integers")
+
+        # Validate category_ids
+        if 'category_ids' in value:
+            if not isinstance(value['category_ids'], list):
+                raise serializers.ValidationError("category_ids must be a list")
+            if not all(isinstance(x, int) for x in value['category_ids']):
+                raise serializers.ValidationError("category_ids must contain integers")
+
+        # Validate amount range
+        if 'min_amount' in value:
+            if not isinstance(value['min_amount'], (int, float)):
+                raise serializers.ValidationError("min_amount must be a number")
+        if 'max_amount' in value:
+            if not isinstance(value['max_amount'], (int, float)):
+                raise serializers.ValidationError("max_amount must be a number")
+        if 'min_amount' in value and 'max_amount' in value:
+            if value['min_amount'] > value['max_amount']:
+                raise serializers.ValidationError("min_amount cannot be greater than max_amount")
+
+        return value
 
     def validate(self, attrs):
         """Validate date range."""

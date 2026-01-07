@@ -9,8 +9,9 @@ urlpatterns = [
     path('templates/', views.report_templates, name='templates'),
     path('templates/<str:template_id>/', views.report_template_detail, name='template-detail'),
 
-    # Report generation
+    # Report generation and preview
     path('generate/', views.generate_report, name='generate'),
+    path('preview/', views.report_preview, name='preview'),
 
     # Report list and detail
     path('', views.report_list, name='list'),
