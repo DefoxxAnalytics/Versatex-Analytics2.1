@@ -22,6 +22,13 @@ import {
   RefreshCw,
   Download,
   FileBarChart,
+  // P2P Analytics Icons
+  ArrowRightLeft,
+  Scale,
+  Clock,
+  ClipboardList,
+  ShoppingCart,
+  CreditCard,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -169,6 +176,7 @@ interface NavItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   description: string;
+  section?: string; // Optional section label for dividers (shown before this item)
 }
 
 /**
@@ -254,6 +262,44 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Reports',
     icon: FileBarChart,
     description: 'Generate and schedule reports',
+  },
+  // P2P (Procure-to-Pay) Analytics Section
+  {
+    path: '/p2p-cycle',
+    label: 'P2P Cycle',
+    icon: ArrowRightLeft,
+    description: 'End-to-end P2P cycle times',
+    section: 'P2P Analytics',
+  },
+  {
+    path: '/matching',
+    label: '3-Way Matching',
+    icon: Scale,
+    description: 'Invoice matching & exceptions',
+  },
+  {
+    path: '/invoice-aging',
+    label: 'Invoice Aging',
+    icon: Clock,
+    description: 'AP aging & payment analysis',
+  },
+  {
+    path: '/requisitions',
+    label: 'Requisitions',
+    icon: ClipboardList,
+    description: 'Purchase requisition analysis',
+  },
+  {
+    path: '/purchase-orders',
+    label: 'Purchase Orders',
+    icon: ShoppingCart,
+    description: 'PO analysis & leakage',
+  },
+  {
+    path: '/supplier-payments',
+    label: 'Supplier Payments',
+    icon: CreditCard,
+    description: 'Payment performance scorecards',
   },
   {
     path: '/settings',
@@ -592,6 +638,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               const Icon = item.icon;
               const active = isActive(item.path);
 
+              // Render section divider if item has a section property
+              const sectionDivider = item.section ? (
+                <div className="pt-4 pb-2">
+                  <div className="flex items-center gap-2 px-3 mb-3">
+                    <Separator className={cn("flex-1", sidebarStyles.divider)} />
+                    <span className={cn("text-xs font-semibold uppercase tracking-wider", sidebarStyles.dividerText)}>
+                      {item.section}
+                    </span>
+                    <Separator className={cn("flex-1", sidebarStyles.divider)} />
+                  </div>
+                </div>
+              ) : null;
+
               // For Settings, render divider and Admin Panel link before it if user has admin access
               if (item.path === '/settings' && canAccessAdminPanel) {
                 return (
@@ -683,23 +742,25 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               }
 
               return (
-                <Link
-                  key={item.path}
-                  href={item.path}
-                  onClick={handleNavClick}
-                  className={cn(
-                    'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
-                    sidebarStyles.hover,
-                    'focus:outline-none focus:ring-2',
-                    sidebarStyles.focus,
-                    active ? sidebarStyles.active : sidebarStyles.inactive
-                  )}
-                  aria-current={active ? 'page' : undefined}
-                  title={item.description}
-                >
-                  <Icon className={cn('h-5 w-5', active ? sidebarStyles.iconActive : sidebarStyles.icon)} />
-                  <span className="text-sm">{item.label}</span>
-                </Link>
+                <div key={item.path}>
+                  {sectionDivider}
+                  <Link
+                    href={item.path}
+                    onClick={handleNavClick}
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
+                      sidebarStyles.hover,
+                      'focus:outline-none focus:ring-2',
+                      sidebarStyles.focus,
+                      active ? sidebarStyles.active : sidebarStyles.inactive
+                    )}
+                    aria-current={active ? 'page' : undefined}
+                    title={item.description}
+                  >
+                    <Icon className={cn('h-5 w-5', active ? sidebarStyles.iconActive : sidebarStyles.icon)} />
+                    <span className="text-sm">{item.label}</span>
+                  </Link>
+                </div>
               );
             })}
           </nav>

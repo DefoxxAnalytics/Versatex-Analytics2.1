@@ -29,6 +29,14 @@ const MaverickPage = lazy(() => import("./pages/maverick"));
 const ReportsPage = lazy(() => import("./pages/reports"));
 const SettingsPage = lazy(() => import("./pages/Settings"));
 
+// P2P Analytics Pages
+const P2PCyclePage = lazy(() => import("./pages/p2p/P2PCycle"));
+const MatchingPage = lazy(() => import("./pages/p2p/Matching"));
+const InvoiceAgingPage = lazy(() => import("./pages/p2p/InvoiceAging"));
+const RequisitionsPage = lazy(() => import("./pages/p2p/Requisitions"));
+const PurchaseOrdersPage = lazy(() => import("./pages/p2p/PurchaseOrders"));
+const SupplierPaymentsPage = lazy(() => import("./pages/p2p/SupplierPayments"));
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -216,6 +224,67 @@ function Router() {
         <DashboardLayout>
           <Suspense fallback={<PageLoader />}>
             <SettingsPage />
+          </Suspense>
+        </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      {/* P2P Analytics Routes */}
+      <Route path="/p2p-cycle">
+        <ProtectedRoute>
+        <DashboardLayout>
+          <Suspense fallback={<PageLoader />}>
+            <P2PCyclePage />
+          </Suspense>
+        </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/matching">
+        <ProtectedRoute>
+        <DashboardLayout>
+          <Suspense fallback={<PageLoader />}>
+            <MatchingPage />
+          </Suspense>
+        </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/invoice-aging">
+        <ProtectedRoute>
+        <DashboardLayout>
+          <Suspense fallback={<PageLoader />}>
+            <InvoiceAgingPage />
+          </Suspense>
+        </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/requisitions">
+        <ProtectedRoute>
+        <DashboardLayout>
+          <Suspense fallback={<PageLoader />}>
+            <RequisitionsPage />
+          </Suspense>
+        </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/purchase-orders">
+        <ProtectedRoute>
+        <DashboardLayout>
+          <Suspense fallback={<PageLoader />}>
+            <PurchaseOrdersPage />
+          </Suspense>
+        </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/supplier-payments">
+        <ProtectedRoute>
+        <DashboardLayout>
+          <Suspense fallback={<PageLoader />}>
+            <SupplierPaymentsPage />
           </Suspense>
         </DashboardLayout>
         </ProtectedRoute>

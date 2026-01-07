@@ -1,7 +1,7 @@
 """
 URL patterns for analytics
 """
-from django.urls import path
+from django.urls import path, include
 from . import views
 
 urlpatterns = [
@@ -62,4 +62,7 @@ urlpatterns = [
     path('compliance/trends/', views.violation_trends, name='violation-trends'),
     path('compliance/supplier-scores/', views.supplier_compliance_scores, name='supplier-compliance-scores'),
     path('compliance/policies/', views.spending_policies, name='spending-policies'),
+
+    # P2P (Procure-to-Pay) Analytics
+    path('', include('apps.analytics.p2p_urls')),
 ]

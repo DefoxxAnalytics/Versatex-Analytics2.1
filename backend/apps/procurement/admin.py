@@ -24,7 +24,8 @@ from django.core.serializers.json import DjangoJSONEncoder
 
 from .models import (
     Supplier, Category, Transaction, DataUpload,
-    ColumnMappingTemplate, Contract, SpendingPolicy, PolicyViolation
+    ColumnMappingTemplate, Contract, SpendingPolicy, PolicyViolation,
+    PurchaseRequisition, PurchaseOrder, GoodsReceipt, Invoice
 )
 from .forms import CSVUploadForm, OrganizationResetForm, DeleteAllDataForm
 from .services import CSVProcessor
@@ -1244,3 +1245,941 @@ class DataUploadAdmin(admin.ModelAdmin):
             'duplicates': duplicates,
             'errors': errors
         }
+
+
+# =============================================================================
+# P2P (Procure-to-Pay) Model Admin Registrations
+# =============================================================================
+
+class P2PImportMixin:
+    """Mixin to add CSV import functionality to P2P model admins."""
+
+    p2p_doc_type = None  # Override in subclass: 'pr', 'po', 'gr', 'invoice'
+    p2p_import_fields = []  # Override with expected CSV columns
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                'import-csv/',
+                self.admin_site.admin_view(self.import_csv_view),
+                name=f'{self.model._meta.model_name}_import_csv'
+            ),
+            path(
+                'download-template/',
+                self.admin_site.admin_view(self.download_template_view),
+                name=f'{self.model._meta.model_name}_download_template'
+            ),
+        ]
+        return custom_urls + urls
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['show_import_button'] = True
+        extra_context['import_url'] = f'import-csv/'
+        extra_context['template_url'] = f'download-template/'
+        return super().changelist_view(request, extra_context=extra_context)
+
+    @method_decorator(staff_member_required)
+    def import_csv_view(self, request):
+        """Handle CSV import for P2P documents."""
+        if not self._check_import_permission(request):
+            messages.error(request, 'You do not have permission to import data.')
+            return redirect('..')
+
+        if request.method == 'POST':
+            file = request.FILES.get('file')
+            if not file:
+                messages.error(request, 'Please select a CSV file.')
+                return redirect('.')
+
+            if not file.name.lower().endswith('.csv'):
+                messages.error(request, 'File must be a CSV.')
+                return redirect('.')
+
+            try:
+                # Get organization
+                organization = self._get_import_organization(request)
+                if not organization:
+                    messages.error(request, 'Could not determine target organization.')
+                    return redirect('.')
+
+                # Process the import
+                content = file.read().decode('utf-8-sig')
+                reader = csv.DictReader(io.StringIO(content))
+                rows = list(reader)
+
+                batch_id = str(uuid_lib.uuid4())
+                stats = self._process_p2p_import(rows, organization, batch_id, request.user)
+
+                # Log the action
+                log_action(
+                    user=request.user,
+                    action='upload',
+                    resource=self.p2p_doc_type,
+                    resource_id=batch_id,
+                    details={
+                        'file_name': file.name,
+                        'successful': stats['successful'],
+                        'failed': stats['failed'],
+                        'skipped': stats['skipped'],
+                    },
+                    request=request
+                )
+
+                if stats['failed'] == 0:
+                    messages.success(
+                        request,
+                        f'Successfully imported {stats["successful"]} {self.p2p_doc_type.upper()}(s). '
+                        f'{stats["skipped"]} skipped as duplicates.'
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        f'Imported {stats["successful"]} {self.p2p_doc_type.upper()}(s), '
+                        f'{stats["failed"]} failed, {stats["skipped"]} skipped.'
+                    )
+
+                return redirect('..')
+
+            except UnicodeDecodeError:
+                messages.error(request, 'File encoding not supported. Please use UTF-8.')
+            except Exception as e:
+                messages.error(request, f'Import error: {str(e)}')
+                return redirect('.')
+
+        # GET request - show upload form
+        context = {
+            **self.admin_site.each_context(request),
+            'title': f'Import {self.model._meta.verbose_name_plural}',
+            'opts': self.model._meta,
+            'has_view_permission': self.has_view_permission(request),
+            'expected_columns': self.p2p_import_fields,
+            'doc_type': self.p2p_doc_type,
+        }
+        return render(request, 'admin/procurement/p2p_import.html', context)
+
+    @method_decorator(staff_member_required)
+    def download_template_view(self, request):
+        """Download CSV template for this P2P document type."""
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="{self.p2p_doc_type}_template.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow(self.p2p_import_fields)
+        # Add example row
+        writer.writerow(self._get_template_example_row())
+
+        return response
+
+    def _check_import_permission(self, request):
+        """Check if user can import data."""
+        if request.user.is_superuser:
+            return True
+        if hasattr(request.user, 'profile'):
+            return request.user.profile.role in ['admin', 'manager']
+        return False
+
+    def _get_import_organization(self, request):
+        """Get organization for import."""
+        org_id = request.POST.get('organization_id')
+        if org_id and request.user.is_superuser:
+            try:
+                return Organization.objects.get(id=org_id, is_active=True)
+            except Organization.DoesNotExist:
+                pass
+        if hasattr(request.user, 'profile'):
+            return request.user.profile.organization
+        return None
+
+    def _process_p2p_import(self, rows, organization, batch_id, user):
+        """Override in subclass to process import."""
+        raise NotImplementedError
+
+    def _get_template_example_row(self):
+        """Override in subclass to provide example data."""
+        return [''] * len(self.p2p_import_fields)
+
+
+@admin.register(PurchaseRequisition)
+class PurchaseRequisitionAdmin(P2PImportMixin, admin.ModelAdmin):
+    """Admin for Purchase Requisitions - P2P Cycle Analytics."""
+
+    p2p_doc_type = 'pr'
+    p2p_import_fields = [
+        'pr_number', 'department', 'cost_center', 'description', 'estimated_amount',
+        'currency', 'budget_code', 'status', 'priority', 'created_date',
+        'submitted_date', 'approval_date', 'supplier_suggested', 'category'
+    ]
+
+    list_display = [
+        'pr_number', 'organization', 'status', 'priority', 'estimated_amount',
+        'department', 'requested_by', 'created_date', 'approval_status_badge'
+    ]
+    list_filter = ['status', 'priority', 'organization', 'department', 'created_date']
+    search_fields = ['pr_number', 'description', 'department', 'cost_center']
+    readonly_fields = ['uuid', 'created_at', 'updated_at']
+    date_hierarchy = 'created_date'
+    raw_id_fields = ['supplier_suggested', 'category', 'requested_by', 'approved_by']
+    ordering = ['-created_date', '-created_at']
+    change_list_template = 'admin/procurement/p2p_change_list.html'
+
+    fieldsets = (
+        ('Identity', {
+            'fields': ('organization', 'pr_number', 'uuid')
+        }),
+        ('Request Details', {
+            'fields': ('requested_by', 'department', 'cost_center', 'description')
+        }),
+        ('Content', {
+            'fields': ('supplier_suggested', 'category')
+        }),
+        ('Financial', {
+            'fields': ('estimated_amount', 'currency', 'budget_code')
+        }),
+        ('Status & Workflow', {
+            'fields': ('status', 'priority')
+        }),
+        ('Key Dates', {
+            'fields': ('created_date', 'submitted_date', 'approval_date', 'rejection_date')
+        }),
+        ('Approval', {
+            'fields': ('approved_by', 'rejection_reason')
+        }),
+        ('Metadata', {
+            'fields': ('upload_batch', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def approval_status_badge(self, obj):
+        """Display approval status with color-coded badge."""
+        colors = {
+            'draft': '#6b7280',
+            'pending_approval': '#f59e0b',
+            'approved': '#10b981',
+            'rejected': '#ef4444',
+            'converted_to_po': '#3b82f6',
+            'cancelled': '#9ca3af',
+        }
+        color = colors.get(obj.status, '#6b7280')
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 3px 8px; '
+            'border-radius: 4px; font-size: 11px; font-weight: 600;">{}</span>',
+            color, obj.get_status_display()
+        )
+    approval_status_badge.short_description = 'Status'
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        if hasattr(request.user, 'profile'):
+            return qs.filter(organization=request.user.profile.organization)
+        return qs.none()
+
+    def _process_p2p_import(self, rows, organization, batch_id, user):
+        """Process PR import from CSV rows."""
+        stats = {'successful': 0, 'failed': 0, 'skipped': 0, 'errors': []}
+
+        for row_num, row in enumerate(rows, start=2):
+            try:
+                pr_number = row.get('pr_number', '').strip()
+                if not pr_number:
+                    stats['failed'] += 1
+                    continue
+
+                # Skip duplicates
+                if PurchaseRequisition.objects.filter(
+                    organization=organization, pr_number=pr_number
+                ).exists():
+                    stats['skipped'] += 1
+                    continue
+
+                estimated_amount = self._parse_decimal(row.get('estimated_amount', ''))
+                if estimated_amount is None:
+                    stats['failed'] += 1
+                    continue
+
+                with transaction.atomic():
+                    supplier = self._get_or_create_supplier(
+                        row.get('supplier_suggested', ''), organization
+                    )
+                    category = self._get_or_create_category(
+                        row.get('category', ''), organization
+                    )
+
+                    PurchaseRequisition.objects.create(
+                        organization=organization,
+                        pr_number=pr_number,
+                        department=row.get('department', '').strip(),
+                        cost_center=row.get('cost_center', '').strip(),
+                        description=row.get('description', '').strip(),
+                        estimated_amount=estimated_amount,
+                        currency=row.get('currency', 'USD').strip() or 'USD',
+                        budget_code=row.get('budget_code', '').strip(),
+                        status=row.get('status', 'draft').strip() or 'draft',
+                        priority=row.get('priority', 'medium').strip() or 'medium',
+                        created_date=self._parse_date(row.get('created_date', '')) or datetime.now().date(),
+                        submitted_date=self._parse_date(row.get('submitted_date', '')),
+                        approval_date=self._parse_date(row.get('approval_date', '')),
+                        supplier_suggested=supplier,
+                        category=category,
+                        upload_batch=batch_id
+                    )
+
+                stats['successful'] += 1
+            except Exception:
+                stats['failed'] += 1
+
+        return stats
+
+    def _get_template_example_row(self):
+        return [
+            'PR-2024-001', 'Engineering', 'CC-1001', 'Office supplies', '5000.00',
+            'USD', 'BUD-2024', 'pending_approval', 'medium', '2024-01-15',
+            '2024-01-16', '', 'ABC Supplies', 'Office Equipment'
+        ]
+
+    def _parse_date(self, date_str):
+        if not date_str or date_str.strip() == '':
+            return None
+        for fmt in ['%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y', '%m-%d-%Y', '%d-%m-%Y']:
+            try:
+                return datetime.strptime(date_str.strip(), fmt).date()
+            except ValueError:
+                continue
+        return None
+
+    def _parse_decimal(self, value_str):
+        if not value_str or value_str.strip() == '':
+            return Decimal('0')
+        try:
+            return Decimal(value_str.strip().replace('$', '').replace(',', ''))
+        except InvalidOperation:
+            return None
+
+    def _get_or_create_supplier(self, name, organization):
+        if not name or name.strip() == '':
+            return None
+        supplier, _ = Supplier.objects.get_or_create(
+            organization=organization, name__iexact=name.strip(),
+            defaults={'name': name.strip()}
+        )
+        return supplier
+
+    def _get_or_create_category(self, name, organization):
+        if not name or name.strip() == '':
+            return None
+        category, _ = Category.objects.get_or_create(
+            organization=organization, name__iexact=name.strip(),
+            defaults={'name': name.strip()}
+        )
+        return category
+
+
+@admin.register(PurchaseOrder)
+class PurchaseOrderAdmin(P2PImportMixin, admin.ModelAdmin):
+    """Admin for Purchase Orders - P2P Cycle Analytics."""
+
+    p2p_doc_type = 'po'
+    p2p_import_fields = [
+        'po_number', 'supplier_name', 'total_amount', 'currency', 'tax_amount',
+        'freight_amount', 'status', 'category', 'created_date', 'approval_date',
+        'sent_date', 'required_date', 'promised_date', 'pr_number', 'is_contract_backed'
+    ]
+
+    list_display = [
+        'po_number', 'organization', 'supplier', 'status', 'total_amount',
+        'is_contract_backed', 'created_date', 'po_status_badge'
+    ]
+    list_filter = ['status', 'is_contract_backed', 'organization', 'supplier', 'created_date']
+    search_fields = ['po_number', 'supplier__name']
+    readonly_fields = ['uuid', 'created_at', 'updated_at']
+    date_hierarchy = 'created_date'
+    raw_id_fields = ['supplier', 'category', 'contract', 'requisition', 'created_by', 'approved_by']
+    ordering = ['-created_date', '-created_at']
+    change_list_template = 'admin/procurement/p2p_change_list.html'
+
+    fieldsets = (
+        ('Identity', {
+            'fields': ('organization', 'po_number', 'uuid')
+        }),
+        ('Supplier & Category', {
+            'fields': ('supplier', 'category')
+        }),
+        ('Financial', {
+            'fields': ('total_amount', 'currency', 'tax_amount', 'freight_amount')
+        }),
+        ('Contract Linkage', {
+            'fields': ('contract', 'is_contract_backed')
+        }),
+        ('Status & Workflow', {
+            'fields': ('status',)
+        }),
+        ('Key Dates', {
+            'fields': ('created_date', 'approval_date', 'sent_date', 'required_date', 'promised_date')
+        }),
+        ('Approvals', {
+            'fields': ('created_by', 'approved_by')
+        }),
+        ('Amendment Tracking', {
+            'fields': ('original_amount', 'amendment_count')
+        }),
+        ('PR Linkage', {
+            'fields': ('requisition',)
+        }),
+        ('Metadata', {
+            'fields': ('upload_batch', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def po_status_badge(self, obj):
+        """Display PO status with color-coded badge."""
+        colors = {
+            'draft': '#6b7280',
+            'pending_approval': '#f59e0b',
+            'approved': '#10b981',
+            'sent_to_supplier': '#3b82f6',
+            'acknowledged': '#6366f1',
+            'partially_received': '#8b5cf6',
+            'fully_received': '#14b8a6',
+            'closed': '#059669',
+            'cancelled': '#9ca3af',
+        }
+        color = colors.get(obj.status, '#6b7280')
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 3px 8px; '
+            'border-radius: 4px; font-size: 11px; font-weight: 600;">{}</span>',
+            color, obj.get_status_display()
+        )
+    po_status_badge.short_description = 'Status'
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        if hasattr(request.user, 'profile'):
+            return qs.filter(organization=request.user.profile.organization)
+        return qs.none()
+
+    def _process_p2p_import(self, rows, organization, batch_id, user):
+        """Process PO import from CSV rows."""
+        stats = {'successful': 0, 'failed': 0, 'skipped': 0, 'errors': []}
+
+        for row_num, row in enumerate(rows, start=2):
+            try:
+                po_number = row.get('po_number', '').strip()
+                if not po_number:
+                    stats['failed'] += 1
+                    continue
+
+                # Skip duplicates
+                if PurchaseOrder.objects.filter(
+                    organization=organization, po_number=po_number
+                ).exists():
+                    stats['skipped'] += 1
+                    continue
+
+                supplier_name = row.get('supplier_name', '').strip()
+                if not supplier_name:
+                    stats['failed'] += 1
+                    continue
+
+                total_amount = self._parse_decimal(row.get('total_amount', ''))
+                if total_amount is None:
+                    stats['failed'] += 1
+                    continue
+
+                with transaction.atomic():
+                    supplier = self._get_or_create_supplier(supplier_name, organization)
+                    category = self._get_or_create_category(
+                        row.get('category', ''), organization
+                    )
+
+                    # Link to existing PR if provided
+                    requisition = None
+                    pr_number = row.get('pr_number', '').strip()
+                    if pr_number:
+                        requisition = PurchaseRequisition.objects.filter(
+                            organization=organization, pr_number=pr_number
+                        ).first()
+
+                    is_contract_backed = row.get('is_contract_backed', '').strip().lower() in ('true', 'yes', '1')
+
+                    PurchaseOrder.objects.create(
+                        organization=organization,
+                        po_number=po_number,
+                        supplier=supplier,
+                        category=category,
+                        total_amount=total_amount,
+                        currency=row.get('currency', 'USD').strip() or 'USD',
+                        tax_amount=self._parse_decimal(row.get('tax_amount', '')) or Decimal('0'),
+                        freight_amount=self._parse_decimal(row.get('freight_amount', '')) or Decimal('0'),
+                        status=row.get('status', 'draft').strip() or 'draft',
+                        created_date=self._parse_date(row.get('created_date', '')) or datetime.now().date(),
+                        approval_date=self._parse_date(row.get('approval_date', '')),
+                        sent_date=self._parse_date(row.get('sent_date', '')),
+                        required_date=self._parse_date(row.get('required_date', '')),
+                        promised_date=self._parse_date(row.get('promised_date', '')),
+                        requisition=requisition,
+                        is_contract_backed=is_contract_backed,
+                        original_amount=total_amount,
+                        upload_batch=batch_id
+                    )
+
+                stats['successful'] += 1
+            except Exception:
+                stats['failed'] += 1
+
+        return stats
+
+    def _get_template_example_row(self):
+        return [
+            'PO-2024-001', 'ABC Supplies', '25000.00', 'USD', '2000.00',
+            '500.00', 'approved', 'Office Equipment', '2024-01-20', '2024-01-21',
+            '2024-01-22', '2024-02-15', '2024-02-10', 'PR-2024-001', 'false'
+        ]
+
+    def _parse_date(self, date_str):
+        if not date_str or date_str.strip() == '':
+            return None
+        for fmt in ['%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y', '%m-%d-%Y', '%d-%m-%Y']:
+            try:
+                return datetime.strptime(date_str.strip(), fmt).date()
+            except ValueError:
+                continue
+        return None
+
+    def _parse_decimal(self, value_str):
+        if not value_str or value_str.strip() == '':
+            return Decimal('0')
+        try:
+            return Decimal(value_str.strip().replace('$', '').replace(',', ''))
+        except InvalidOperation:
+            return None
+
+    def _get_or_create_supplier(self, name, organization):
+        if not name or name.strip() == '':
+            return None
+        supplier, _ = Supplier.objects.get_or_create(
+            organization=organization, name__iexact=name.strip(),
+            defaults={'name': name.strip()}
+        )
+        return supplier
+
+    def _get_or_create_category(self, name, organization):
+        if not name or name.strip() == '':
+            return None
+        category, _ = Category.objects.get_or_create(
+            organization=organization, name__iexact=name.strip(),
+            defaults={'name': name.strip()}
+        )
+        return category
+
+
+@admin.register(GoodsReceipt)
+class GoodsReceiptAdmin(P2PImportMixin, admin.ModelAdmin):
+    """Admin for Goods Receipts - 3-Way Matching."""
+
+    p2p_doc_type = 'gr'
+    p2p_import_fields = [
+        'gr_number', 'po_number', 'received_date', 'quantity_ordered',
+        'quantity_received', 'quantity_accepted', 'amount_received', 'status', 'inspection_notes'
+    ]
+
+    list_display = [
+        'gr_number', 'organization', 'purchase_order', 'status',
+        'quantity_received', 'received_date', 'variance_badge'
+    ]
+    list_filter = ['status', 'organization', 'received_date']
+    search_fields = ['gr_number', 'purchase_order__po_number']
+    readonly_fields = ['uuid', 'created_at', 'updated_at']
+    date_hierarchy = 'received_date'
+    raw_id_fields = ['purchase_order', 'received_by']
+    ordering = ['-received_date', '-created_at']
+    change_list_template = 'admin/procurement/p2p_change_list.html'
+
+    fieldsets = (
+        ('Identity', {
+            'fields': ('organization', 'gr_number', 'uuid')
+        }),
+        ('PO Linkage', {
+            'fields': ('purchase_order',)
+        }),
+        ('Receipt Details', {
+            'fields': ('received_date', 'received_by')
+        }),
+        ('Quantities', {
+            'fields': ('quantity_ordered', 'quantity_received', 'quantity_accepted', 'amount_received')
+        }),
+        ('Status', {
+            'fields': ('status', 'inspection_notes')
+        }),
+        ('Metadata', {
+            'fields': ('upload_batch', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def variance_badge(self, obj):
+        """Display variance with color-coded badge."""
+        variance = obj.quantity_variance
+        if abs(variance) <= 1:
+            color = '#10b981'  # Green - good
+            text = 'OK'
+        elif abs(variance) <= 5:
+            color = '#f59e0b'  # Amber - warning
+            text = f'{variance:+.1f}%'
+        else:
+            color = '#ef4444'  # Red - critical
+            text = f'{variance:+.1f}%'
+
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 3px 8px; '
+            'border-radius: 4px; font-size: 11px; font-weight: 600;">{}</span>',
+            color, text
+        )
+    variance_badge.short_description = 'Variance'
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        if hasattr(request.user, 'profile'):
+            return qs.filter(organization=request.user.profile.organization)
+        return qs.none()
+
+    def _process_p2p_import(self, rows, organization, batch_id, user):
+        """Process GR import from CSV rows."""
+        stats = {'successful': 0, 'failed': 0, 'skipped': 0, 'errors': []}
+
+        for row_num, row in enumerate(rows, start=2):
+            try:
+                gr_number = row.get('gr_number', '').strip()
+                if not gr_number:
+                    stats['failed'] += 1
+                    continue
+
+                # Skip duplicates
+                if GoodsReceipt.objects.filter(
+                    organization=organization, gr_number=gr_number
+                ).exists():
+                    stats['skipped'] += 1
+                    continue
+
+                # Find linked PO
+                po_number = row.get('po_number', '').strip()
+                if not po_number:
+                    stats['failed'] += 1
+                    continue
+
+                purchase_order = PurchaseOrder.objects.filter(
+                    organization=organization, po_number=po_number
+                ).first()
+
+                if not purchase_order:
+                    stats['failed'] += 1
+                    continue
+
+                received_date = self._parse_date(row.get('received_date', ''))
+                if not received_date:
+                    stats['failed'] += 1
+                    continue
+
+                quantity_received = self._parse_decimal(row.get('quantity_received', ''))
+                if quantity_received is None:
+                    stats['failed'] += 1
+                    continue
+
+                with transaction.atomic():
+                    GoodsReceipt.objects.create(
+                        organization=organization,
+                        gr_number=gr_number,
+                        purchase_order=purchase_order,
+                        received_date=received_date,
+                        quantity_ordered=self._parse_decimal(row.get('quantity_ordered', '')) or quantity_received,
+                        quantity_received=quantity_received,
+                        quantity_accepted=self._parse_decimal(row.get('quantity_accepted', '')) or quantity_received,
+                        amount_received=self._parse_decimal(row.get('amount_received', '')) or Decimal('0'),
+                        status=row.get('status', 'received').strip() or 'received',
+                        inspection_notes=row.get('inspection_notes', '').strip(),
+                        upload_batch=batch_id
+                    )
+
+                stats['successful'] += 1
+            except Exception:
+                stats['failed'] += 1
+
+        return stats
+
+    def _get_template_example_row(self):
+        return [
+            'GR-2024-001', 'PO-2024-001', '2024-02-10', '100',
+            '98', '98', '24500.00', 'received', 'Minor packaging damage, items OK'
+        ]
+
+    def _parse_date(self, date_str):
+        if not date_str or date_str.strip() == '':
+            return None
+        for fmt in ['%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y', '%m-%d-%Y', '%d-%m-%Y']:
+            try:
+                return datetime.strptime(date_str.strip(), fmt).date()
+            except ValueError:
+                continue
+        return None
+
+    def _parse_decimal(self, value_str):
+        if not value_str or value_str.strip() == '':
+            return Decimal('0')
+        try:
+            return Decimal(value_str.strip().replace('$', '').replace(',', ''))
+        except InvalidOperation:
+            return None
+
+
+@admin.register(Invoice)
+class InvoiceAdmin(P2PImportMixin, admin.ModelAdmin):
+    """Admin for Invoices - AP Aging & 3-Way Matching."""
+
+    p2p_doc_type = 'invoice'
+    p2p_import_fields = [
+        'invoice_number', 'supplier_name', 'invoice_amount', 'invoice_date', 'due_date',
+        'currency', 'tax_amount', 'net_amount', 'payment_terms', 'payment_terms_days',
+        'status', 'match_status', 'po_number', 'gr_number', 'received_date',
+        'approved_date', 'paid_date', 'has_exception', 'exception_type',
+        'exception_amount', 'exception_notes'
+    ]
+
+    list_display = [
+        'invoice_number', 'organization', 'supplier', 'status', 'match_status',
+        'invoice_amount', 'due_date', 'aging_badge', 'exception_badge'
+    ]
+    list_filter = [
+        'status', 'match_status', 'has_exception', 'exception_type',
+        'organization', 'supplier', 'invoice_date', 'due_date'
+    ]
+    search_fields = ['invoice_number', 'supplier__name']
+    readonly_fields = ['uuid', 'created_at', 'updated_at']
+    date_hierarchy = 'invoice_date'
+    raw_id_fields = ['supplier', 'purchase_order', 'goods_receipt', 'exception_resolved_by']
+    ordering = ['-invoice_date', '-created_at']
+    change_list_template = 'admin/procurement/p2p_change_list.html'
+
+    fieldsets = (
+        ('Identity', {
+            'fields': ('organization', 'invoice_number', 'supplier', 'uuid')
+        }),
+        ('Linkage (3-Way Match)', {
+            'fields': ('purchase_order', 'goods_receipt')
+        }),
+        ('Financial', {
+            'fields': ('invoice_amount', 'tax_amount', 'net_amount', 'currency')
+        }),
+        ('Payment Terms', {
+            'fields': ('payment_terms', 'payment_terms_days', 'discount_percent', 'discount_days')
+        }),
+        ('Key Dates', {
+            'fields': ('invoice_date', 'received_date', 'due_date', 'approved_date', 'paid_date')
+        }),
+        ('Status & Matching', {
+            'fields': ('status', 'match_status')
+        }),
+        ('Exception Tracking', {
+            'fields': (
+                'has_exception', 'exception_type', 'exception_amount',
+                'exception_notes', 'exception_resolved', 'exception_resolved_by',
+                'exception_resolved_at'
+            )
+        }),
+        ('Hold', {
+            'fields': ('hold_reason',),
+            'classes': ('collapse',)
+        }),
+        ('Metadata', {
+            'fields': ('upload_batch', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def aging_badge(self, obj):
+        """Display aging bucket with color-coded badge."""
+        bucket = obj.aging_bucket
+        colors = {
+            'current': '#10b981',  # Green
+            '31-60': '#f59e0b',    # Amber
+            '61-90': '#f97316',    # Orange
+            '90+': '#ef4444',      # Red
+        }
+        labels = {
+            'current': 'Current',
+            '31-60': '31-60 Days',
+            '61-90': '61-90 Days',
+            '90+': '90+ Days',
+        }
+        color = colors.get(bucket, '#6b7280')
+        label = labels.get(bucket, bucket)
+
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 3px 8px; '
+            'border-radius: 4px; font-size: 11px; font-weight: 600;">{}</span>',
+            color, label
+        )
+    aging_badge.short_description = 'Aging'
+
+    def exception_badge(self, obj):
+        """Display exception status with color-coded badge."""
+        if not obj.has_exception:
+            return format_html(
+                '<span style="background-color: #10b981; color: white; padding: 3px 8px; '
+                'border-radius: 4px; font-size: 11px; font-weight: 600;">✓</span>'
+            )
+
+        if obj.exception_resolved:
+            color = '#6366f1'  # Indigo - resolved
+            text = 'Resolved'
+        else:
+            color = '#ef4444'  # Red - open
+            text = obj.get_exception_type_display() if obj.exception_type else 'Exception'
+
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 3px 8px; '
+            'border-radius: 4px; font-size: 11px; font-weight: 600;">{}</span>',
+            color, text
+        )
+    exception_badge.short_description = 'Exception'
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        if hasattr(request.user, 'profile'):
+            return qs.filter(organization=request.user.profile.organization)
+        return qs.none()
+
+    def _process_p2p_import(self, rows, organization, batch_id, user):
+        """Process Invoice import from CSV rows."""
+        stats = {'successful': 0, 'failed': 0, 'skipped': 0, 'errors': []}
+
+        for row_num, row in enumerate(rows, start=2):
+            try:
+                invoice_number = row.get('invoice_number', '').strip()
+                if not invoice_number:
+                    stats['failed'] += 1
+                    continue
+
+                # Skip duplicates
+                if Invoice.objects.filter(
+                    organization=organization, invoice_number=invoice_number
+                ).exists():
+                    stats['skipped'] += 1
+                    continue
+
+                supplier_name = row.get('supplier_name', '').strip()
+                if not supplier_name:
+                    stats['failed'] += 1
+                    continue
+
+                invoice_amount = self._parse_decimal(row.get('invoice_amount', ''))
+                if invoice_amount is None:
+                    stats['failed'] += 1
+                    continue
+
+                invoice_date = self._parse_date(row.get('invoice_date', ''))
+                if not invoice_date:
+                    stats['failed'] += 1
+                    continue
+
+                due_date = self._parse_date(row.get('due_date', ''))
+                if not due_date:
+                    stats['failed'] += 1
+                    continue
+
+                with transaction.atomic():
+                    supplier = self._get_or_create_supplier(supplier_name, organization)
+
+                    # Link to existing PO if provided
+                    purchase_order = None
+                    po_number = row.get('po_number', '').strip()
+                    if po_number:
+                        purchase_order = PurchaseOrder.objects.filter(
+                            organization=organization, po_number=po_number
+                        ).first()
+
+                    # Link to existing GR if provided
+                    goods_receipt = None
+                    gr_number = row.get('gr_number', '').strip()
+                    if gr_number:
+                        goods_receipt = GoodsReceipt.objects.filter(
+                            organization=organization, gr_number=gr_number
+                        ).first()
+
+                    has_exception = row.get('has_exception', '').strip().lower() in ('true', 'yes', '1')
+
+                    Invoice.objects.create(
+                        organization=organization,
+                        invoice_number=invoice_number,
+                        supplier=supplier,
+                        invoice_amount=invoice_amount,
+                        invoice_date=invoice_date,
+                        due_date=due_date,
+                        currency=row.get('currency', 'USD').strip() or 'USD',
+                        tax_amount=self._parse_decimal(row.get('tax_amount', '')) or Decimal('0'),
+                        net_amount=self._parse_decimal(row.get('net_amount', '')) or invoice_amount,
+                        payment_terms=row.get('payment_terms', '').strip(),
+                        payment_terms_days=int(row.get('payment_terms_days', '30') or '30'),
+                        status=row.get('status', 'received').strip() or 'received',
+                        match_status=row.get('match_status', 'unmatched').strip() or 'unmatched',
+                        purchase_order=purchase_order,
+                        goods_receipt=goods_receipt,
+                        received_date=self._parse_date(row.get('received_date', '')) or invoice_date,
+                        approved_date=self._parse_date(row.get('approved_date', '')),
+                        paid_date=self._parse_date(row.get('paid_date', '')),
+                        has_exception=has_exception,
+                        exception_type=row.get('exception_type', '').strip() if has_exception else '',
+                        exception_amount=self._parse_decimal(row.get('exception_amount', '')) if has_exception else None,
+                        exception_notes=row.get('exception_notes', '').strip() if has_exception else '',
+                        upload_batch=batch_id
+                    )
+
+                stats['successful'] += 1
+            except Exception:
+                stats['failed'] += 1
+
+        return stats
+
+    def _get_template_example_row(self):
+        return [
+            'INV-2024-001', 'ABC Supplies', '24500.00', '2024-02-15', '2024-03-15',
+            'USD', '2000.00', '22500.00', 'Net 30', '30',
+            'received', '3way_matched', 'PO-2024-001', 'GR-2024-001', '2024-02-16',
+            '', '', 'false', '', '', ''
+        ]
+
+    def _parse_date(self, date_str):
+        if not date_str or date_str.strip() == '':
+            return None
+        for fmt in ['%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y', '%m-%d-%Y', '%d-%m-%Y']:
+            try:
+                return datetime.strptime(date_str.strip(), fmt).date()
+            except ValueError:
+                continue
+        return None
+
+    def _parse_decimal(self, value_str):
+        if not value_str or value_str.strip() == '':
+            return Decimal('0')
+        try:
+            return Decimal(value_str.strip().replace('$', '').replace(',', ''))
+        except InvalidOperation:
+            return None
+
+    def _get_or_create_supplier(self, name, organization):
+        if not name or name.strip() == '':
+            return None
+        supplier, _ = Supplier.objects.get_or_create(
+            organization=organization, name__iexact=name.strip(),
+            defaults={'name': name.strip()}
+        )
+        return supplier

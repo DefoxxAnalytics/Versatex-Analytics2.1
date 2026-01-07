@@ -1197,6 +1197,10 @@ export type ReportType =
   | 'contract_compliance'
   | 'executive_summary'
   | 'pareto_analysis'
+  | 'stratification'
+  | 'seasonality'
+  | 'year_over_year'
+  | 'tail_spend'
   | 'custom';
 
 export type ReportFormat = 'pdf' | 'xlsx' | 'csv';
@@ -1782,6 +1786,676 @@ export const reportsAPI = {
 
   runScheduleNow: (scheduleId: string): Promise<AxiosResponse<{ message: string; id: string }>> =>
     api.post(`/reports/schedules/${scheduleId}/run-now/`, {}, { params: getOrganizationParam() }),
+};
+
+// =====================
+// P2P (Procure-to-Pay) Analytics Types
+// =====================
+
+// P2P Document Status Types
+export type PRStatus = 'draft' | 'pending_approval' | 'approved' | 'rejected' | 'converted_to_po' | 'cancelled';
+export type PRPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type POStatus = 'draft' | 'pending_approval' | 'approved' | 'sent_to_supplier' | 'acknowledged' | 'partially_received' | 'fully_received' | 'closed' | 'cancelled';
+export type GRStatus = 'pending' | 'accepted' | 'partial_accept' | 'rejected';
+export type InvoiceStatus = 'received' | 'pending_match' | 'matched' | 'exception' | 'approved' | 'on_hold' | 'paid' | 'disputed';
+export type MatchStatus = 'unmatched' | '2way_matched' | '3way_matched' | 'exception';
+export type ExceptionType = 'price_variance' | 'quantity_variance' | 'no_po' | 'duplicate' | 'missing_gr' | 'other';
+
+// P2P Cycle Overview
+export interface P2PCycleStage {
+  name: string;
+  avg_days: number;
+  target_days: number;
+  variance_pct: number;
+  status: 'on_track' | 'warning' | 'critical';
+}
+
+export interface P2PCycleOverview {
+  stages: {
+    pr_to_po: P2PCycleStage;
+    po_to_gr: P2PCycleStage;
+    gr_to_invoice: P2PCycleStage;
+    invoice_to_payment: P2PCycleStage;
+  };
+  total_cycle: {
+    avg_days: number;
+    target_days: number;
+    variance_pct: number;
+  };
+  summary: {
+    total_transactions: number;
+    on_time_rate: number;
+    bottleneck_stage: string;
+  };
+}
+
+export interface P2PCycleByCategory {
+  category: string;
+  category_id: number;
+  pr_to_po_days: number;
+  po_to_gr_days: number;
+  gr_to_invoice_days: number;
+  invoice_to_payment_days: number;
+  total_days: number;
+  transaction_count: number;
+  total_spend: number;
+}
+
+export interface P2PCycleBySupplier {
+  supplier: string;
+  supplier_id: number;
+  pr_to_po_days: number;
+  po_to_gr_days: number;
+  gr_to_invoice_days: number;
+  invoice_to_payment_days: number;
+  total_days: number;
+  transaction_count: number;
+  on_time_rate: number;
+}
+
+export interface P2PCycleTrend {
+  month: string;
+  pr_to_po_days: number;
+  po_to_gr_days: number;
+  gr_to_invoice_days: number;
+  invoice_to_payment_days: number;
+  total_days: number;
+}
+
+export interface P2PBottleneck {
+  stage: string;
+  avg_days: number;
+  target_days: number;
+  variance_pct: number;
+  status: 'on_track' | 'warning' | 'critical';
+  impact: string;
+  recommendations: string[];
+}
+
+export interface P2PBottleneckAnalysis {
+  bottlenecks: P2PBottleneck[];
+  primary_bottleneck: string;
+  estimated_savings_days: number;
+}
+
+export interface P2PFunnelStage {
+  stage: string;
+  count: number;
+  value: number;
+  conversion_rate: number;
+}
+
+export interface P2PProcessFunnel {
+  stages: P2PFunnelStage[];
+  drop_off_points: { from: string; to: string; lost_count: number; lost_value: number }[];
+}
+
+export interface P2PStageDrilldownItem {
+  document_number: string;
+  document_type: 'PR' | 'PO' | 'GR' | 'Invoice';
+  document_id: number;
+  supplier: string;
+  supplier_name?: string;
+  amount: number;
+  days_in_stage: number;
+  status: string;
+  created_date: string;
+}
+
+export interface P2PStageDrilldown {
+  stage: string;
+  avg_days: number;
+  documents_count: number;
+  total_value: number;
+  slowest_documents: P2PStageDrilldownItem[];
+}
+
+// 3-Way Matching Types
+export interface MatchingOverview {
+  total_invoices: number;
+  total_amount: number;
+  three_way_matched: { count: number; amount: number; percentage: number };
+  two_way_matched: { count: number; amount: number; percentage: number };
+  exceptions: { count: number; amount: number; percentage: number };
+  avg_resolution_days: number;
+}
+
+export interface InvoiceException {
+  invoice_id: number;
+  invoice_number: string;
+  supplier: string;
+  supplier_id: number;
+  invoice_amount: number;
+  exception_type: ExceptionType;
+  exception_amount: number | null;
+  days_open: number;
+  po_number: string | null;
+  invoice_date: string;
+  status: InvoiceStatus;
+  exception_notes: string;
+}
+
+export interface ExceptionsByType {
+  exception_type: ExceptionType;
+  count: number;
+  amount: number;
+  percentage: number;
+}
+
+export interface ExceptionsBySupplier {
+  supplier: string;
+  supplier_id: number;
+  total_invoices: number;
+  exception_count: number;
+  exception_rate: number;
+  exception_amount: number;
+  primary_exception_type: ExceptionType | null;
+}
+
+export interface PriceVarianceItem {
+  invoice_id: number;
+  invoice_number: string;
+  supplier: string;
+  po_number: string;
+  po_price: number;
+  invoice_price: number;
+  variance_amount: number;
+  variance_pct: number;
+}
+
+export interface PriceVarianceAnalysis {
+  total_variance: number;
+  variance_count: number;
+  avg_variance_pct: number;
+  items: PriceVarianceItem[];
+}
+
+export interface QuantityVarianceItem {
+  gr_number: string;
+  po_number: string;
+  supplier: string;
+  qty_ordered: number;
+  qty_received: number;
+  qty_invoiced: number;
+  variance_type: 'over' | 'under' | 'match';
+}
+
+export interface QuantityVarianceAnalysis {
+  total_variances: number;
+  over_shipments: number;
+  under_shipments: number;
+  items: QuantityVarianceItem[];
+}
+
+export interface InvoiceMatchDetail {
+  invoice: {
+    id: number;
+    invoice_number: string;
+    supplier: string;
+    supplier_id: number;
+    invoice_amount: number;
+    tax_amount: number;
+    net_amount: number;
+    invoice_date: string;
+    due_date: string;
+    status: InvoiceStatus;
+    match_status: MatchStatus;
+    has_exception: boolean;
+    exception_type: ExceptionType | null;
+    exception_amount: number | null;
+    exception_notes: string;
+    exception_resolved: boolean;
+  };
+  purchase_order: {
+    id: number;
+    po_number: string;
+    total_amount: number;
+    created_date: string;
+    status: POStatus;
+  } | null;
+  goods_receipt: {
+    id: number;
+    gr_number: string;
+    received_date: string;
+    quantity_ordered: number;
+    quantity_received: number;
+    status: GRStatus;
+  } | null;
+  variance: {
+    price_variance: number | null;
+    quantity_variance: number | null;
+    total_variance: number | null;
+  };
+}
+
+export interface ExceptionResolution {
+  invoice_id: number;
+  invoice_number: string;
+  resolved: boolean;
+  resolved_at: string;
+  resolved_by: string;
+}
+
+export interface BulkExceptionResolution {
+  resolved_count: number;
+  failed_count: number;
+  resolved_invoices: number[];
+  failed_invoices: { id: number; error: string }[];
+}
+
+// Invoice Aging Types
+export interface AgingBucket {
+  bucket: string;
+  count: number;
+  amount: number;
+  percentage: number;
+}
+
+export interface AgingOverview {
+  total_ap: number;
+  overdue_amount: number;
+  current_dpo: number;
+  on_time_rate: number;
+  buckets: AgingBucket[];
+  trend: { month: string; dpo: number }[];
+}
+
+export interface AgingBySupplier {
+  supplier: string;
+  supplier_id: number;
+  total_ap: number;
+  current: number;
+  days_31_60: number;
+  days_61_90: number;
+  days_90_plus: number;
+  avg_days_outstanding: number;
+  on_time_rate: number;
+}
+
+export interface PaymentTermsCompliance {
+  overall_on_time_rate: number;
+  early_discount_capture_rate: number;
+  discount_amount_captured: number;
+  discount_amount_missed: number;
+  by_terms: {
+    terms: string;
+    count: number;
+    on_time_rate: number;
+  }[];
+  by_supplier: {
+    supplier: string;
+    supplier_id: number;
+    on_time_rate: number;
+    avg_days_to_pay: number;
+  }[];
+}
+
+export interface DPOTrend {
+  month: string;
+  dpo: number;
+  invoices_paid: number;
+  amount_paid: number;
+}
+
+export interface CashFlowForecastWeek {
+  week: string;
+  week_start: string;
+  week_end: string;
+  amount_due: number;
+  invoice_count: number;
+  critical_payments: number;
+}
+
+export interface CashFlowForecast {
+  total_due: number;
+  weeks: CashFlowForecastWeek[];
+  by_supplier: { supplier: string; amount: number }[];
+}
+
+// Purchase Requisition Types
+export interface PROverview {
+  total_prs: number;
+  total_count: number;  // Alias for total_prs
+  total_value: number;
+  conversion_rate: number;
+  avg_approval_days: number;
+  rejection_rate: number;
+  by_status: { status: PRStatus; count: number; value: number }[];
+  status_breakdown: Record<string, number>;  // Quick lookup by status
+}
+
+export interface PRApprovalAnalysis {
+  avg_approval_days: number;
+  distribution: { range: string; count: number; percentage: number }[];
+  approval_time_distribution: { range: string; count: number; percentage: number }[];
+  top_approvers: { name: string; count: number; avg_days: number }[];
+  bottlenecks: { stage: string; avg_days: number; count: number }[];
+}
+
+export interface PRByDepartment {
+  department: string;
+  pr_count: number;
+  count: number;  // Alias for pr_count
+  total_value: number;
+  approval_rate: number;
+  avg_processing_days: number;
+}
+
+export interface PRPendingItem {
+  pr_id: number;
+  pr_number: string;
+  requestor: string;
+  department: string;
+  amount: number;
+  days_pending: number;
+  priority: PRPriority;
+  submitted_date: string;
+}
+
+export interface PRDetail {
+  id: number;
+  pr_number: string;
+  requested_by: string;
+  requestor_name?: string;
+  department: string;
+  cost_center: string;
+  supplier_suggested: string | null;
+  suggested_supplier?: string | null;
+  category: string | null;
+  description: string;
+  estimated_amount: number;
+  currency: string;
+  status: PRStatus;
+  priority: PRPriority;
+  created_date: string;
+  submitted_date: string | null;
+  approval_date: string | null;
+  approved_by: string | null;
+  rejection_reason: string;
+  purchase_order: { id: number; po_number: string } | null;
+  linked_po_number?: string | null;
+}
+
+// Purchase Order Types
+export interface POOverview {
+  total_pos: number;
+  total_count: number;
+  total_value: number;
+  contract_coverage: number;
+  contract_coverage_pct?: number;
+  on_contract_value?: number;
+  off_contract_value?: number;
+  amendment_rate: number;
+  avg_po_value: number;
+  by_status: { status: POStatus; count: number; value: number }[];
+}
+
+export interface POLeakageCategory {
+  category: string;
+  category_id: number | null;
+  maverick_spend: number;
+  off_contract_value?: number;
+  off_contract_pct?: number;
+  total_spend: number;
+  total_value?: number;
+  maverick_percentage: number;
+  supplier_count: number;
+}
+
+// POLeakage can be returned as an array of categories OR as object with by_category
+export type POLeakage = POLeakageCategory[] | {
+  total_maverick_spend: number;
+  maverick_percentage: number;
+  maverick_po_count: number;
+  by_category: POLeakageCategory[];
+  top_maverick_suppliers: { supplier: string; supplier_id: number; spend: number }[];
+  recommendations: string[];
+};
+
+export interface POAmendmentAnalysis {
+  amendment_rate: number;
+  avg_value_change: number;
+  total_amendments: number;
+  total_amended?: number;
+  total_value_change?: number;
+  reasons: { reason: string; count: number; percentage: number }[];
+  by_reason?: { reason: string; count: number; avg_change: number; total_change: number }[];
+  high_amendment_suppliers: { supplier: string; supplier_id: number; amendment_count: number; amendment_rate: number }[];
+}
+
+export interface POBySupplier {
+  supplier: string;
+  supplier_id: number;
+  po_count: number;
+  total_value: number;
+  contract_status: 'on_contract' | 'preferred' | 'maverick';
+  on_contract_pct?: number;
+  on_time_rate: number;
+  amendment_rate: number;
+}
+
+export interface PODetail {
+  id: number;
+  po_number: string;
+  supplier: string;
+  supplier_name?: string;
+  supplier_id: number;
+  total_amount: number;
+  original_amount?: number;
+  currency: string;
+  tax_amount: number;
+  freight_amount: number;
+  status: POStatus;
+  is_contract_backed: boolean;
+  contract: { id: number; contract_number: string } | null;
+  contract_number?: string;
+  created_date: string;
+  approval_date: string | null;
+  sent_date: string | null;
+  required_date: string | null;
+  promised_date: string | null;
+  created_by: string;
+  approved_by: string | null;
+  amendment_count: number;
+  requisitions: { id: number; pr_number: string }[];
+  linked_prs?: { id: number; pr_number: string }[];
+  goods_receipts: { id: number; gr_number: string; status: GRStatus }[];
+  invoices: { id: number; invoice_number: string; status: InvoiceStatus }[];
+}
+
+// Supplier Payment Performance Types
+export interface SupplierPaymentsOverview {
+  total_suppliers_with_ap: number;
+  total_suppliers?: number;
+  overall_on_time_rate: number;
+  avg_on_time_rate?: number;
+  avg_dpo: number;
+  exception_rate: number;
+  avg_exception_rate?: number;
+  total_ap_balance: number;
+}
+
+export interface SupplierPaymentScore {
+  supplier: string;
+  supplier_id: number;
+  ap_balance: number;
+  total_ap?: number;
+  dpo: number;
+  avg_dpo?: number;
+  on_time_rate: number;
+  exception_rate: number;
+  score: number;
+  performance_score?: number;
+  risk_level: 'low' | 'medium' | 'high';
+}
+
+export interface SupplierPaymentDetail {
+  supplier: string;
+  supplier_id: number;
+  total_invoices: number;
+  invoice_count?: number;
+  total_amount: number;
+  ap_balance: number;
+  total_ap?: number;
+  dpo: number;
+  avg_dpo?: number;
+  on_time_rate: number;
+  exception_count: number;
+  exception_rate: number;
+  performance_score?: number;
+  aging_buckets: AgingBucket[];
+  exception_breakdown: { type: ExceptionType; count: number }[];
+}
+
+export interface SupplierPaymentHistoryMonth {
+  month: string;
+  invoices_paid: number;
+  amount_paid: number;
+  on_time_count: number;
+  late_count: number;
+}
+
+export interface SupplierPaymentHistoryItem {
+  invoice_id: number;
+  invoice_number: string;
+  invoice_amount?: number;
+  amount?: number;
+  invoice_date: string;
+  due_date: string;
+  paid_date: string | null;
+  status: InvoiceStatus;
+  days_to_pay: number | null;
+  on_time?: boolean;
+}
+
+// SupplierPaymentHistory can be an object or array
+export type SupplierPaymentHistory = {
+  supplier: string;
+  supplier_id: number;
+  monthly_trend: SupplierPaymentHistoryMonth[];
+  recent_invoices: SupplierPaymentHistoryItem[];
+  exception_history: {
+    invoice_id: number;
+    invoice_number: string;
+    exception_type: ExceptionType;
+    amount: number;
+    resolved: boolean;
+    date: string;
+  }[];
+} | SupplierPaymentHistoryItem[];
+
+// P2P Analytics API
+export const p2pAnalyticsAPI = {
+  // P2P Cycle Time Analysis
+  getCycleOverview: (): Promise<AxiosResponse<P2PCycleOverview>> =>
+    api.get('/analytics/p2p/cycle-overview/', { params: getOrganizationParam() }),
+
+  getCycleByCategory: (): Promise<AxiosResponse<P2PCycleByCategory[]>> =>
+    api.get('/analytics/p2p/cycle-by-category/', { params: getOrganizationParam() }),
+
+  getCycleBySupplier: (): Promise<AxiosResponse<P2PCycleBySupplier[]>> =>
+    api.get('/analytics/p2p/cycle-by-supplier/', { params: getOrganizationParam() }),
+
+  getCycleTrends: (months: number = 12): Promise<AxiosResponse<P2PCycleTrend[]>> =>
+    api.get('/analytics/p2p/cycle-trends/', { params: { months, ...getOrganizationParam() } }),
+
+  getBottlenecks: (): Promise<AxiosResponse<P2PBottleneckAnalysis>> =>
+    api.get('/analytics/p2p/bottlenecks/', { params: getOrganizationParam() }),
+
+  getProcessFunnel: (months: number = 12): Promise<AxiosResponse<P2PProcessFunnel>> =>
+    api.get('/analytics/p2p/process-funnel/', { params: { months, ...getOrganizationParam() } }),
+
+  getStageDrilldown: (stage: string): Promise<AxiosResponse<P2PStageDrilldown>> =>
+    api.get(`/analytics/p2p/stage-drilldown/${stage}/`, { params: getOrganizationParam() }),
+
+  // 3-Way Matching
+  getMatchingOverview: (): Promise<AxiosResponse<MatchingOverview>> =>
+    api.get('/analytics/matching/overview/', { params: getOrganizationParam() }),
+
+  getMatchingExceptions: (params?: { status?: 'open' | 'resolved' | 'all'; exception_type?: ExceptionType; limit?: number }): Promise<AxiosResponse<{ exceptions: InvoiceException[]; count: number; filters: Record<string, string | null> }>> =>
+    api.get('/analytics/matching/exceptions/', { params: { ...params, ...getOrganizationParam() } }),
+
+  getExceptionsByType: (): Promise<AxiosResponse<ExceptionsByType[]>> =>
+    api.get('/analytics/matching/exceptions-by-type/', { params: getOrganizationParam() }),
+
+  getExceptionsBySupplier: (): Promise<AxiosResponse<ExceptionsBySupplier[]>> =>
+    api.get('/analytics/matching/exceptions-by-supplier/', { params: getOrganizationParam() }),
+
+  getPriceVarianceAnalysis: (): Promise<AxiosResponse<PriceVarianceAnalysis>> =>
+    api.get('/analytics/matching/price-variance/', { params: getOrganizationParam() }),
+
+  getQuantityVarianceAnalysis: (): Promise<AxiosResponse<QuantityVarianceAnalysis>> =>
+    api.get('/analytics/matching/quantity-variance/', { params: getOrganizationParam() }),
+
+  getInvoiceMatchDetail: (invoiceId: number): Promise<AxiosResponse<InvoiceMatchDetail>> =>
+    api.get(`/analytics/matching/invoice/${invoiceId}/`, { params: getOrganizationParam() }),
+
+  resolveException: (invoiceId: number, resolutionNotes: string): Promise<AxiosResponse<ExceptionResolution>> =>
+    api.post(`/analytics/matching/invoice/${invoiceId}/resolve/`, { resolution_notes: resolutionNotes }, { params: getOrganizationParam() }),
+
+  bulkResolveExceptions: (invoiceIds: number[], resolutionNotes: string): Promise<AxiosResponse<BulkExceptionResolution>> =>
+    api.post('/analytics/matching/exceptions/bulk-resolve/', { invoice_ids: invoiceIds, resolution_notes: resolutionNotes }, { params: getOrganizationParam() }),
+
+  // Invoice Aging / AP Analysis
+  getAgingOverview: (): Promise<AxiosResponse<AgingOverview>> =>
+    api.get('/analytics/aging/overview/', { params: getOrganizationParam() }),
+
+  getAgingBySupplier: (): Promise<AxiosResponse<AgingBySupplier[]>> =>
+    api.get('/analytics/aging/by-supplier/', { params: getOrganizationParam() }),
+
+  getPaymentTermsCompliance: (): Promise<AxiosResponse<PaymentTermsCompliance>> =>
+    api.get('/analytics/aging/payment-terms-compliance/', { params: getOrganizationParam() }),
+
+  getDPOTrends: (months: number = 12): Promise<AxiosResponse<DPOTrend[]>> =>
+    api.get('/analytics/aging/dpo-trends/', { params: { months, ...getOrganizationParam() } }),
+
+  getCashFlowForecast: (weeks: number = 4): Promise<AxiosResponse<CashFlowForecast>> =>
+    api.get('/analytics/aging/cash-forecast/', { params: { weeks, ...getOrganizationParam() } }),
+
+  // Purchase Requisitions
+  getPROverview: (): Promise<AxiosResponse<PROverview>> =>
+    api.get('/analytics/requisitions/overview/', { params: getOrganizationParam() }),
+
+  getPRApprovalAnalysis: (): Promise<AxiosResponse<PRApprovalAnalysis>> =>
+    api.get('/analytics/requisitions/approval-analysis/', { params: getOrganizationParam() }),
+
+  getPRByDepartment: (): Promise<AxiosResponse<PRByDepartment[]>> =>
+    api.get('/analytics/requisitions/by-department/', { params: getOrganizationParam() }),
+
+  getPRPending: (limit: number = 50): Promise<AxiosResponse<{ pending_prs: PRPendingItem[]; count: number }>> =>
+    api.get('/analytics/requisitions/pending/', { params: { limit, ...getOrganizationParam() } }),
+
+  getPRDetail: (prId: number): Promise<AxiosResponse<PRDetail>> =>
+    api.get(`/analytics/requisitions/${prId}/`, { params: getOrganizationParam() }),
+
+  // Purchase Orders
+  getPOOverview: (): Promise<AxiosResponse<POOverview>> =>
+    api.get('/analytics/purchase-orders/overview/', { params: getOrganizationParam() }),
+
+  getPOLeakage: (): Promise<AxiosResponse<POLeakage>> =>
+    api.get('/analytics/purchase-orders/leakage/', { params: getOrganizationParam() }),
+
+  getPOAmendments: (): Promise<AxiosResponse<POAmendmentAnalysis>> =>
+    api.get('/analytics/purchase-orders/amendments/', { params: getOrganizationParam() }),
+
+  getPOBySupplier: (): Promise<AxiosResponse<POBySupplier[]>> =>
+    api.get('/analytics/purchase-orders/by-supplier/', { params: getOrganizationParam() }),
+
+  getPODetail: (poId: number): Promise<AxiosResponse<PODetail>> =>
+    api.get(`/analytics/purchase-orders/${poId}/`, { params: getOrganizationParam() }),
+
+  // Supplier Payment Performance
+  getSupplierPaymentsOverview: (): Promise<AxiosResponse<SupplierPaymentsOverview>> =>
+    api.get('/analytics/supplier-payments/overview/', { params: getOrganizationParam() }),
+
+  getSupplierPaymentsScorecard: (limit: number = 50): Promise<AxiosResponse<{ suppliers: SupplierPaymentScore[]; count: number }>> =>
+    api.get('/analytics/supplier-payments/scorecard/', { params: { limit, ...getOrganizationParam() } }),
+
+  getSupplierPaymentDetail: (supplierId: number): Promise<AxiosResponse<SupplierPaymentDetail>> =>
+    api.get(`/analytics/supplier-payments/${supplierId}/`, { params: getOrganizationParam() }),
+
+  getSupplierPaymentHistory: (supplierId: number, months: number = 12): Promise<AxiosResponse<SupplierPaymentHistory>> =>
+    api.get(`/analytics/supplier-payments/${supplierId}/history/`, { params: { months, ...getOrganizationParam() } }),
 };
 
 export default api;

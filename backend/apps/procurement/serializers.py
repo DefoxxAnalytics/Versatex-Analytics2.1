@@ -3,7 +3,10 @@ Serializers for procurement data
 """
 import logging
 from rest_framework import serializers
-from .models import Supplier, Category, Transaction, DataUpload
+from .models import (
+    Supplier, Category, Transaction, DataUpload,
+    PurchaseRequisition, PurchaseOrder, GoodsReceipt, Invoice
+)
 
 # Try to import python-magic for robust file type validation
 try:
@@ -264,3 +267,306 @@ class CSVUploadSerializer(serializers.Serializer):
             raise serializers.ValidationError("Error validating file content: Unable to read file")
 
         return value
+
+
+# =============================================================================
+# P2P (Procure-to-Pay) Serializers
+# =============================================================================
+
+class PurchaseRequisitionSerializer(serializers.ModelSerializer):
+    """Serializer for Purchase Requisition model."""
+    requested_by_name = serializers.CharField(source='requested_by.username', read_only=True)
+    approved_by_name = serializers.CharField(source='approved_by.username', read_only=True)
+    supplier_suggested_name = serializers.CharField(source='supplier_suggested.name', read_only=True)
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    days_to_approval = serializers.IntegerField(read_only=True)
+    is_overdue = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = PurchaseRequisition
+        fields = [
+            'id', 'uuid', 'pr_number', 'organization',
+            'requested_by', 'requested_by_name', 'department', 'cost_center',
+            'supplier_suggested', 'supplier_suggested_name', 'category', 'category_name',
+            'description', 'estimated_amount', 'currency', 'budget_code',
+            'status', 'priority',
+            'created_date', 'submitted_date', 'approval_date', 'rejection_date',
+            'approved_by', 'approved_by_name', 'rejection_reason',
+            'days_to_approval', 'is_overdue',
+            'upload_batch', 'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'uuid', 'organization', 'created_at', 'updated_at',
+            'days_to_approval', 'is_overdue'
+        ]
+
+    def validate(self, attrs):
+        """Validate PR data."""
+        request = self.context.get('request')
+        if request and hasattr(request.user, 'profile'):
+            org = request.user.profile.organization
+
+            # Validate supplier belongs to organization
+            supplier = attrs.get('supplier_suggested')
+            if supplier and supplier.organization_id != org.id:
+                raise serializers.ValidationError({
+                    'supplier_suggested': 'Supplier does not belong to your organization.'
+                })
+
+            # Validate category belongs to organization
+            category = attrs.get('category')
+            if category and category.organization_id != org.id:
+                raise serializers.ValidationError({
+                    'category': 'Category does not belong to your organization.'
+                })
+
+        return attrs
+
+
+class PurchaseRequisitionListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for PR list views."""
+    requested_by_name = serializers.CharField(source='requested_by.username', read_only=True)
+    category_name = serializers.CharField(source='category.name', read_only=True)
+
+    class Meta:
+        model = PurchaseRequisition
+        fields = [
+            'id', 'uuid', 'pr_number', 'status', 'priority',
+            'estimated_amount', 'department', 'category_name',
+            'requested_by_name', 'created_date', 'approval_date'
+        ]
+
+
+class PurchaseOrderSerializer(serializers.ModelSerializer):
+    """Serializer for Purchase Order model."""
+    supplier_name = serializers.CharField(source='supplier.name', read_only=True)
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    contract_number = serializers.CharField(source='contract.contract_number', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.username', read_only=True)
+    approved_by_name = serializers.CharField(source='approved_by.username', read_only=True)
+    requisition_number = serializers.CharField(source='requisition.pr_number', read_only=True)
+    is_maverick = serializers.BooleanField(read_only=True)
+    amount_variance = serializers.FloatField(read_only=True)
+
+    class Meta:
+        model = PurchaseOrder
+        fields = [
+            'id', 'uuid', 'po_number', 'organization',
+            'supplier', 'supplier_name', 'category', 'category_name',
+            'total_amount', 'currency', 'tax_amount', 'freight_amount',
+            'contract', 'contract_number', 'is_contract_backed',
+            'status',
+            'created_date', 'approval_date', 'sent_date', 'required_date', 'promised_date',
+            'created_by', 'created_by_name', 'approved_by', 'approved_by_name',
+            'original_amount', 'amendment_count',
+            'requisition', 'requisition_number',
+            'is_maverick', 'amount_variance',
+            'upload_batch', 'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'uuid', 'organization', 'created_at', 'updated_at',
+            'is_maverick', 'amount_variance'
+        ]
+
+    def validate(self, attrs):
+        """Validate PO data."""
+        request = self.context.get('request')
+        if request and hasattr(request.user, 'profile'):
+            org = request.user.profile.organization
+
+            # Validate supplier belongs to organization
+            supplier = attrs.get('supplier')
+            if supplier and supplier.organization_id != org.id:
+                raise serializers.ValidationError({
+                    'supplier': 'Supplier does not belong to your organization.'
+                })
+
+            # Validate category belongs to organization
+            category = attrs.get('category')
+            if category and category.organization_id != org.id:
+                raise serializers.ValidationError({
+                    'category': 'Category does not belong to your organization.'
+                })
+
+            # Validate contract belongs to organization
+            contract = attrs.get('contract')
+            if contract and contract.organization_id != org.id:
+                raise serializers.ValidationError({
+                    'contract': 'Contract does not belong to your organization.'
+                })
+
+        return attrs
+
+
+class PurchaseOrderListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for PO list views."""
+    supplier_name = serializers.CharField(source='supplier.name', read_only=True)
+
+    class Meta:
+        model = PurchaseOrder
+        fields = [
+            'id', 'uuid', 'po_number', 'status', 'supplier_name',
+            'total_amount', 'is_contract_backed', 'created_date'
+        ]
+
+
+class GoodsReceiptSerializer(serializers.ModelSerializer):
+    """Serializer for Goods Receipt model."""
+    po_number = serializers.CharField(source='purchase_order.po_number', read_only=True)
+    supplier_name = serializers.CharField(source='purchase_order.supplier.name', read_only=True)
+    received_by_name = serializers.CharField(source='received_by.username', read_only=True)
+    quantity_variance = serializers.FloatField(read_only=True)
+    has_variance = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = GoodsReceipt
+        fields = [
+            'id', 'uuid', 'gr_number', 'organization',
+            'purchase_order', 'po_number', 'supplier_name',
+            'received_date', 'received_by', 'received_by_name',
+            'quantity_ordered', 'quantity_received', 'quantity_accepted',
+            'amount_received', 'status', 'inspection_notes',
+            'quantity_variance', 'has_variance',
+            'upload_batch', 'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'uuid', 'organization', 'created_at', 'updated_at',
+            'quantity_variance', 'has_variance'
+        ]
+
+    def validate_purchase_order(self, value):
+        """Validate PO belongs to user's organization."""
+        request = self.context.get('request')
+        if request and hasattr(request.user, 'profile'):
+            org = request.user.profile.organization
+            if value.organization_id != org.id:
+                raise serializers.ValidationError(
+                    'Purchase Order does not belong to your organization.'
+                )
+        return value
+
+
+class GoodsReceiptListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for GR list views."""
+    po_number = serializers.CharField(source='purchase_order.po_number', read_only=True)
+
+    class Meta:
+        model = GoodsReceipt
+        fields = [
+            'id', 'uuid', 'gr_number', 'status', 'po_number',
+            'quantity_received', 'received_date'
+        ]
+
+
+class InvoiceSerializer(serializers.ModelSerializer):
+    """Serializer for Invoice model."""
+    supplier_name = serializers.CharField(source='supplier.name', read_only=True)
+    po_number = serializers.CharField(source='purchase_order.po_number', read_only=True)
+    gr_number = serializers.CharField(source='goods_receipt.gr_number', read_only=True)
+    exception_resolved_by_name = serializers.CharField(
+        source='exception_resolved_by.username', read_only=True
+    )
+    days_outstanding = serializers.IntegerField(read_only=True)
+    days_overdue = serializers.IntegerField(read_only=True)
+    is_overdue = serializers.BooleanField(read_only=True)
+    aging_bucket = serializers.CharField(read_only=True)
+    discount_available = serializers.BooleanField(read_only=True)
+    price_variance = serializers.FloatField(read_only=True)
+
+    class Meta:
+        model = Invoice
+        fields = [
+            'id', 'uuid', 'invoice_number', 'organization',
+            'supplier', 'supplier_name',
+            'purchase_order', 'po_number', 'goods_receipt', 'gr_number',
+            'invoice_amount', 'tax_amount', 'net_amount', 'currency',
+            'payment_terms', 'payment_terms_days', 'discount_percent', 'discount_days',
+            'invoice_date', 'received_date', 'due_date', 'approved_date', 'paid_date',
+            'status', 'match_status',
+            'has_exception', 'exception_type', 'exception_amount',
+            'exception_notes', 'exception_resolved',
+            'exception_resolved_by', 'exception_resolved_by_name', 'exception_resolved_at',
+            'hold_reason',
+            'days_outstanding', 'days_overdue', 'is_overdue', 'aging_bucket',
+            'discount_available', 'price_variance',
+            'upload_batch', 'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'uuid', 'organization', 'created_at', 'updated_at',
+            'days_outstanding', 'days_overdue', 'is_overdue', 'aging_bucket',
+            'discount_available', 'price_variance'
+        ]
+
+    def validate(self, attrs):
+        """Validate Invoice data."""
+        request = self.context.get('request')
+        if request and hasattr(request.user, 'profile'):
+            org = request.user.profile.organization
+
+            # Validate supplier belongs to organization
+            supplier = attrs.get('supplier')
+            if supplier and supplier.organization_id != org.id:
+                raise serializers.ValidationError({
+                    'supplier': 'Supplier does not belong to your organization.'
+                })
+
+            # Validate PO belongs to organization
+            po = attrs.get('purchase_order')
+            if po and po.organization_id != org.id:
+                raise serializers.ValidationError({
+                    'purchase_order': 'Purchase Order does not belong to your organization.'
+                })
+
+            # Validate GR belongs to organization
+            gr = attrs.get('goods_receipt')
+            if gr and gr.organization_id != org.id:
+                raise serializers.ValidationError({
+                    'goods_receipt': 'Goods Receipt does not belong to your organization.'
+                })
+
+        return attrs
+
+
+class InvoiceListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for Invoice list views."""
+    supplier_name = serializers.CharField(source='supplier.name', read_only=True)
+    aging_bucket = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = Invoice
+        fields = [
+            'id', 'uuid', 'invoice_number', 'status', 'match_status',
+            'supplier_name', 'invoice_amount', 'due_date',
+            'has_exception', 'exception_type', 'aging_bucket'
+        ]
+
+
+class InvoiceExceptionResolveSerializer(serializers.Serializer):
+    """Serializer for resolving invoice exceptions."""
+    resolution_notes = serializers.CharField(required=True, max_length=2000)
+
+    def validate_resolution_notes(self, value):
+        """Ensure resolution notes are meaningful."""
+        if len(value.strip()) < 10:
+            raise serializers.ValidationError(
+                'Resolution notes must be at least 10 characters.'
+            )
+        return value.strip()
+
+
+class InvoiceBulkExceptionResolveSerializer(serializers.Serializer):
+    """Serializer for bulk resolving invoice exceptions."""
+    invoice_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        allow_empty=False,
+        max_length=100
+    )
+    resolution_notes = serializers.CharField(required=True, max_length=2000)
+
+    def validate_resolution_notes(self, value):
+        """Ensure resolution notes are meaningful."""
+        if len(value.strip()) < 10:
+            raise serializers.ValidationError(
+                'Resolution notes must be at least 10 characters.'
+            )
+        return value.strip()
