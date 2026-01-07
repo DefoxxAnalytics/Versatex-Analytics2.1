@@ -12,17 +12,19 @@ class BaseRenderer(ABC):
     Each renderer handles a specific output format (PDF, Excel, CSV).
     """
 
-    def __init__(self, report_data: dict, report_name: str = "Report"):
+    def __init__(self, report_data: dict, report_name: str = "Report", branding: dict = None):
         """
         Initialize renderer with report data.
 
         Args:
             report_data: Dictionary containing the report data from generators
             report_name: Name of the report for file naming
+            branding: Optional organization branding configuration
         """
         self.report_data = report_data
         self.report_name = report_name
         self.metadata = report_data.get('metadata', {})
+        self.branding = branding or {}
 
     @property
     @abstractmethod

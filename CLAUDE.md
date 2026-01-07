@@ -97,7 +97,7 @@ backend/
 │   ├── procurement/        # Supplier, Category, Transaction, DataUpload models
 │   ├── analytics/          # AnalyticsService - all analytics calculations
 │   └── reports/            # Report generation, scheduling, and export
-│       ├── generators/     # 6 report generators (executive, spend, supplier, pareto, compliance, savings)
+│       ├── generators/     # 11 report generators (executive, spend, supplier, pareto, compliance, savings, stratification, seasonality, yoy, tail_spend)
 │       ├── renderers/      # PDF (ReportLab), Excel (openpyxl), CSV (pandas)
 │       └── tasks.py        # Celery tasks for async generation
 ├── config/                 # Django settings, URLs, Celery config
@@ -249,17 +249,49 @@ GitHub Actions workflow runs on push/PR to master:
 Badges:
 - [![CI](https://github.com/DefoxxAnalytics/Versatex_Analytics2.0/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/DefoxxAnalytics/Versatex_Analytics2.0/actions/workflows/ci.yml)
 
-## Recent Updates (v2.2)
+## Recent Updates (v2.4)
+
+### Reports UI Enhancements
+- **Categorized Report Generation**: Reports organized into categories (Executive & Overview, Supplier Intelligence, Trends & Patterns, Optimization & Compliance)
+- **Report Badges**: Visual indicators for New, Popular, and Recommended reports
+- **Themed Report Cards**: Each report type has unique gradient colors, icons, and hover effects
+- **History Tab Makeover**: Gradient header, themed report icons, format badges (PDF/Excel/CSV), hover effects
+- **Schedules Tab Makeover**: Indigo/purple theme, frequency color badges (daily/weekly/monthly), improved action buttons
+
+### Organization Branding for PDF Reports
+- **Logo Support**: Upload organization logo (recommended: 200x60px PNG) via Django Admin
+- **Custom Colors**: Set primary and secondary brand colors (hex format) applied to PDF headers
+- **Footer Customization**: Add custom footer text (e.g., confidentiality notices)
+- **Website URL**: Display organization website in PDF footer
+- Branding fields on Organization model: `logo`, `primary_color`, `secondary_color`, `report_footer`, `website`
+- Access branding via `organization.get_branding()` method
+
+---
+
+## Previous Updates (v2.3)
 
 ### Reports Module
 - **Report Generation**: Generate procurement reports in PDF, Excel (XLSX), or CSV formats
-- **6 Report Types**: Executive Summary, Spend Analysis, Supplier Performance, Pareto Analysis, Contract Compliance, Savings Opportunities
+- **11 Report Types**: Executive Summary, Spend Analysis, Supplier Performance, Pareto Analysis, Contract Compliance, Savings Opportunities, Spend Stratification, Seasonality & Trends, Year-over-Year Analysis, Tail Spend Analysis
 - **Async Generation**: Large reports generated via Celery with real-time status polling
 - **Report Scheduling**: Create recurring reports (daily, weekly, bi-weekly, monthly, quarterly)
 - **Multi-tenant**: All reports scoped by organization
 - **Report Preview**: Preview report data before generating the full report
 - **Advanced Filtering**: Filter reports by suppliers, categories, and amount ranges
-- **Professional PDF Styling**: Executive headers, KPI cards with auto-sizing, smart table column widths, page numbers
+- **Professional PDF Styling**: Executive headers with org branding, KPI cards with auto-sizing, smart table column widths, page numbers
+
+### New Report Types (v2.3)
+| Report Type | Description | Key Metrics |
+|-------------|-------------|-------------|
+| **Spend Stratification** | Kraljic matrix analysis | Segments (Strategic/Leverage/Routine/Tactical), spend bands, risk assessment |
+| **Seasonality & Trends** | Monthly spending patterns | Seasonal indices, peak/trough analysis, savings opportunities |
+| **Year-over-Year** | YoY comparison | Top gainers/decliners, variance analysis, monthly comparison |
+| **Tail Spend** | Vendor fragmentation analysis | Tail vendor count, consolidation opportunities, action plans |
+
+Report-specific parameters:
+- **Seasonality**: `use_fiscal_year` (boolean, default: true) - Use fiscal year (Jul-Jun) vs calendar year
+- **Year-over-Year**: `year1`, `year2` (integers), `use_fiscal_year` (boolean)
+- **Tail Spend**: `threshold` (integer, default: 50000) - Dollar amount threshold for tail classification
 
 ### Reports API Endpoints
 ```
@@ -314,7 +346,7 @@ Date filtering is handled via `period_start` and `period_end` fields.
 
 ---
 
-## Previous Updates (v2.1)
+## Previous Updates (v2.2)
 
 ### Dashboard Page Enhancements
 - **Backend-Powered Analytics**: All dashboard pages now use pre-computed backend data instead of client-side aggregation

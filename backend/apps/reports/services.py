@@ -41,6 +41,10 @@ from .generators import (
     ParetoReportGenerator,
     ComplianceReportGenerator,
     SavingsOpportunitiesGenerator,
+    StratificationReportGenerator,
+    SeasonalityReportGenerator,
+    YearOverYearReportGenerator,
+    TailSpendReportGenerator,
 )
 from .renderers import PDFRenderer, ExcelRenderer, CSVRenderer
 
@@ -61,6 +65,10 @@ class ReportingService:
         'pareto_analysis': ParetoReportGenerator,
         'contract_compliance': ComplianceReportGenerator,
         'savings_opportunities': SavingsOpportunitiesGenerator,
+        'stratification': StratificationReportGenerator,
+        'seasonality': SeasonalityReportGenerator,
+        'year_over_year': YearOverYearReportGenerator,
+        'tail_spend': TailSpendReportGenerator,
         'price_trends': SpendAnalysisGenerator,  # Reuse spend analysis
         'custom': SpendAnalysisGenerator,  # Default to spend analysis
     }
@@ -252,10 +260,16 @@ class ReportingService:
         if not renderer_class:
             raise ValueError(f"Unknown format: {fmt}")
 
+        # Get organization branding for PDF reports
+        branding = None
+        if fmt == 'pdf' and hasattr(report.organization, 'get_branding'):
+            branding = report.organization.get_branding()
+
         # Create renderer
         renderer = renderer_class(
             report_data=report.summary_data,
             report_name=report.name,
+            branding=branding,
         )
 
         # Render to buffer
@@ -288,6 +302,10 @@ class ReportingService:
             'contract_compliance': 'Maverick spend analysis and policy violations',
             'executive_summary': 'High-level KPIs and strategic insights',
             'pareto_analysis': '80/20 analysis with supplier classifications',
+            'stratification': 'Kraljic matrix analysis with strategic, leverage, routine, and tactical segments',
+            'seasonality': 'Monthly spending patterns with fiscal year support and savings opportunities',
+            'year_over_year': 'Year-over-year comparison with top gainers, decliners, and variance analysis',
+            'tail_spend': 'Tail vendor analysis with consolidation opportunities and action plans',
             'custom': 'Custom report with user-defined parameters',
         }
         return descriptions.get(report_type, '')

@@ -19,14 +19,52 @@ class Organization(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
+    # Branding fields for reports
+    logo = models.ImageField(
+        upload_to='org_logos/',
+        null=True,
+        blank=True,
+        help_text='Organization logo for reports (recommended: 200x60px PNG)'
+    )
+    primary_color = models.CharField(
+        max_length=7,
+        default='#1e3a5f',
+        help_text='Primary brand color in hex format (e.g., #1e3a5f)'
+    )
+    secondary_color = models.CharField(
+        max_length=7,
+        default='#2563eb',
+        help_text='Secondary brand color in hex format (e.g., #2563eb)'
+    )
+    report_footer = models.TextField(
+        blank=True,
+        default='',
+        help_text='Custom footer text for reports (e.g., confidentiality notice)'
+    )
+    website = models.URLField(
+        blank=True,
+        help_text='Organization website URL'
+    )
+
     class Meta:
         ordering = ['name']
         verbose_name = 'Organization'
         verbose_name_plural = 'Organizations'
-    
+
     def __str__(self):
         return self.name
+
+    def get_branding(self):
+        """Return branding configuration for reports."""
+        return {
+            'name': self.name,
+            'logo_path': self.logo.path if self.logo else None,
+            'primary_color': self.primary_color,
+            'secondary_color': self.secondary_color,
+            'footer': self.report_footer,
+            'website': self.website,
+        }
 
 
 class UserProfile(models.Model):

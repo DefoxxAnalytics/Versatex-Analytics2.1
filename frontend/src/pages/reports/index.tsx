@@ -22,7 +22,8 @@ import {
   FileText, PieChart, Users, BarChart2, Shield, TrendingDown,
   Download, Clock, Calendar, Trash2, Eye, Share2, PlayCircle,
   Loader2, FileSpreadsheet, FileType2, CheckCircle2, XCircle,
-  AlertCircle, RefreshCw, Plus, Edit2, ChevronDown, Filter, DollarSign
+  AlertCircle, RefreshCw, Plus, Edit2, ChevronDown, Filter, DollarSign,
+  Layers, CalendarDays, TrendingUp, Scissors
 } from 'lucide-react';
 import { useSuppliers, useCategories } from '@/hooks/useAnalytics';
 import {
@@ -60,7 +61,128 @@ const REPORT_ICONS: Record<string, React.ElementType> = {
   'contract_compliance': Shield,
   'savings_opportunities': TrendingDown,
   'price_trends': TrendingDown,
+  'stratification': Layers,
+  'seasonality': CalendarDays,
+  'year_over_year': TrendingUp,
+  'tail_spend': Scissors,
   'custom': FileText,
+};
+
+// Color themes for each report type (gradient backgrounds and accent colors)
+const REPORT_THEMES: Record<string, { gradient: string; iconBg: string; iconColor: string; hoverBorder: string }> = {
+  'executive_summary': {
+    gradient: 'from-violet-500/10 via-violet-500/5 to-transparent',
+    iconBg: 'bg-gradient-to-br from-violet-500 to-purple-600',
+    iconColor: 'text-white',
+    hoverBorder: 'hover:border-violet-400',
+  },
+  'spend_analysis': {
+    gradient: 'from-blue-500/10 via-blue-500/5 to-transparent',
+    iconBg: 'bg-gradient-to-br from-blue-500 to-cyan-600',
+    iconColor: 'text-white',
+    hoverBorder: 'hover:border-blue-400',
+  },
+  'supplier_performance': {
+    gradient: 'from-emerald-500/10 via-emerald-500/5 to-transparent',
+    iconBg: 'bg-gradient-to-br from-emerald-500 to-teal-600',
+    iconColor: 'text-white',
+    hoverBorder: 'hover:border-emerald-400',
+  },
+  'pareto_analysis': {
+    gradient: 'from-amber-500/10 via-amber-500/5 to-transparent',
+    iconBg: 'bg-gradient-to-br from-amber-500 to-orange-600',
+    iconColor: 'text-white',
+    hoverBorder: 'hover:border-amber-400',
+  },
+  'contract_compliance': {
+    gradient: 'from-rose-500/10 via-rose-500/5 to-transparent',
+    iconBg: 'bg-gradient-to-br from-rose-500 to-pink-600',
+    iconColor: 'text-white',
+    hoverBorder: 'hover:border-rose-400',
+  },
+  'savings_opportunities': {
+    gradient: 'from-green-500/10 via-green-500/5 to-transparent',
+    iconBg: 'bg-gradient-to-br from-green-500 to-emerald-600',
+    iconColor: 'text-white',
+    hoverBorder: 'hover:border-green-400',
+  },
+  'price_trends': {
+    gradient: 'from-indigo-500/10 via-indigo-500/5 to-transparent',
+    iconBg: 'bg-gradient-to-br from-indigo-500 to-purple-600',
+    iconColor: 'text-white',
+    hoverBorder: 'hover:border-indigo-400',
+  },
+  'stratification': {
+    gradient: 'from-sky-500/10 via-sky-500/5 to-transparent',
+    iconBg: 'bg-gradient-to-br from-sky-500 to-blue-600',
+    iconColor: 'text-white',
+    hoverBorder: 'hover:border-sky-400',
+  },
+  'seasonality': {
+    gradient: 'from-teal-500/10 via-teal-500/5 to-transparent',
+    iconBg: 'bg-gradient-to-br from-teal-500 to-cyan-600',
+    iconColor: 'text-white',
+    hoverBorder: 'hover:border-teal-400',
+  },
+  'year_over_year': {
+    gradient: 'from-fuchsia-500/10 via-fuchsia-500/5 to-transparent',
+    iconBg: 'bg-gradient-to-br from-fuchsia-500 to-pink-600',
+    iconColor: 'text-white',
+    hoverBorder: 'hover:border-fuchsia-400',
+  },
+  'tail_spend': {
+    gradient: 'from-orange-500/10 via-orange-500/5 to-transparent',
+    iconBg: 'bg-gradient-to-br from-orange-500 to-red-600',
+    iconColor: 'text-white',
+    hoverBorder: 'hover:border-orange-400',
+  },
+  'custom': {
+    gradient: 'from-slate-500/10 via-slate-500/5 to-transparent',
+    iconBg: 'bg-gradient-to-br from-slate-500 to-gray-600',
+    iconColor: 'text-white',
+    hoverBorder: 'hover:border-slate-400',
+  },
+};
+
+// Report categories for grouping
+const REPORT_CATEGORIES: Record<string, { title: string; description: string; types: string[] }> = {
+  'executive': {
+    title: 'Executive & Overview',
+    description: 'High-level insights and strategic summaries',
+    types: ['executive_summary', 'spend_analysis'],
+  },
+  'supplier': {
+    title: 'Supplier Intelligence',
+    description: 'Vendor analysis, performance, and relationships',
+    types: ['supplier_performance', 'pareto_analysis', 'tail_spend'],
+  },
+  'trends': {
+    title: 'Trends & Patterns',
+    description: 'Historical analysis and forecasting',
+    types: ['seasonality', 'year_over_year', 'price_trends'],
+  },
+  'optimization': {
+    title: 'Optimization & Compliance',
+    description: 'Savings opportunities and policy adherence',
+    types: ['savings_opportunities', 'contract_compliance', 'stratification'],
+  },
+};
+
+// Badges for special reports
+const REPORT_BADGES: Record<string, { label: string; variant: 'new' | 'popular' | 'recommended' }> = {
+  'stratification': { label: 'New', variant: 'new' },
+  'seasonality': { label: 'New', variant: 'new' },
+  'year_over_year': { label: 'New', variant: 'new' },
+  'tail_spend': { label: 'New', variant: 'new' },
+  'executive_summary': { label: 'Popular', variant: 'popular' },
+  'spend_analysis': { label: 'Recommended', variant: 'recommended' },
+};
+
+// Badge styles
+const BADGE_STYLES: Record<string, string> = {
+  'new': 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white',
+  'popular': 'bg-gradient-to-r from-amber-500 to-orange-500 text-white',
+  'recommended': 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white',
 };
 
 // Status badge colors
@@ -421,84 +543,223 @@ export default function ReportsPage() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {templates.map((template) => {
-                const Icon = REPORT_ICONS[template.report_type] || FileText;
+            <div className="space-y-8">
+              {Object.entries(REPORT_CATEGORIES).map(([categoryKey, category]) => {
+                // Filter templates that belong to this category
+                const categoryTemplates = templates.filter(t =>
+                  category.types.includes(t.report_type)
+                );
+
+                if (categoryTemplates.length === 0) return null;
+
                 return (
-                  <Card
-                    key={template.id}
-                    className="cursor-pointer hover:border-primary transition-colors"
-                    onClick={() => handleGenerateClick(template)}
-                  >
-                    <CardHeader>
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                          <Icon className="h-6 w-6 text-primary" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-lg">{template.name}</CardTitle>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <CardDescription>{template.description}</CardDescription>
-                    </CardContent>
-                  </Card>
+                  <div key={categoryKey} className="space-y-4">
+                    {/* Category Header */}
+                    <div className="border-b pb-2">
+                      <h3 className="text-lg font-semibold tracking-tight">{category.title}</h3>
+                      <p className="text-sm text-muted-foreground">{category.description}</p>
+                    </div>
+
+                    {/* Category Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {categoryTemplates.map((template) => {
+                        const Icon = REPORT_ICONS[template.report_type] || FileText;
+                        const theme = REPORT_THEMES[template.report_type] || REPORT_THEMES['custom'];
+                        const badge = REPORT_BADGES[template.report_type];
+
+                        return (
+                          <Card
+                            key={template.id}
+                            className={`cursor-pointer group relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20 hover:-translate-y-1 ${theme.hoverBorder}`}
+                            onClick={() => handleGenerateClick(template)}
+                          >
+                            {/* Gradient Background */}
+                            <div className={`absolute inset-0 bg-gradient-to-br ${theme.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+
+                            {/* Badge */}
+                            {badge && (
+                              <div className="absolute top-3 right-3 z-10">
+                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-sm ${BADGE_STYLES[badge.variant]}`}>
+                                  {badge.label}
+                                </span>
+                              </div>
+                            )}
+
+                            <CardHeader className="relative z-10 pb-2">
+                              <div className="flex items-start gap-4">
+                                {/* Icon with gradient background */}
+                                <div className={`p-3 rounded-xl ${theme.iconBg} shadow-lg shadow-black/10 group-hover:scale-110 transition-transform duration-300`}>
+                                  <Icon className={`h-6 w-6 ${theme.iconColor}`} />
+                                </div>
+                                <div className="flex-1 min-w-0 pt-1">
+                                  <CardTitle className="text-base font-semibold leading-tight group-hover:text-primary transition-colors">
+                                    {template.name}
+                                  </CardTitle>
+                                </div>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="relative z-10 pt-0">
+                              <CardDescription className="text-sm leading-relaxed line-clamp-2">
+                                {template.description}
+                              </CardDescription>
+
+                              {/* Hover indicator */}
+                              <div className="mt-4 flex items-center text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <span>Click to generate</span>
+                                <svg className="ml-1 h-3 w-3 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </div>
                 );
               })}
+
+              {/* Uncategorized reports (if any) */}
+              {(() => {
+                const categorizedTypes = Object.values(REPORT_CATEGORIES).flatMap(c => c.types);
+                const uncategorizedTemplates = templates.filter(t =>
+                  !categorizedTypes.includes(t.report_type) && t.report_type !== 'custom'
+                );
+
+                if (uncategorizedTemplates.length === 0) return null;
+
+                return (
+                  <div className="space-y-4">
+                    <div className="border-b pb-2">
+                      <h3 className="text-lg font-semibold tracking-tight">Other Reports</h3>
+                      <p className="text-sm text-muted-foreground">Additional report types</p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {uncategorizedTemplates.map((template) => {
+                        const Icon = REPORT_ICONS[template.report_type] || FileText;
+                        const theme = REPORT_THEMES[template.report_type] || REPORT_THEMES['custom'];
+                        const badge = REPORT_BADGES[template.report_type];
+
+                        return (
+                          <Card
+                            key={template.id}
+                            className={`cursor-pointer group relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20 hover:-translate-y-1 ${theme.hoverBorder}`}
+                            onClick={() => handleGenerateClick(template)}
+                          >
+                            <div className={`absolute inset-0 bg-gradient-to-br ${theme.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+                            {badge && (
+                              <div className="absolute top-3 right-3 z-10">
+                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-sm ${BADGE_STYLES[badge.variant]}`}>
+                                  {badge.label}
+                                </span>
+                              </div>
+                            )}
+                            <CardHeader className="relative z-10 pb-2">
+                              <div className="flex items-start gap-4">
+                                <div className={`p-3 rounded-xl ${theme.iconBg} shadow-lg shadow-black/10 group-hover:scale-110 transition-transform duration-300`}>
+                                  <Icon className={`h-6 w-6 ${theme.iconColor}`} />
+                                </div>
+                                <div className="flex-1 min-w-0 pt-1">
+                                  <CardTitle className="text-base font-semibold leading-tight group-hover:text-primary transition-colors">
+                                    {template.name}
+                                  </CardTitle>
+                                </div>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="relative z-10 pt-0">
+                              <CardDescription className="text-sm leading-relaxed line-clamp-2">
+                                {template.description}
+                              </CardDescription>
+                              <div className="mt-4 flex items-center text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <span>Click to generate</span>
+                                <svg className="ml-1 h-3 w-3 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
         </TabsContent>
 
         {/* History Tab */}
         <TabsContent value="history" className="mt-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Report History</CardTitle>
-              <Button variant="outline" size="sm" onClick={() => refetchHistory()}>
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-t-lg border-b">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-primary" />
+                  Report History
+                </CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {historyData?.results.length || 0} reports generated
+                </p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => refetchHistory()} className="shadow-sm">
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Refresh
               </Button>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               {historyLoading ? (
-                <div className="space-y-4">
+                <div className="p-6 space-y-4">
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="h-16 bg-muted animate-pulse rounded" />
+                    <div key={i} className="h-20 bg-gradient-to-r from-muted/50 to-muted animate-pulse rounded-lg" />
                   ))}
                 </div>
               ) : historyData?.results.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No reports generated yet</p>
-                  <Button
-                    variant="link"
-                    className="mt-2"
-                    onClick={() => setActiveTab('generate')}
-                  >
-                    Generate your first report
+                <div className="text-center py-16 px-6">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 mb-4">
+                    <FileText className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-1">No reports yet</h3>
+                  <p className="text-muted-foreground mb-4">Generate your first report to see it here</p>
+                  <Button onClick={() => setActiveTab('generate')} className="shadow-sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Generate Report
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="divide-y">
                   {historyData?.results.map((report) => {
                     const FormatIcon = FORMAT_ICONS[report.report_format] || FileText;
+                    const theme = REPORT_THEMES[report.report_type] || REPORT_THEMES['custom'];
+                    const ReportTypeIcon = REPORT_ICONS[report.report_type] || FileText;
                     return (
                       <div
                         key={report.id}
-                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                        className="group flex items-center justify-between p-4 hover:bg-gradient-to-r hover:from-slate-50/50 hover:to-transparent dark:hover:from-slate-800/50 transition-all duration-200"
                       >
                         <div className="flex items-center gap-4">
-                          <FormatIcon className="h-8 w-8 text-muted-foreground" />
-                          <div>
-                            <div className="font-medium">{report.name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {report.report_type_display} • {formatDateTime(report.generated_at || report.created_at)}
+                          {/* Report Type Icon with Theme Color */}
+                          <div className={`p-2.5 rounded-xl ${theme.iconBg} shadow-md group-hover:scale-105 transition-transform`}>
+                            <ReportTypeIcon className={`h-5 w-5 ${theme.iconColor}`} />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-sm truncate max-w-[200px] md:max-w-[300px] group-hover:text-primary transition-colors">
+                              {report.name}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                              <span className="font-medium">{report.report_type_display}</span>
+                              <span>•</span>
+                              <span>{formatDateTime(report.generated_at || report.created_at)}</span>
                             </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
-                          <Badge className={STATUS_COLORS[report.status]}>
+                          {/* Format Badge */}
+                          <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-xs font-medium">
+                            <FormatIcon className="h-3.5 w-3.5" />
+                            <span className="uppercase">{report.report_format}</span>
+                          </div>
+                          {/* Status Badge */}
+                          <Badge className={`${STATUS_COLORS[report.status]} shadow-sm`}>
                             {report.status === 'generating' && (
                               <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                             )}
@@ -510,14 +771,17 @@ export default function ReportsPage() {
                             )}
                             {report.status_display}
                           </Badge>
-                          <span className="text-sm text-muted-foreground">
+                          {/* File Size */}
+                          <span className="hidden md:inline text-xs text-muted-foreground font-mono">
                             {formatFileSize(report.file_size)}
                           </span>
-                          <div className="flex gap-1">
+                          {/* Actions */}
+                          <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                             {report.status === 'completed' && (
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
                                 onClick={() => handleDownload(report)}
                                 disabled={downloadReport.isPending}
                               >
@@ -527,10 +791,11 @@ export default function ReportsPage() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
                               onClick={() => handleDelete(report.id)}
                               disabled={deleteReport.isPending}
                             >
-                              <Trash2 className="h-4 w-4 text-destructive" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
@@ -545,84 +810,122 @@ export default function ReportsPage() {
 
         {/* Schedules Tab */}
         <TabsContent value="schedules" className="mt-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Scheduled Reports</CardTitle>
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950 dark:to-purple-950 rounded-t-lg border-b">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                  Scheduled Reports
+                </CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {schedules.length} active schedule{schedules.length !== 1 ? 's' : ''}
+                </p>
+              </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => refetchSchedules()}>
+                <Button variant="outline" size="sm" onClick={() => refetchSchedules()} className="shadow-sm">
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Refresh
                 </Button>
-                <Button size="sm" onClick={() => handleOpenScheduleDialog()}>
+                <Button size="sm" onClick={() => handleOpenScheduleDialog()} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-sm">
                   <Plus className="h-4 w-4 mr-2" />
                   Create Schedule
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               {schedulesLoading ? (
-                <div className="space-y-4">
+                <div className="p-6 space-y-4">
                   {[1, 2].map((i) => (
-                    <div key={i} className="h-16 bg-muted animate-pulse rounded" />
+                    <div key={i} className="h-24 bg-gradient-to-r from-muted/50 to-muted animate-pulse rounded-lg" />
                   ))}
                 </div>
               ) : schedules.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No scheduled reports</p>
-                  <p className="text-sm mt-1">Scheduled reports will appear here</p>
+                <div className="text-center py-16 px-6">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900 dark:to-purple-900 mb-4">
+                    <Calendar className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-1">No schedules yet</h3>
+                  <p className="text-muted-foreground mb-4">Automate your report generation with schedules</p>
+                  <Button onClick={() => handleOpenScheduleDialog()} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Your First Schedule
+                  </Button>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {schedules.map((schedule) => (
-                    <div
-                      key={schedule.id}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-center gap-4">
-                        <Calendar className="h-8 w-8 text-muted-foreground" />
-                        <div>
-                          <div className="font-medium">{schedule.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {schedule.report_type_display} • {schedule.schedule_frequency}
+                <div className="divide-y">
+                  {schedules.map((schedule) => {
+                    const theme = REPORT_THEMES[schedule.report_type] || REPORT_THEMES['custom'];
+                    const ReportTypeIcon = REPORT_ICONS[schedule.report_type] || FileText;
+                    const frequencyColors: Record<string, string> = {
+                      'daily': 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
+                      'weekly': 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+                      'bi_weekly': 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
+                      'monthly': 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+                      'quarterly': 'bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300',
+                    };
+                    return (
+                      <div
+                        key={schedule.id}
+                        className="group flex items-center justify-between p-4 hover:bg-gradient-to-r hover:from-indigo-50/50 hover:to-transparent dark:hover:from-indigo-950/50 transition-all duration-200"
+                      >
+                        <div className="flex items-center gap-4">
+                          {/* Report Type Icon */}
+                          <div className={`p-2.5 rounded-xl ${theme.iconBg} shadow-md group-hover:scale-105 transition-transform`}>
+                            <ReportTypeIcon className={`h-5 w-5 ${theme.iconColor}`} />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-sm truncate max-w-[200px] md:max-w-[300px] group-hover:text-primary transition-colors">
+                              {schedule.name}
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs text-muted-foreground">{schedule.report_type_display}</span>
+                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${frequencyColors[schedule.schedule_frequency as string] || 'bg-gray-100 text-gray-700'}`}>
+                                {schedule.schedule_frequency?.replace('_', '-').toUpperCase()}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          {/* Next Run Info */}
+                          <div className="text-right hidden sm:block">
+                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Next Run</div>
+                            <div className="text-sm font-medium">{formatDateTime(schedule.next_run)}</div>
+                          </div>
+                          {/* Actions */}
+                          <div className="flex gap-0.5">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 hover:bg-green-100 hover:text-green-700 dark:hover:bg-green-900 dark:hover:text-green-300"
+                              onClick={() => handleRunSchedule(schedule.id)}
+                              disabled={runScheduleNow.isPending}
+                              title="Run now"
+                            >
+                              <PlayCircle className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900 dark:hover:text-blue-300"
+                              onClick={() => handleOpenScheduleDialog(schedule)}
+                              title="Edit schedule"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                              onClick={() => handleDeleteSchedule(schedule.id)}
+                              disabled={deleteSchedule.isPending}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="text-sm text-right">
-                          <div className="text-muted-foreground">Next run:</div>
-                          <div>{formatDateTime(schedule.next_run)}</div>
-                        </div>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRunSchedule(schedule.id)}
-                            disabled={runScheduleNow.isPending}
-                            title="Run now"
-                          >
-                            <PlayCircle className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleOpenScheduleDialog(schedule)}
-                            title="Edit schedule"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteSchedule(schedule.id)}
-                            disabled={deleteSchedule.isPending}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
@@ -912,6 +1215,10 @@ export default function ReportsPage() {
                   <SelectItem value="contract_compliance">Contract Compliance</SelectItem>
                   <SelectItem value="savings_opportunities">Savings Opportunities</SelectItem>
                   <SelectItem value="price_trends">Price Trends</SelectItem>
+                  <SelectItem value="stratification">Spend Stratification</SelectItem>
+                  <SelectItem value="seasonality">Seasonality & Trends</SelectItem>
+                  <SelectItem value="year_over_year">Year-over-Year Analysis</SelectItem>
+                  <SelectItem value="tail_spend">Tail Spend Analysis</SelectItem>
                 </SelectContent>
               </Select>
             </div>

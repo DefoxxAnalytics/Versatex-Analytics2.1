@@ -132,16 +132,17 @@ class KPICard(Flowable):
 class PDFRenderer(BaseRenderer):
     """
     Renders reports as professional PDF documents with:
-    - Executive header with organization branding
+    - Executive header with organization branding and logo
+    - Dynamic color theming from organization settings
     - KPI summary cards
     - Styled data tables
     - Charts (pie, bar)
-    - Professional footer with page numbers
+    - Professional footer with page numbers and custom text
     """
 
-    # Brand colors
-    NAVY = '#1e3a5f'
-    BLUE = '#2563eb'
+    # Default brand colors (can be overridden by organization branding)
+    DEFAULT_NAVY = '#1e3a5f'
+    DEFAULT_BLUE = '#2563eb'
     LIGHT_BLUE = '#3b82f6'
     TEAL = '#0d9488'
     GREEN = '#10b981'
@@ -159,6 +160,27 @@ class PDFRenderer(BaseRenderer):
         '#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
         '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#6366f1'
     ]
+
+    def __init__(self, report_data: dict, report_name: str = "Report", branding: dict = None):
+        """
+        Initialize PDF renderer with optional organization branding.
+
+        Args:
+            report_data: Report data dictionary
+            report_name: Name of the report
+            branding: Optional branding config with keys:
+                - name: Organization name
+                - logo_path: Path to logo image file
+                - primary_color: Primary brand color (hex)
+                - secondary_color: Secondary brand color (hex)
+                - footer: Custom footer text
+                - website: Organization website
+        """
+        super().__init__(report_data, report_name, branding)
+
+        # Apply branding colors if provided
+        self.NAVY = self.branding.get('primary_color') or self.DEFAULT_NAVY
+        self.BLUE = self.branding.get('secondary_color') or self.DEFAULT_BLUE
 
     @property
     def content_type(self) -> str:
@@ -206,47 +228,78 @@ class PDFRenderer(BaseRenderer):
         return buffer
 
     def _add_page_header_footer(self, canvas, doc):
-        """Add header and footer to each page."""
+        """Add branded header and footer to each page."""
+        import os
         canvas.saveState()
 
-        # Header line
-        canvas.setStrokeColor(self._get_hex_color(self.NAVY))
-        canvas.setLineWidth(2)
-        canvas.line(0.5 * inch, letter[1] - 0.5 * inch,
-                   letter[0] - 0.5 * inch, letter[1] - 0.5 * inch)
+        page_width = letter[0]
+        page_height = letter[1]
+
+        # =================== HEADER ===================
+        # Header background gradient effect (subtle)
+        canvas.setFillColor(self._get_hex_color(self.NAVY))
+        canvas.rect(0, page_height - 0.6 * inch, page_width, 0.6 * inch, stroke=0, fill=1)
+
+        # Try to add logo if available
+        logo_path = self.branding.get('logo_path')
+        header_x = 0.5 * inch
+
+        if logo_path and os.path.exists(logo_path):
+            try:
+                # Add logo image (max height 0.4 inch)
+                logo_img = Image(logo_path, height=0.4 * inch, kind='proportional')
+                logo_img.drawOn(canvas, header_x, page_height - 0.5 * inch)
+                header_x += 2.0 * inch  # Shift text after logo
+            except Exception:
+                pass  # Skip logo if there's an error
 
         # Organization name in header
-        org_name = self.metadata.get('organization', 'Versatex Analytics')
-        canvas.setFont('Helvetica-Bold', 10)
-        canvas.setFillColor(self._get_hex_color(self.NAVY))
-        canvas.drawString(0.5 * inch, letter[1] - 0.4 * inch, org_name)
+        org_name = self.branding.get('name') or self.metadata.get('organization', 'Versatex Analytics')
+        canvas.setFont('Helvetica-Bold', 12)
+        canvas.setFillColor(colors.white)
+        canvas.drawString(header_x, page_height - 0.38 * inch, org_name)
 
         # Report type in header right
         report_type = self.metadata.get('report_type_display',
                                         self.metadata.get('report_type', 'Report'))
-        canvas.setFont('Helvetica', 9)
-        canvas.setFillColor(self._get_hex_color(self.GRAY_500))
-        canvas.drawRightString(letter[0] - 0.5 * inch, letter[1] - 0.4 * inch,
+        canvas.setFont('Helvetica', 10)
+        canvas.setFillColor(colors.white)
+        canvas.drawRightString(page_width - 0.5 * inch, page_height - 0.38 * inch,
                                report_type)
 
-        # Footer
-        canvas.setStrokeColor(self._get_hex_color(self.GRAY_200))
-        canvas.setLineWidth(1)
-        canvas.line(0.5 * inch, 0.5 * inch, letter[0] - 0.5 * inch, 0.5 * inch)
+        # =================== FOOTER ===================
+        # Footer accent line
+        canvas.setStrokeColor(self._get_hex_color(self.NAVY))
+        canvas.setLineWidth(2)
+        canvas.line(0.5 * inch, 0.55 * inch, page_width - 0.5 * inch, 0.55 * inch)
 
-        # Page number
+        # Page number (centered)
         page_num = canvas.getPageNumber()
-        canvas.setFont('Helvetica', 9)
-        canvas.setFillColor(self._get_hex_color(self.GRAY_500))
-        canvas.drawCentredString(letter[0] / 2, 0.35 * inch, f"Page {page_num}")
+        canvas.setFont('Helvetica-Bold', 9)
+        canvas.setFillColor(self._get_hex_color(self.NAVY))
+        canvas.drawCentredString(page_width / 2, 0.35 * inch, f"Page {page_num}")
 
-        # Generation date
+        # Generation date (left)
         generated = self.metadata.get('generated_at', datetime.now().strftime('%Y-%m-%d'))
+        canvas.setFont('Helvetica', 8)
+        canvas.setFillColor(self._get_hex_color(self.GRAY_500))
         canvas.drawString(0.5 * inch, 0.35 * inch, f"Generated: {generated}")
 
-        # Confidential notice
-        canvas.drawRightString(letter[0] - 0.5 * inch, 0.35 * inch,
-                               "Confidential - Internal Use Only")
+        # Custom footer text or default confidential notice (right)
+        footer_text = self.branding.get('footer') or "Confidential - Internal Use Only"
+        canvas.setFont('Helvetica', 8)
+        canvas.setFillColor(self._get_hex_color(self.GRAY_500))
+        # Truncate if too long
+        if len(footer_text) > 50:
+            footer_text = footer_text[:47] + "..."
+        canvas.drawRightString(page_width - 0.5 * inch, 0.35 * inch, footer_text)
+
+        # Website URL if provided (very bottom, centered)
+        website = self.branding.get('website')
+        if website:
+            canvas.setFont('Helvetica', 7)
+            canvas.setFillColor(self._get_hex_color(self.BLUE))
+            canvas.drawCentredString(page_width / 2, 0.2 * inch, website)
 
         canvas.restoreState()
 
