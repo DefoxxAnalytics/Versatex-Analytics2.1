@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     'apps.authentication',
     'apps.procurement',
     'apps.analytics',
+    'apps.reports',
 ]
 
 MIDDLEWARE = [
@@ -189,6 +190,8 @@ REST_FRAMEWORK = {
         'predictions': '60/hour',   # Predictions rate limiting
         'contract_analytics': '100/hour',  # Contract analytics rate limiting
         'compliance': '100/hour',  # Compliance rate limiting
+        'report_generate': '20/hour',  # Report generation rate limiting (expensive)
+        'report_download': '60/hour',  # Report download rate limiting
     },
     'EXCEPTION_HANDLER': 'config.exception_handler.custom_exception_handler',
 }

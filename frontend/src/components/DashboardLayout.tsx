@@ -21,6 +21,7 @@ import {
   Shield,
   RefreshCw,
   Download,
+  FileBarChart,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -247,6 +248,12 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Maverick Spend',
     icon: AlertTriangle,
     description: 'Policy compliance tracking',
+  },
+  {
+    path: '/reports',
+    label: 'Reports',
+    icon: FileBarChart,
+    description: 'Generate and schedule reports',
   },
   {
     path: '/settings',

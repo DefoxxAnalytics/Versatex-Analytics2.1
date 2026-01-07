@@ -26,6 +26,7 @@ const AIInsightsPage = lazy(() => import("./pages/ai-insights"));
 const PredictivePage = lazy(() => import("./pages/predictive"));
 const ContractsPage = lazy(() => import("./pages/contracts"));
 const MaverickPage = lazy(() => import("./pages/maverick"));
+const ReportsPage = lazy(() => import("./pages/reports"));
 const SettingsPage = lazy(() => import("./pages/Settings"));
 
 const queryClient = new QueryClient({
@@ -195,6 +196,16 @@ function Router() {
         <DashboardLayout>
           <Suspense fallback={<PageLoader />}>
             <MaverickPage />
+          </Suspense>
+        </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/reports">
+        <ProtectedRoute>
+        <DashboardLayout>
+          <Suspense fallback={<PageLoader />}>
+            <ReportsPage />
           </Suspense>
         </DashboardLayout>
         </ProtectedRoute>

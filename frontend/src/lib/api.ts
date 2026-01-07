@@ -1188,6 +1188,118 @@ export interface SpendingPolicy {
   created_at: string;
 }
 
+// Report Types
+export type ReportType =
+  | 'spend_analysis'
+  | 'supplier_performance'
+  | 'savings_opportunities'
+  | 'price_trends'
+  | 'contract_compliance'
+  | 'executive_summary'
+  | 'pareto_analysis'
+  | 'custom';
+
+export type ReportFormat = 'pdf' | 'xlsx' | 'csv';
+
+export type ReportStatus = 'draft' | 'generating' | 'completed' | 'failed' | 'scheduled';
+
+export type ScheduleFrequency = 'daily' | 'weekly' | 'bi_weekly' | 'monthly' | 'quarterly';
+
+export interface ReportTemplate {
+  id: string;
+  name: string;
+  description: string;
+  report_type: ReportType;
+  icon?: string;
+  default_parameters?: Record<string, unknown>;
+}
+
+export interface ReportListItem {
+  id: string;
+  name: string;
+  description: string;
+  report_type: ReportType;
+  report_type_display: string;
+  report_format: ReportFormat;
+  report_format_display: string;
+  status: ReportStatus;
+  status_display: string;
+  period_start: string | null;
+  period_end: string | null;
+  created_by_name: string;
+  created_at: string;
+  generated_at: string | null;
+  is_expired: boolean;
+  file_size: number | null;
+  is_scheduled: boolean;
+  schedule_frequency: ScheduleFrequency | '';
+  next_run: string | null;
+}
+
+export interface ReportDetail extends ReportListItem {
+  organization_name: string;
+  filters: Record<string, unknown>;
+  parameters: Record<string, unknown>;
+  error_message: string;
+  file_path: string;
+  summary_data: Record<string, unknown>;
+  is_public: boolean;
+  shared_with_users: string[];
+  schedule_frequency_display: string;
+  last_run: string | null;
+  updated_at: string;
+}
+
+export interface ReportGenerateRequest {
+  report_type: ReportType;
+  report_format?: ReportFormat;
+  name?: string;
+  description?: string;
+  period_start?: string;
+  period_end?: string;
+  filters?: Record<string, unknown>;
+  parameters?: Record<string, unknown>;
+  async_generation?: boolean;
+}
+
+export interface ReportGenerateResponse {
+  id: string;
+  status: ReportStatus;
+  message?: string;
+}
+
+export interface ReportScheduleRequest {
+  name: string;
+  report_type: ReportType;
+  report_format?: ReportFormat;
+  period_start?: string;
+  period_end?: string;
+  filters?: Record<string, unknown>;
+  parameters?: Record<string, unknown>;
+  is_scheduled: boolean;
+  schedule_frequency: ScheduleFrequency;
+}
+
+export interface ReportShareRequest {
+  user_ids?: number[];
+  is_public?: boolean;
+}
+
+export interface ReportStatusResponse {
+  id: string;
+  status: ReportStatus;
+  error_message: string;
+  generated_at: string | null;
+  file_size: number | null;
+}
+
+export interface ReportListResponse {
+  results: ReportListItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 // Paginated response
 export interface PaginatedResponse<T> {
   count: number;
@@ -1569,6 +1681,66 @@ export const analyticsAPI = {
 
   getSpendingPolicies: (): Promise<AxiosResponse<{ policies: SpendingPolicy[]; count: number }>> =>
     api.get('/analytics/compliance/policies/', { params: getOrganizationParam() }),
+};
+
+// Reports API
+export const reportsAPI = {
+  // Templates
+  getTemplates: (): Promise<AxiosResponse<ReportTemplate[]>> =>
+    api.get('/reports/templates/', { params: getOrganizationParam() }),
+
+  getTemplate: (templateId: string): Promise<AxiosResponse<ReportTemplate>> =>
+    api.get(`/reports/templates/${templateId}/`, { params: getOrganizationParam() }),
+
+  // Report Generation
+  generate: (data: ReportGenerateRequest): Promise<AxiosResponse<ReportDetail | ReportGenerateResponse>> =>
+    api.post('/reports/generate/', data, { params: getOrganizationParam() }),
+
+  // Report List and Detail
+  getReports: (params?: { status?: ReportStatus; report_type?: ReportType; limit?: number; offset?: number }): Promise<AxiosResponse<ReportListResponse>> =>
+    api.get('/reports/', { params: { ...params, ...getOrganizationParam() } }),
+
+  getReport: (reportId: string): Promise<AxiosResponse<ReportDetail>> =>
+    api.get(`/reports/${reportId}/`, { params: getOrganizationParam() }),
+
+  getStatus: (reportId: string): Promise<AxiosResponse<ReportStatusResponse>> =>
+    api.get(`/reports/${reportId}/status/`, { params: getOrganizationParam() }),
+
+  deleteReport: (reportId: string): Promise<AxiosResponse<void>> =>
+    api.delete(`/reports/${reportId}/delete/`, { params: getOrganizationParam() }),
+
+  // Download report file
+  // NOTE: Use 'output_format' not 'format' to avoid conflict with DRF content negotiation
+  download: async (reportId: string, format?: ReportFormat): Promise<Blob> => {
+    const response = await api.get(`/reports/${reportId}/download/`, {
+      params: { output_format: format, ...getOrganizationParam() },
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  // Sharing
+  share: (reportId: string, data: ReportShareRequest): Promise<AxiosResponse<ReportDetail>> =>
+    api.post(`/reports/${reportId}/share/`, data, { params: getOrganizationParam() }),
+
+  // Scheduled Reports
+  getSchedules: (): Promise<AxiosResponse<ReportListItem[]>> =>
+    api.get('/reports/schedules/', { params: getOrganizationParam() }),
+
+  createSchedule: (data: ReportScheduleRequest): Promise<AxiosResponse<ReportListItem>> =>
+    api.post('/reports/schedules/', data, { params: getOrganizationParam() }),
+
+  getSchedule: (scheduleId: string): Promise<AxiosResponse<ReportDetail>> =>
+    api.get(`/reports/schedules/${scheduleId}/`, { params: getOrganizationParam() }),
+
+  updateSchedule: (scheduleId: string, data: Partial<ReportScheduleRequest>): Promise<AxiosResponse<ReportDetail>> =>
+    api.put(`/reports/schedules/${scheduleId}/`, data, { params: getOrganizationParam() }),
+
+  deleteSchedule: (scheduleId: string): Promise<AxiosResponse<void>> =>
+    api.delete(`/reports/schedules/${scheduleId}/`, { params: getOrganizationParam() }),
+
+  runScheduleNow: (scheduleId: string): Promise<AxiosResponse<{ message: string; id: string }>> =>
+    api.post(`/reports/schedules/${scheduleId}/run-now/`, {}, { params: getOrganizationParam() }),
 };
 
 export default api;

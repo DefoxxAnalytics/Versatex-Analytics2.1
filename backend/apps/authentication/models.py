@@ -103,9 +103,11 @@ class AuditLog(models.Model):
         ('delete', 'Delete'),
         ('upload', 'Upload'),
         ('export', 'Export'),
+        ('download', 'Download'),  # Report downloads
         ('view', 'View'),
         ('reset', 'Reset'),           # Organization reset
         ('bulk_delete', 'Bulk Delete'),  # Delete all data
+        ('generate', 'Generate'),  # Report generation
     ]
 
     # Allowed keys for the details JSONField (security: prevent arbitrary data injection)
@@ -124,7 +126,9 @@ class AuditLog(models.Model):
         # Data Upload Center keys
         'organization_name', 'deleted_counts', 'transactions_deleted', 'uploads_deleted',
         'suppliers_deleted', 'categories_deleted', 'templates_deleted', 'contracts_deleted',
-        'duplicates', 'template_name', 'mapping_snapshot', 'processing_mode'
+        'duplicates', 'template_name', 'mapping_snapshot', 'processing_mode',
+        # Reports module keys
+        'report_type', 'report_id', 'schedule_id', 'format', 'async', 'name'
     }
 
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='audit_logs')

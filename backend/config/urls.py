@@ -23,11 +23,13 @@ urlpatterns = [
     path('api/v1/auth/', include('apps.authentication.urls')),
     path('api/v1/procurement/', include('apps.procurement.urls')),
     path('api/v1/analytics/', include('apps.analytics.urls')),
+    path('api/v1/reports/', include('apps.reports.urls')),
 
     # Legacy API endpoints (for backwards compatibility, will be deprecated)
     path('api/auth/', include('apps.authentication.urls')),
     path('api/procurement/', include('apps.procurement.urls')),
     path('api/analytics/', include('apps.analytics.urls')),
+    path('api/reports/', include('apps.reports.urls')),
 
     # API Documentation (only in development)
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
