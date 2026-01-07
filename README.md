@@ -58,6 +58,17 @@ Versatex Analytics is a full-stack procurement analytics dashboard designed for 
 | **Year-over-Year** | Comparative analysis |
 | **Consolidation** | Supplier optimization opportunities |
 
+### Reports Module
+| Feature | Description |
+|---------|-------------|
+| **Report Generation** | Generate reports in PDF, Excel (XLSX), or CSV formats |
+| **6 Report Types** | Executive Summary, Spend Analysis, Supplier Performance, Pareto Analysis, Contract Compliance, Savings Opportunities |
+| **Async Generation** | Large reports generated via Celery with real-time status polling |
+| **Report Preview** | Preview report data before generating the full report |
+| **Advanced Filtering** | Filter by suppliers, categories, and amount ranges |
+| **Report Scheduling** | Create recurring reports (daily, weekly, bi-weekly, monthly, quarterly) |
+| **Professional PDF** | Executive headers, KPI cards, smart table layouts, page numbers |
+
 ### Security Features
 - Argon2 password hashing
 - JWT token authentication with refresh
@@ -164,6 +175,21 @@ docker-compose exec backend python manage.py shell
 | `/api/v1/analytics/year-over-year/` | GET | Year over year |
 | `/api/v1/analytics/consolidation/` | GET | Consolidation opportunities |
 
+### Reports
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/reports/templates/` | GET | List available report templates |
+| `/api/v1/reports/generate/` | POST | Generate a report (sync or async) |
+| `/api/v1/reports/preview/` | POST | Generate lightweight preview data |
+| `/api/v1/reports/` | GET | List generated reports |
+| `/api/v1/reports/<id>/` | GET | Get report details |
+| `/api/v1/reports/<id>/status/` | GET | Poll generation status |
+| `/api/v1/reports/<id>/download/` | GET | Download report (pdf/xlsx/csv) |
+| `/api/v1/reports/<id>/` | DELETE | Delete report |
+| `/api/v1/reports/schedules/` | GET/POST | List/create scheduled reports |
+| `/api/v1/reports/schedules/<id>/` | GET/PUT/DELETE | Schedule CRUD |
+| `/api/v1/reports/schedules/<id>/run-now/` | POST | Trigger immediate generation |
+
 ## Development
 
 ### Backend Development
@@ -232,6 +258,7 @@ pnpm test:ui     # With UI
 | **Category** | Spend categories (hierarchical) |
 | **Transaction** | Procurement transactions |
 | **DataUpload** | Upload history tracking |
+| **Report** | Generated reports with scheduling support |
 
 ### User Roles
 
