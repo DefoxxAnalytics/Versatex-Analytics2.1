@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -635,6 +635,9 @@ export default function ReportsPage() {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Generate {selectedTemplate?.name}</DialogTitle>
+            <DialogDescription>
+              Configure your report options below. You can preview the data before generating the full report.
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
@@ -875,6 +878,11 @@ export default function ReportsPage() {
             <DialogTitle>
               {editingSchedule ? 'Edit Schedule' : 'Create Schedule'}
             </DialogTitle>
+            <DialogDescription>
+              {editingSchedule
+                ? 'Update the settings for this scheduled report.'
+                : 'Set up automatic report generation on a recurring schedule.'}
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
@@ -982,6 +990,9 @@ export default function ReportsPage() {
               <Eye className="h-5 w-5" />
               Report Preview: {selectedTemplate?.name}
             </DialogTitle>
+            <DialogDescription>
+              Review the report data preview below. Click "Generate Full Report" to create the complete report.
+            </DialogDescription>
           </DialogHeader>
           <ScrollArea className="flex-1 pr-4">
             <div className="space-y-6 py-4">
