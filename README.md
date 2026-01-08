@@ -62,12 +62,25 @@ Versatex Analytics is a full-stack procurement analytics dashboard designed for 
 | Feature | Description |
 |---------|-------------|
 | **Report Generation** | Generate reports in PDF, Excel (XLSX), or CSV formats |
-| **6 Report Types** | Executive Summary, Spend Analysis, Supplier Performance, Pareto Analysis, Contract Compliance, Savings Opportunities |
+| **13 Report Types** | Executive Summary, Spend Analysis, Supplier Performance, Pareto Analysis, Contract Compliance, Savings Opportunities, Stratification, Seasonality, Year-over-Year, Tail Spend, plus 3 P2P reports |
 | **Async Generation** | Large reports generated via Celery with real-time status polling |
 | **Report Preview** | Preview report data before generating the full report |
 | **Advanced Filtering** | Filter by suppliers, categories, and amount ranges |
 | **Report Scheduling** | Create recurring reports (daily, weekly, bi-weekly, monthly, quarterly) |
 | **Professional PDF** | Executive headers, KPI cards, smart table layouts, page numbers |
+
+### P2P Analytics Module
+| Feature | Description |
+|---------|-------------|
+| **Data Models** | Purchase Requisitions (PR), Purchase Orders (PO), Goods Receipts (GR), Invoices |
+| **P2P Cycle Dashboard** | End-to-end process visibility with cycle time metrics |
+| **Three-Way Matching** | Automated PO-GR-Invoice matching with exception management |
+| **Invoice Aging** | Aging buckets, DPO trends, payment performance analytics |
+| **Requisitions Analysis** | PR status tracking, approval workflows, department breakdowns |
+| **Purchase Orders** | PO compliance, contract coverage, maverick spend detection |
+| **Supplier Payments** | Payment terms compliance, cash flow forecasting |
+| **P2P Reports** | PR Status Report, PO Compliance Report, AP Aging Report |
+| **Admin Import** | CSV import for all P2P documents with superuser org selection |
 
 ### Security Features
 - Argon2 password hashing
@@ -190,6 +203,16 @@ docker-compose exec backend python manage.py shell
 | `/api/v1/reports/schedules/<id>/` | GET/PUT/DELETE | Schedule CRUD |
 | `/api/v1/reports/schedules/<id>/run-now/` | POST | Trigger immediate generation |
 
+### P2P Analytics
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/analytics/p2p/cycle/` | GET | P2P cycle overview with stage metrics |
+| `/api/v1/analytics/p2p/matching/` | GET | Three-way matching analytics |
+| `/api/v1/analytics/p2p/aging/` | GET | Invoice aging overview |
+| `/api/v1/analytics/p2p/requisitions/` | GET | Purchase requisition analytics |
+| `/api/v1/analytics/p2p/purchase-orders/` | GET | Purchase order analytics |
+| `/api/v1/analytics/p2p/supplier-payments/` | GET | Supplier payment analytics |
+
 ## Development
 
 ### Backend Development
@@ -259,6 +282,15 @@ pnpm test:ui     # With UI
 | **Transaction** | Procurement transactions |
 | **DataUpload** | Upload history tracking |
 | **Report** | Generated reports with scheduling support |
+
+### P2P Models
+
+| Model | Description |
+|-------|-------------|
+| **PurchaseRequisition** | PR with status, department, cost center, approval workflow |
+| **PurchaseOrder** | PO with supplier, amounts, contract backing, amendments |
+| **GoodsReceipt** | GR linked to PO with quantity received/accepted |
+| **Invoice** | Invoice with matching status, payment terms, exceptions |
 
 ### User Roles
 

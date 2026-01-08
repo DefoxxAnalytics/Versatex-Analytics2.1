@@ -164,9 +164,12 @@ class AuditLog(models.Model):
         # Data Upload Center keys
         'organization_name', 'deleted_counts', 'transactions_deleted', 'uploads_deleted',
         'suppliers_deleted', 'categories_deleted', 'templates_deleted', 'contracts_deleted',
-        'duplicates', 'template_name', 'mapping_snapshot', 'processing_mode',
+        'duplicates', 'skipped', 'template_name', 'mapping_snapshot', 'processing_mode',
         # Reports module keys
-        'report_type', 'report_id', 'schedule_id', 'format', 'async', 'name'
+        'report_type', 'report_id', 'schedule_id', 'format', 'async', 'name',
+        # P2P Analytics keys
+        'weeks', 'stage', 'invoice_id', 'pr_id', 'po_id', 'limit',
+        'status', 'exception_type', 'resolved_count', 'failed_count'
     }
 
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='audit_logs')

@@ -45,6 +45,10 @@ from .generators import (
     SeasonalityReportGenerator,
     YearOverYearReportGenerator,
     TailSpendReportGenerator,
+    # P2P Report generators
+    PRStatusReportGenerator,
+    POComplianceReportGenerator,
+    APAgingReportGenerator,
 )
 from .renderers import PDFRenderer, ExcelRenderer, CSVRenderer
 
@@ -71,6 +75,10 @@ class ReportingService:
         'tail_spend': TailSpendReportGenerator,
         'price_trends': SpendAnalysisGenerator,  # Reuse spend analysis
         'custom': SpendAnalysisGenerator,  # Default to spend analysis
+        # P2P Report types
+        'p2p_pr_status': PRStatusReportGenerator,
+        'p2p_po_compliance': POComplianceReportGenerator,
+        'p2p_ap_aging': APAgingReportGenerator,
     }
 
     # Map formats to renderers
@@ -307,5 +315,9 @@ class ReportingService:
             'year_over_year': 'Year-over-year comparison with top gainers, decliners, and variance analysis',
             'tail_spend': 'Tail vendor analysis with consolidation opportunities and action plans',
             'custom': 'Custom report with user-defined parameters',
+            # P2P Report descriptions
+            'p2p_pr_status': 'Purchase requisition workflow analysis with approval metrics and department breakdown',
+            'p2p_po_compliance': 'Contract coverage, maverick spend analysis, and PO compliance metrics',
+            'p2p_ap_aging': 'Accounts payable aging buckets, DPO trends, and payment performance',
         }
         return descriptions.get(report_type, '')

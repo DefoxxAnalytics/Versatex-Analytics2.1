@@ -202,7 +202,9 @@
     padding: 12px 16px;
     border: 1px solid #d1d5db !important;
     border-radius: 8px;
-    font-size: 0.95rem;
+    font-size: 15px;
+    line-height: 1.5;
+    height: 48px;
     background-color: #ffffff !important;
     color: #1f2937 !important;
     cursor: pointer;

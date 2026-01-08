@@ -11,6 +11,11 @@ from .seasonality import SeasonalityReportGenerator
 from .yoy import YearOverYearReportGenerator
 from .tail_spend import TailSpendReportGenerator
 
+# P2P Report generators
+from .p2p_pr_status import PRStatusReportGenerator
+from .p2p_po_compliance import POComplianceReportGenerator
+from .p2p_ap_aging import APAgingReportGenerator
+
 __all__ = [
     'BaseReportGenerator',
     'ExecutiveSummaryGenerator',
@@ -23,4 +28,8 @@ __all__ = [
     'SeasonalityReportGenerator',
     'YearOverYearReportGenerator',
     'TailSpendReportGenerator',
+    # P2P Reports
+    'PRStatusReportGenerator',
+    'POComplianceReportGenerator',
+    'APAgingReportGenerator',
 ]

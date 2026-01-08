@@ -80,6 +80,63 @@ REPORT_TEMPLATES = [
         'icon': 'trending-down',
         'default_parameters': {},
     },
+    {
+        'id': 'stratification',
+        'name': 'Spend Stratification',
+        'description': 'Kraljic matrix analysis with strategic, leverage, routine, and tactical segments',
+        'report_type': 'stratification',
+        'icon': 'layers',
+        'default_parameters': {},
+    },
+    {
+        'id': 'seasonality',
+        'name': 'Seasonality & Trends',
+        'description': 'Monthly spending patterns with fiscal year support and savings opportunities',
+        'report_type': 'seasonality',
+        'icon': 'calendar-days',
+        'default_parameters': {'use_fiscal_year': True},
+    },
+    {
+        'id': 'year_over_year',
+        'name': 'Year-over-Year Analysis',
+        'description': 'Year-over-year comparison with top gainers, decliners, and variance analysis',
+        'report_type': 'year_over_year',
+        'icon': 'trending-up',
+        'default_parameters': {'use_fiscal_year': True},
+    },
+    {
+        'id': 'tail_spend',
+        'name': 'Tail Spend Analysis',
+        'description': 'Tail vendor analysis with consolidation opportunities and action plans',
+        'report_type': 'tail_spend',
+        'icon': 'scissors',
+        'default_parameters': {'threshold': 50000},
+    },
+    # P2P Report Templates
+    {
+        'id': 'p2p_pr_status',
+        'name': 'PR Status Report',
+        'description': 'Purchase requisition workflow analysis with approval metrics and department breakdown',
+        'report_type': 'p2p_pr_status',
+        'icon': 'file-check',
+        'default_parameters': {},
+    },
+    {
+        'id': 'p2p_po_compliance',
+        'name': 'PO Compliance Report',
+        'description': 'Contract coverage, maverick spend analysis, and PO compliance metrics',
+        'report_type': 'p2p_po_compliance',
+        'icon': 'shield-check',
+        'default_parameters': {},
+    },
+    {
+        'id': 'p2p_ap_aging',
+        'name': 'AP Aging Report',
+        'description': 'Accounts payable aging buckets, DPO trends, and payment performance',
+        'report_type': 'p2p_ap_aging',
+        'icon': 'clock',
+        'default_parameters': {},
+    },
 ]
 
 

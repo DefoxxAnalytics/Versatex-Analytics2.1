@@ -1349,6 +1349,23 @@ class P2PImportMixin:
                 return redirect('.')
 
         # GET request - show upload form
+        # Get organizations for superuser dropdown
+        organizations = []
+        if request.user.is_superuser:
+            organizations = list(
+                Organization.objects.filter(is_active=True)
+                .order_by('name')
+                .values('id', 'name')
+            )
+
+        # Get user's current organization
+        user_org = None
+        if hasattr(request.user, 'profile') and request.user.profile.organization:
+            user_org = {
+                'id': request.user.profile.organization.id,
+                'name': request.user.profile.organization.name,
+            }
+
         context = {
             **self.admin_site.each_context(request),
             'title': f'Import {self.model._meta.verbose_name_plural}',
@@ -1356,6 +1373,9 @@ class P2PImportMixin:
             'has_view_permission': self.has_view_permission(request),
             'expected_columns': self.p2p_import_fields,
             'doc_type': self.p2p_doc_type,
+            'is_superuser': request.user.is_superuser,
+            'organizations': organizations,
+            'user_organization': user_org,
         }
         return render(request, 'admin/procurement/p2p_import.html', context)
 

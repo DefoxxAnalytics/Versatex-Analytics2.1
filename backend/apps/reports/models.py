@@ -25,7 +25,15 @@ class Report(models.Model):
         ('contract_compliance', 'Contract Compliance'),
         ('executive_summary', 'Executive Summary'),
         ('pareto_analysis', 'Pareto Analysis'),
+        ('stratification', 'Spend Stratification'),
+        ('seasonality', 'Seasonality & Trends'),
+        ('year_over_year', 'Year-over-Year Analysis'),
+        ('tail_spend', 'Tail Spend Analysis'),
         ('custom', 'Custom Report'),
+        # P2P Report Types
+        ('p2p_pr_status', 'PR Status Report'),
+        ('p2p_po_compliance', 'PO Compliance Report'),
+        ('p2p_ap_aging', 'AP Aging Report'),
     ]
 
     # Export Formats

@@ -23,7 +23,9 @@ import {
   Download, Clock, Calendar, Trash2, Eye, Share2, PlayCircle,
   Loader2, FileSpreadsheet, FileType2, CheckCircle2, XCircle,
   AlertCircle, RefreshCw, Plus, Edit2, ChevronDown, Filter, DollarSign,
-  Layers, CalendarDays, TrendingUp, Scissors
+  Layers, CalendarDays, TrendingUp, Scissors,
+  // P2P Report icons
+  FileCheck, ShieldCheck, ClipboardList
 } from 'lucide-react';
 import { useSuppliers, useCategories } from '@/hooks/useAnalytics';
 import {
@@ -66,6 +68,10 @@ const REPORT_ICONS: Record<string, React.ElementType> = {
   'year_over_year': TrendingUp,
   'tail_spend': Scissors,
   'custom': FileText,
+  // P2P Report icons
+  'p2p_pr_status': FileCheck,
+  'p2p_po_compliance': ShieldCheck,
+  'p2p_ap_aging': Clock,
 };
 
 // Color themes for each report type (gradient backgrounds and accent colors)
@@ -142,6 +148,25 @@ const REPORT_THEMES: Record<string, { gradient: string; iconBg: string; iconColo
     iconColor: 'text-white',
     hoverBorder: 'hover:border-slate-400',
   },
+  // P2P Report themes - teal/cyan family for distinctive P2P look
+  'p2p_pr_status': {
+    gradient: 'from-teal-500/10 via-teal-500/5 to-transparent',
+    iconBg: 'bg-gradient-to-br from-teal-500 to-emerald-600',
+    iconColor: 'text-white',
+    hoverBorder: 'hover:border-teal-400',
+  },
+  'p2p_po_compliance': {
+    gradient: 'from-cyan-500/10 via-cyan-500/5 to-transparent',
+    iconBg: 'bg-gradient-to-br from-cyan-500 to-teal-600',
+    iconColor: 'text-white',
+    hoverBorder: 'hover:border-cyan-400',
+  },
+  'p2p_ap_aging': {
+    gradient: 'from-sky-500/10 via-sky-500/5 to-transparent',
+    iconBg: 'bg-gradient-to-br from-sky-600 to-cyan-600',
+    iconColor: 'text-white',
+    hoverBorder: 'hover:border-sky-400',
+  },
 };
 
 // Report categories for grouping
@@ -166,6 +191,11 @@ const REPORT_CATEGORIES: Record<string, { title: string; description: string; ty
     description: 'Savings opportunities and policy adherence',
     types: ['savings_opportunities', 'contract_compliance', 'stratification'],
   },
+  'p2p': {
+    title: 'P2P Analytics',
+    description: 'Procure-to-Pay workflow and performance metrics',
+    types: ['p2p_pr_status', 'p2p_po_compliance', 'p2p_ap_aging'],
+  },
 };
 
 // Badges for special reports
@@ -176,6 +206,10 @@ const REPORT_BADGES: Record<string, { label: string; variant: 'new' | 'popular' 
   'tail_spend': { label: 'New', variant: 'new' },
   'executive_summary': { label: 'Popular', variant: 'popular' },
   'spend_analysis': { label: 'Recommended', variant: 'recommended' },
+  // P2P Report badges
+  'p2p_pr_status': { label: 'New', variant: 'new' },
+  'p2p_po_compliance': { label: 'New', variant: 'new' },
+  'p2p_ap_aging': { label: 'New', variant: 'new' },
 };
 
 // Badge styles
@@ -1219,6 +1253,9 @@ export default function ReportsPage() {
                   <SelectItem value="seasonality">Seasonality & Trends</SelectItem>
                   <SelectItem value="year_over_year">Year-over-Year Analysis</SelectItem>
                   <SelectItem value="tail_spend">Tail Spend Analysis</SelectItem>
+                  <SelectItem value="p2p_pr_status">PR Status Report</SelectItem>
+                  <SelectItem value="p2p_po_compliance">PO Compliance Report</SelectItem>
+                  <SelectItem value="p2p_ap_aging">AP Aging Report</SelectItem>
                 </SelectContent>
               </Select>
             </div>

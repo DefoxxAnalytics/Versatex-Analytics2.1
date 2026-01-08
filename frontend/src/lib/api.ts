@@ -1201,7 +1201,11 @@ export type ReportType =
   | 'seasonality'
   | 'year_over_year'
   | 'tail_spend'
-  | 'custom';
+  | 'custom'
+  // P2P Report Types
+  | 'p2p_pr_status'
+  | 'p2p_po_compliance'
+  | 'p2p_ap_aging';
 
 export type ReportFormat = 'pdf' | 'xlsx' | 'csv';
 

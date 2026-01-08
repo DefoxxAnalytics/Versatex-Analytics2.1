@@ -94,10 +94,14 @@ flake8 .            # Lint Python code
 backend/
 ├── apps/
 │   ├── authentication/     # User, Organization, UserProfile, AuditLog models
-│   ├── procurement/        # Supplier, Category, Transaction, DataUpload models
-│   ├── analytics/          # AnalyticsService - all analytics calculations
+│   ├── procurement/        # Supplier, Category, Transaction, DataUpload + P2P models (PR, PO, GR, Invoice)
+│   ├── analytics/          # AnalyticsService + P2PAnalyticsService - all analytics calculations
+│   │   ├── services.py     # Core procurement analytics
+│   │   ├── p2p_services.py # P2P analytics (cycle, matching, aging, requisitions, POs, payments)
+│   │   ├── p2p_views.py    # P2P API endpoints
+│   │   └── p2p_urls.py     # P2P URL routing
 │   └── reports/            # Report generation, scheduling, and export
-│       ├── generators/     # 11 report generators (executive, spend, supplier, pareto, compliance, savings, stratification, seasonality, yoy, tail_spend)
+│       ├── generators/     # 13 report generators (including 3 P2P: pr_status, po_compliance, ap_aging)
 │       ├── renderers/      # PDF (ReportLab), Excel (openpyxl), CSV (pandas)
 │       └── tasks.py        # Celery tasks for async generation
 ├── config/                 # Django settings, URLs, Celery config
@@ -107,6 +111,7 @@ backend/
 **Key Patterns:**
 - All data models are scoped by `organization` ForeignKey for multi-tenancy
 - `AnalyticsService` class in `apps/analytics/services.py` handles all analytics calculations
+- `P2PAnalyticsService` class in `apps/analytics/p2p_services.py` handles P2P analytics
 - JWT auth via djangorestframework-simplejwt with token refresh
 - CSRF exempt on LoginView for frontend API calls
 - Celery worker for background tasks (CSV processing, reports)
@@ -124,6 +129,7 @@ src/
 │   └── ThemeContext.tsx    # Light/dark theme
 ├── hooks/
 │   ├── useAnalytics.ts     # Analytics data fetching
+│   ├── useP2PAnalytics.ts  # P2P analytics data fetching
 │   ├── useFilters.ts       # Filter state management
 │   ├── useProcurementData.ts # Transaction data fetching
 │   └── useReports.ts       # Report generation, scheduling, downloads
@@ -149,6 +155,7 @@ src/
 /api/v1/auth/          # login, register, logout, token/refresh, user, change-password
 /api/v1/procurement/   # suppliers, categories, transactions (CRUD + upload_csv, bulk_delete, export), uploads
 /api/v1/analytics/     # overview, spend-by-category, spend-by-supplier, pareto, tail-spend, monthly-trend, stratification, seasonality, year-over-year, consolidation
+/api/v1/analytics/p2p/ # P2P analytics: cycle, matching, aging, requisitions, purchase-orders, supplier-payments
 /api/v1/reports/       # Report generation, scheduling, and downloads (see Reports Module below)
 ```
 
@@ -212,6 +219,12 @@ Production features:
 - `UserProfile` - extends Django User with org, role (admin/manager/viewer)
 - `Transaction` - core data model with supplier/category FKs, amount, date
 - `DataUpload` - tracks CSV upload history with batch_id
+
+### P2P Models (in `apps/procurement/models.py`)
+- `PurchaseRequisition` - PR with status, department, cost center, approval workflow
+- `PurchaseOrder` - PO linked to supplier, with amounts, contract backing, amendments
+- `GoodsReceipt` - GR linked to PO, with quantity received/accepted
+- `Invoice` - Invoice with matching status, payment terms, exception handling
 
 ## Creating Admin Users
 
@@ -339,12 +352,26 @@ GET /api/v1/analytics/supplier-payments/<id>/history/ # Payment history
 
 #### P2P Data Import
 **Via Django Admin:** Each P2P model has "Import CSV" and "Download Template" buttons
+- Superusers see organization dropdown to import data into any organization
+- Regular users import into their profile's organization automatically
+
 **Via Management Command:**
 ```bash
 docker-compose exec backend python manage.py import_p2p_data \
   --org-slug <slug> --type <pr|po|gr|invoice> --file <path.csv> \
   [--skip-errors] [--dry-run]
 ```
+
+#### P2P Reports (in Reports Module)
+Three new P2P-specific report generators integrated into the Reports page:
+
+| Report Type | Description | Key Metrics |
+|-------------|-------------|-------------|
+| **PR Status Report** | Purchase requisition workflow analysis | Total PRs, conversion rate, rejection rate, avg approval days, department breakdown |
+| **PO Compliance Report** | Contract coverage and maverick analysis | Compliance score (A-F grade), contract coverage %, maverick rate, amendment patterns |
+| **AP Aging Report** | Accounts payable aging analysis | Aging buckets, DPO trends, supplier aging, cash flow forecast, risk assessment |
+
+P2P reports appear in the "P2P Analytics" category on the Reports page with teal/cyan theme.
 
 ---
 

@@ -122,6 +122,39 @@
     .legend-dot.optional {
         background: #4f46e5;
     }
+    .org-selector {
+        margin-bottom: 16px;
+    }
+    .org-selector label {
+        display: block;
+        font-weight: 500;
+        margin-bottom: 8px;
+        color: #374151;
+    }
+    .org-selector select {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        background: white;
+        font-size: 15px;
+        line-height: 1.5;
+        height: 48px;
+    }
+    .org-selector select:focus {
+        outline: none;
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+    .org-info {
+        background: #fef3c7;
+        border: 1px solid #fcd34d;
+        border-radius: 6px;
+        padding: 12px;
+        margin-bottom: 16px;
+        font-size: 13px;
+        color: #92400e;
+    }
 </style>
 {% endblock %}
 
@@ -159,6 +192,25 @@
 
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
+
+        {% if is_superuser %}
+        <div class="form-section">
+            <h3>Target Organization</h3>
+            <div class="org-info">
+                <strong>Super Admin Mode:</strong> You can import data into any organization.
+            </div>
+            <div class="org-selector">
+                <label for="organization_id">Select Organization</label>
+                <select name="organization_id" id="organization_id" required>
+                    {% for org in organizations %}
+                    <option value="{{ org.id }}" {% if user_organization and org.id == user_organization.id %}selected{% endif %}>
+                        {{ org.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        {% endif %}
 
         <div class="form-section">
             <h3>Select CSV File</h3>
