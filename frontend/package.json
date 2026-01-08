@@ -13,7 +13,9 @@
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "generate-types": "openapi-typescript http://localhost:8001/api/schema/ -o src/lib/api-types.generated.ts",
+    "generate-types:file": "openapi-typescript ./openapi-schema.json -o src/lib/api-types.generated.ts"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",
@@ -74,6 +76,7 @@
   },
   "devDependencies": {
     "@builder.io/vite-plugin-jsx-loc": "^0.1.1",
+    "openapi-typescript": "^7.4.0",
     "@playwright/test": "^1.49.0",
     "@tailwindcss/typography": "^0.5.15",
     "@tailwindcss/vite": "^4.1.3",

@@ -419,6 +419,12 @@ LOGGING = {
             'level': 'INFO',
             'propagate': True,
         },
+        # Legacy API usage tracking for migration monitoring (TD-014)
+        'legacy_api': {
+            'handlers': ['console', 'security_file'] if not DEBUG else ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
     },
 }
 

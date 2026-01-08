@@ -1,6 +1,10 @@
 """
 Custom middleware for security and API versioning.
 """
+import logging
+
+# Logger for tracking legacy API usage
+legacy_api_logger = logging.getLogger('legacy_api')
 
 
 class DeprecationMiddleware:
@@ -24,8 +28,9 @@ class DeprecationMiddleware:
         '/api/analytics/',
     )
 
-    # Sunset date for legacy endpoints (ISO 8601 format)
-    SUNSET_DATE = 'Sat, 01 Jun 2025 00:00:00 GMT'
+    # Sunset date for legacy endpoints (RFC 7231 HTTP-date format)
+    # Updated to June 1, 2026 to give clients more time to migrate
+    SUNSET_DATE = 'Mon, 01 Jun 2026 00:00:00 GMT'
 
     def __init__(self, get_response):
         self.get_response = get_response
@@ -36,6 +41,9 @@ class DeprecationMiddleware:
         # Check if this is a legacy endpoint
         path = request.path
         if self._is_legacy_endpoint(path):
+            # Log legacy API usage for monitoring and migration tracking
+            self._log_legacy_usage(request)
+
             response['Deprecation'] = 'true'
             response['Sunset'] = self.SUNSET_DATE
 
@@ -46,6 +54,28 @@ class DeprecationMiddleware:
                 response['Link'] = f'<{versioned_path}>; rel="successor-version"'
 
         return response
+
+    def _log_legacy_usage(self, request):
+        """Log legacy API usage for monitoring and migration tracking."""
+        user_id = getattr(request.user, 'id', None) if hasattr(request, 'user') else None
+        legacy_api_logger.warning(
+            'Legacy API endpoint accessed',
+            extra={
+                'path': request.path,
+                'method': request.method,
+                'user_id': user_id,
+                'ip_address': self._get_client_ip(request),
+                'user_agent': request.META.get('HTTP_USER_AGENT', '')[:200],  # Truncate user agent
+            }
+        )
+
+    def _get_client_ip(self, request):
+        """Get client IP address from request."""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            # Take the first IP in the chain (original client)
+            return x_forwarded_for.split(',')[0].strip()
+        return request.META.get('REMOTE_ADDR')
 
     def _is_legacy_endpoint(self, path: str) -> bool:
         """Check if the path is a legacy (non-versioned) endpoint."""

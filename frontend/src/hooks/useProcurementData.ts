@@ -75,7 +75,7 @@ export function useProcurementData() {
       }
     },
     staleTime: 5 * 60 * 1000, // Data becomes stale after 5 minutes
-    cacheTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
+    cacheTime: 30 * 60 * 1000, // Keep in cache for 30 minutes (TODO: rename to gcTime for TanStack Query v5)
     refetchOnMount: true,
     refetchOnWindowFocus: false,
     refetchOnReconnect: true,
@@ -142,7 +142,7 @@ export function useFilteredProcurementData() {
       }
     },
     staleTime: Infinity, // Data only becomes stale when explicitly invalidated
-    cacheTime: Infinity, // Keep in cache indefinitely
+    cacheTime: Infinity, // Keep in cache indefinitely (TODO: rename to gcTime for TanStack Query v5)
     enabled: !rawLoading && !rawError, // Only run when raw data is ready
   });
 

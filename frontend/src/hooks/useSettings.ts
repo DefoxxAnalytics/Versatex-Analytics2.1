@@ -240,7 +240,7 @@ export function useSettings() {
     queryKey: ['settings'],
     queryFn: (): UserSettings => loadSettingsFromStorage(),
     staleTime: Infinity,
-    cacheTime: Infinity,
+    cacheTime: Infinity, // TODO: Rename to gcTime when upgrading to TanStack Query v5
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,

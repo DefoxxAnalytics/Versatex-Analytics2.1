@@ -133,7 +133,7 @@ function clearFilters(): void {
 export function useFilters() {
   return useQuery(QUERY_KEY, loadFilters, {
     staleTime: Infinity,
-    cacheTime: Infinity,
+    cacheTime: Infinity, // TODO: Rename to gcTime when upgrading to TanStack Query v5
   });
 }
 
