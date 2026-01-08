@@ -82,6 +82,25 @@ services:
       - db
       - redis
 
+  # Celery Flower Monitoring (TD-013)
+  flower:
+    image: mher/flower:2.0
+    container_name: analytics-flower
+    command: celery --broker=redis://:${REDIS_PASSWORD:-dev_redis_password_change_me}@redis:6379/0 flower --port=5555
+    environment:
+      - FLOWER_BASIC_AUTH=${FLOWER_USER:-admin}:${FLOWER_PASSWORD:-flower_admin_change_me}
+      - FLOWER_PURGE_OFFLINE_WORKERS=60
+    ports:
+      - "5555:5555"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5555/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   # React Frontend
   frontend:
     build:
