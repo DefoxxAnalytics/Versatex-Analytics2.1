@@ -450,7 +450,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       toast.success('Export completed successfully');
     } catch (error) {
-      console.error('Export failed:', error);
+      // Only log in development to prevent information leakage
+      if (import.meta.env.DEV) {
+        console.error('Export failed:', error);
+      }
       toast.error('Failed to export data');
     } finally {
       setIsExporting(false);

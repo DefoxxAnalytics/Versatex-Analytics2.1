@@ -101,8 +101,10 @@ function loadSettingsFromStorage(): UserSettings {
       ...parsed,
     };
   } catch (error) {
-    // Handle corrupted data
-    console.warn('Failed to load settings, using defaults:', error);
+    // Handle corrupted data - only log in development
+    if (import.meta.env.DEV) {
+      console.warn('Failed to load settings, using defaults:', error);
+    }
     return DEFAULT_SETTINGS;
   }
 }
@@ -149,7 +151,10 @@ function saveSettingsToStorage(settings: Partial<UserSettings>): UserSettings {
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(updated));
     return updated;
   } catch (error) {
-    console.error('Failed to save settings:', error);
+    // Only log in development
+    if (import.meta.env.DEV) {
+      console.error('Failed to save settings:', error);
+    }
     throw error;
   }
 }

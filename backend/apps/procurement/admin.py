@@ -1491,12 +1491,26 @@ class PurchaseRequisitionAdmin(P2PImportMixin, admin.ModelAdmin):
     approval_status_badge.short_description = 'Status'
 
     def get_queryset(self, request):
-        qs = super().get_queryset(request)
+        qs = super().get_queryset(request).select_related(
+            'organization', 'supplier_suggested', 'category', 'requested_by', 'approved_by'
+        )
         if request.user.is_superuser:
             return qs
         if hasattr(request.user, 'profile'):
             return qs.filter(organization=request.user.profile.organization)
         return qs.none()
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """Filter FK choices by organization to prevent IDOR."""
+        if not request.user.is_superuser and hasattr(request.user, 'profile'):
+            user_org = request.user.profile.organization
+            if db_field.name == 'supplier_suggested':
+                kwargs['queryset'] = Supplier.objects.filter(organization=user_org)
+            elif db_field.name == 'category':
+                kwargs['queryset'] = Category.objects.filter(organization=user_org)
+            elif db_field.name in ['requested_by', 'approved_by']:
+                kwargs['queryset'] = User.objects.filter(profile__organization=user_org)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def _process_p2p_import(self, rows, organization, batch_id, user):
         """Process PR import from CSV rows."""
@@ -1677,12 +1691,31 @@ class PurchaseOrderAdmin(P2PImportMixin, admin.ModelAdmin):
     po_status_badge.short_description = 'Status'
 
     def get_queryset(self, request):
-        qs = super().get_queryset(request)
+        qs = super().get_queryset(request).select_related(
+            'organization', 'supplier', 'category', 'contract', 'requisition',
+            'created_by', 'approved_by'
+        )
         if request.user.is_superuser:
             return qs
         if hasattr(request.user, 'profile'):
             return qs.filter(organization=request.user.profile.organization)
         return qs.none()
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """Filter FK choices by organization to prevent IDOR."""
+        if not request.user.is_superuser and hasattr(request.user, 'profile'):
+            user_org = request.user.profile.organization
+            if db_field.name == 'supplier':
+                kwargs['queryset'] = Supplier.objects.filter(organization=user_org)
+            elif db_field.name == 'category':
+                kwargs['queryset'] = Category.objects.filter(organization=user_org)
+            elif db_field.name == 'contract':
+                kwargs['queryset'] = Contract.objects.filter(organization=user_org)
+            elif db_field.name == 'requisition':
+                kwargs['queryset'] = PurchaseRequisition.objects.filter(organization=user_org)
+            elif db_field.name in ['created_by', 'approved_by']:
+                kwargs['queryset'] = User.objects.filter(profile__organization=user_org)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def _process_p2p_import(self, rows, organization, batch_id, user):
         """Process PO import from CSV rows."""
@@ -1864,12 +1897,24 @@ class GoodsReceiptAdmin(P2PImportMixin, admin.ModelAdmin):
     variance_badge.short_description = 'Variance'
 
     def get_queryset(self, request):
-        qs = super().get_queryset(request)
+        qs = super().get_queryset(request).select_related(
+            'organization', 'purchase_order', 'purchase_order__supplier', 'received_by'
+        )
         if request.user.is_superuser:
             return qs
         if hasattr(request.user, 'profile'):
             return qs.filter(organization=request.user.profile.organization)
         return qs.none()
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """Filter FK choices by organization to prevent IDOR."""
+        if not request.user.is_superuser and hasattr(request.user, 'profile'):
+            user_org = request.user.profile.organization
+            if db_field.name == 'purchase_order':
+                kwargs['queryset'] = PurchaseOrder.objects.filter(organization=user_org)
+            elif db_field.name == 'received_by':
+                kwargs['queryset'] = User.objects.filter(profile__organization=user_org)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def _process_p2p_import(self, rows, organization, batch_id, user):
         """Process GR import from CSV rows."""
@@ -2071,12 +2116,29 @@ class InvoiceAdmin(P2PImportMixin, admin.ModelAdmin):
     exception_badge.short_description = 'Exception'
 
     def get_queryset(self, request):
-        qs = super().get_queryset(request)
+        qs = super().get_queryset(request).select_related(
+            'organization', 'supplier', 'purchase_order', 'goods_receipt',
+            'exception_resolved_by'
+        )
         if request.user.is_superuser:
             return qs
         if hasattr(request.user, 'profile'):
             return qs.filter(organization=request.user.profile.organization)
         return qs.none()
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """Filter FK choices by organization to prevent IDOR."""
+        if not request.user.is_superuser and hasattr(request.user, 'profile'):
+            user_org = request.user.profile.organization
+            if db_field.name == 'supplier':
+                kwargs['queryset'] = Supplier.objects.filter(organization=user_org)
+            elif db_field.name == 'purchase_order':
+                kwargs['queryset'] = PurchaseOrder.objects.filter(organization=user_org)
+            elif db_field.name == 'goods_receipt':
+                kwargs['queryset'] = GoodsReceipt.objects.filter(organization=user_org)
+            elif db_field.name == 'exception_resolved_by':
+                kwargs['queryset'] = User.objects.filter(profile__organization=user_org)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def _process_p2p_import(self, rows, organization, batch_id, user):
         """Process Invoice import from CSV rows."""

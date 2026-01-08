@@ -115,7 +115,10 @@ export function useDataPolling(options: UseDataPollingOptions = {}) {
         };
       });
     } catch (error) {
-      console.error('Polling error:', error);
+      // Only log in development
+      if (import.meta.env.DEV) {
+        console.error('Polling error:', error);
+      }
       // Don't update state on error, just skip this check
     }
   }, [onNewData]);

@@ -2,6 +2,7 @@
 Django Admin configuration for the reports module.
 """
 from django.contrib import admin
+from django.contrib.auth.models import User
 from django.utils.html import format_html
 from .models import Report
 
@@ -89,10 +90,32 @@ class ReportAdmin(admin.ModelAdmin):
     summary_data_preview.short_description = 'Summary Data (Preview)'
 
     def get_queryset(self, request):
-        """Optimize queryset with select_related."""
-        return super().get_queryset(request).select_related(
+        """Optimize queryset with select_related and org filtering."""
+        qs = super().get_queryset(request).select_related(
             'organization', 'created_by'
         )
+        if request.user.is_superuser:
+            return qs
+        if hasattr(request.user, 'profile'):
+            return qs.filter(organization=request.user.profile.organization)
+        return qs.none()
+
+    def formfield_for_many_to_many(self, db_field, request, **kwargs):
+        """Filter M2M choices by organization to prevent data leakage."""
+        if db_field.name == 'shared_with':
+            if not request.user.is_superuser and hasattr(request.user, 'profile'):
+                kwargs['queryset'] = User.objects.filter(
+                    profile__organization=request.user.profile.organization
+                )
+        return super().formfield_for_many_to_many(db_field, request, **kwargs)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """Filter FK choices by organization to prevent IDOR."""
+        if not request.user.is_superuser and hasattr(request.user, 'profile'):
+            user_org = request.user.profile.organization
+            if db_field.name == 'created_by':
+                kwargs['queryset'] = User.objects.filter(profile__organization=user_org)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     actions = ['mark_completed', 'mark_failed', 'regenerate']
 
@@ -109,11 +132,21 @@ class ReportAdmin(admin.ModelAdmin):
     mark_failed.short_description = 'Mark as failed'
 
     def regenerate(self, request, queryset):
-        """Regenerate selected reports."""
+        """Regenerate selected reports (rate limited to 100)."""
         from .tasks import generate_report_async
+        # Rate limit to prevent abuse
+        MAX_BULK_REGENERATE = 100
+        limited_queryset = queryset[:MAX_BULK_REGENERATE]
         count = 0
-        for report in queryset:
+        for report in limited_queryset:
             generate_report_async.delay(str(report.pk))
             count += 1
-        self.message_user(request, f'{count} reports queued for regeneration.')
+        if queryset.count() > MAX_BULK_REGENERATE:
+            self.message_user(
+                request,
+                f'{count} reports queued for regeneration (limited to {MAX_BULK_REGENERATE}).',
+                level='warning'
+            )
+        else:
+            self.message_user(request, f'{count} reports queued for regeneration.')
     regenerate.short_description = 'Regenerate reports'

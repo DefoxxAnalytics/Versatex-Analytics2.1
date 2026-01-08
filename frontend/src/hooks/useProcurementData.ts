@@ -67,7 +67,10 @@ export function useProcurementData() {
         // Transform backend format to frontend format
         return transactions.map(transformTransaction);
       } catch (error) {
-        console.error('Failed to load data from API:', error);
+        // Only log in development
+        if (import.meta.env.DEV) {
+          console.error('Failed to load data from API:', error);
+        }
         return [];
       }
     },
@@ -131,7 +134,10 @@ export function useFilteredProcurementData() {
         const filters = JSON.parse(stored) as Filters;
         return applyFilters(rawData as ProcurementRecord[], filters);
       } catch (error) {
-        console.error('Failed to apply filters:', error);
+        // Only log in development
+        if (import.meta.env.DEV) {
+          console.error('Failed to apply filters:', error);
+        }
         return rawData as ProcurementRecord[];
       }
     },

@@ -56,16 +56,22 @@ export default function Login() {
         setLocation('/');
       }, 100);
     } catch (error: any) {
-      console.error('Login error:', error);
+      // Only log in development to prevent information leakage
+      if (import.meta.env.DEV) {
+        console.error('Login error:', error);
+      }
 
+      // Sanitize error messages - map all errors to user-friendly messages
+      // to prevent backend system information leakage
       if (error.response?.status === 401) {
         setError('Invalid username or password');
-      } else if (error.response?.data?.detail) {
-        setError(error.response.data.detail);
-      } else if (error.response?.data?.non_field_errors) {
-        setError(error.response.data.non_field_errors[0]);
+      } else if (error.response?.status === 429) {
+        setError('Too many login attempts. Please try again later.');
+      } else if (error.response?.status >= 500) {
+        setError('Server error. Please try again later.');
       } else {
-        setError('Login failed. Please try again.');
+        // Generic message for all other errors - don't expose backend details
+        setError('Login failed. Please check your credentials and try again.');
       }
 
       toast.error('Login failed');

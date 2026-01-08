@@ -79,7 +79,10 @@ function loadFilters(): Filters {
       },
     };
   } catch (error) {
-    console.error('Failed to load filters from localStorage:', error);
+    // Only log in development
+    if (import.meta.env.DEV) {
+      console.error('Failed to load filters from localStorage:', error);
+    }
     return DEFAULT_FILTERS;
   }
 }
@@ -93,7 +96,10 @@ function saveFilters(filters: Filters): void {
     // Dispatch custom event to notify other components of filter changes
     window.dispatchEvent(new Event('filtersUpdated'));
   } catch (error) {
-    console.error('Failed to save filters to localStorage:', error);
+    // Only log in development
+    if (import.meta.env.DEV) {
+      console.error('Failed to save filters to localStorage:', error);
+    }
   }
 }
 
@@ -106,7 +112,10 @@ function clearFilters(): void {
     // Dispatch custom event to notify other components of filter changes
     window.dispatchEvent(new Event('filtersUpdated'));
   } catch (error) {
-    console.error('Failed to clear filters from localStorage:', error);
+    // Only log in development
+    if (import.meta.env.DEV) {
+      console.error('Failed to clear filters from localStorage:', error);
+    }
   }
 }
 

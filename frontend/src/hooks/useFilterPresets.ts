@@ -36,7 +36,10 @@ function loadPresets(): FilterPreset[] {
     if (!stored) return [];
     return JSON.parse(stored) as FilterPreset[];
   } catch (error) {
-    console.error('Failed to load filter presets:', error);
+    // Only log in development
+    if (import.meta.env.DEV) {
+      console.error('Failed to load filter presets:', error);
+    }
     return [];
   }
 }
@@ -48,7 +51,10 @@ function savePresets(presets: FilterPreset[]): void {
   try {
     localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
   } catch (error) {
-    console.error('Failed to save filter presets:', error);
+    // Only log in development
+    if (import.meta.env.DEV) {
+      console.error('Failed to save filter presets:', error);
+    }
   }
 }
 
