@@ -34,7 +34,8 @@ Versatex Analytics is a full-stack procurement analytics dashboard designed for 
 ### Authentication & Authorization
 - User registration and login with JWT token authentication
 - Organization-based multi-tenancy with complete data isolation
-- Role-based permissions (Admin, Manager, Viewer)
+- **Multi-organization user support** - Users can belong to multiple organizations with different roles per org
+- Role-based permissions (Admin, Manager, Viewer) per organization
 - Audit logging for compliance and security
 - Custom branded admin panel with Versatex theming
 
@@ -163,6 +164,9 @@ docker-compose exec backend python manage.py shell
 | `/api/v1/auth/token/refresh/` | POST | Refresh JWT token |
 | `/api/v1/auth/user/` | GET | Get current user |
 | `/api/v1/auth/change-password/` | POST | Change password |
+| `/api/v1/auth/user/organizations/` | GET | List user's organization memberships |
+| `/api/v1/auth/user/organizations/<id>/switch/` | POST | Switch active organization |
+| `/api/v1/auth/memberships/` | GET/POST | Manage organization memberships (admin) |
 
 ### Procurement
 | Endpoint | Method | Description |
@@ -277,6 +281,7 @@ pnpm test:ui     # With UI
 |-------|-------------|
 | **Organization** | Multi-tenant root with isolated data |
 | **User/UserProfile** | Extended Django User with org, role |
+| **UserOrganizationMembership** | Many-to-many relationship for multi-org users with per-org roles |
 | **Supplier** | Vendor information |
 | **Category** | Spend categories (hierarchical) |
 | **Transaction** | Procurement transactions |
@@ -299,6 +304,8 @@ pnpm test:ui     # With UI
 | **Admin** | Full access, user management, bulk delete, Django Admin |
 | **Manager** | Upload data, manage own data |
 | **Viewer** | Read-only access |
+
+**Multi-Organization Support:** Users can have different roles in different organizations. For example, a consultant might be an Admin in one organization and a Viewer in another. The frontend organization switcher shows role badges for each organization.
 
 ## Deployment
 

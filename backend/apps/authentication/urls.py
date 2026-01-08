@@ -6,13 +6,15 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     RegisterView, LoginView, LogoutView, CookieTokenRefreshView,
     CurrentUserView, ChangePasswordView, UserPreferencesView,
-    OrganizationViewSet, UserProfileViewSet, AuditLogViewSet
+    OrganizationViewSet, UserProfileViewSet, AuditLogViewSet,
+    UserOrganizationMembershipViewSet, user_organizations, switch_organization
 )
 
 router = DefaultRouter()
 router.register(r'organizations', OrganizationViewSet, basename='organization')
 router.register(r'profiles', UserProfileViewSet, basename='profile')
 router.register(r'audit-logs', AuditLogViewSet, basename='audit-log')
+router.register(r'memberships', UserOrganizationMembershipViewSet, basename='membership')
 
 urlpatterns = [
     # Authentication
@@ -25,6 +27,10 @@ urlpatterns = [
     path('user/', CurrentUserView.as_view(), name='current-user'),
     path('change-password/', ChangePasswordView.as_view(), name='change-password'),
     path('preferences/', UserPreferencesView.as_view(), name='user-preferences'),
+
+    # Multi-organization support
+    path('user/organizations/', user_organizations, name='user-organizations'),
+    path('user/organizations/<int:org_id>/switch/', switch_organization, name='switch-organization'),
 
     # Router URLs
     path('', include(router.urls)),

@@ -93,7 +93,8 @@ flake8 .            # Lint Python code
 ```
 backend/
 ├── apps/
-│   ├── authentication/     # User, Organization, UserProfile, AuditLog models
+│   ├── authentication/     # User, Organization, UserProfile, UserOrganizationMembership, AuditLog models
+│   │   ├── organization_utils.py  # Shared org utilities (get_target_organization, user_can_access_org)
 │   ├── procurement/        # Supplier, Category, Transaction, DataUpload + P2P models (PR, PO, GR, Invoice)
 │   ├── analytics/          # AnalyticsService + P2PAnalyticsService - all analytics calculations
 │   │   ├── services.py     # Core procurement analytics
@@ -126,6 +127,7 @@ src/
 │   └── ProtectedRoute.tsx  # Auth guard component
 ├── contexts/
 │   ├── AuthContext.tsx     # Auth state (isAuth, checkAuth, logout)
+│   ├── OrganizationContext.tsx  # Multi-org support (activeOrg, switchOrganization)
 │   └── ThemeContext.tsx    # Light/dark theme
 ├── hooks/
 │   ├── useAnalytics.ts     # Analytics data fetching
@@ -217,6 +219,7 @@ Production features:
 
 - `Organization` - multi-tenant root, all data scoped to org
 - `UserProfile` - extends Django User with org, role (admin/manager/viewer)
+- `UserOrganizationMembership` - many-to-many between User and Organization with per-org role (supports multi-org users)
 - `Transaction` - core data model with supplier/category FKs, amount, date
 - `DataUpload` - tracks CSV upload history with batch_id
 
@@ -262,7 +265,113 @@ GitHub Actions workflow runs on push/PR to master:
 Badges:
 - [![CI](https://github.com/DefoxxAnalytics/Versatex_Analytics2.0/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/DefoxxAnalytics/Versatex_Analytics2.0/actions/workflows/ci.yml)
 
-## Recent Updates (v2.5)
+## Recent Updates (v2.6)
+
+### Multi-Organization User Support
+
+Users can now belong to multiple organizations with different roles per organization. This enables consultants, auditors, and cross-functional users to access data across multiple organizations without needing separate accounts.
+
+#### Architecture
+
+| Model | Purpose |
+|-------|---------|
+| `UserProfile.organization` | User's primary/default organization (legacy, kept for backwards compatibility) |
+| `UserOrganizationMembership` | Many-to-many relationship with per-org roles |
+
+**Automatic Sync:** Django signals keep `UserProfile` and `UserOrganizationMembership` in sync:
+- Changing `UserProfile.organization` creates/updates a primary membership
+- Setting a membership as `is_primary=True` updates `UserProfile.organization`
+
+#### User Types
+
+| Type | Description | Organization Switcher |
+|------|-------------|----------------------|
+| **Single-org user** | Has one membership | Hidden |
+| **Multi-org user** | Has 2+ memberships | Shows with role badges |
+| **Superuser** | Django `is_superuser=True` | Shows all orgs with "super" badge |
+
+#### Backend Models
+
+```python
+# UserOrganizationMembership fields
+user = ForeignKey(User)           # The user
+organization = ForeignKey(Org)    # The organization
+role = CharField                  # 'admin', 'manager', or 'viewer'
+is_primary = BooleanField         # User's default org (only one per user)
+is_active = BooleanField          # Soft delete support
+invited_by = ForeignKey(User)     # Who invited this user
+```
+
+#### API Endpoints
+
+```
+GET  /api/v1/auth/user/organizations/           # List user's memberships
+POST /api/v1/auth/user/organizations/<id>/switch/  # Switch active org
+GET  /api/v1/auth/memberships/                  # Admin: list all memberships
+POST /api/v1/auth/memberships/                  # Admin: create membership
+```
+
+#### Frontend Components
+
+- **`OrganizationContext`** (`contexts/OrganizationContext.tsx`): Manages active org state, provides `switchOrganization()`, `getRoleInOrg()`, `canSwitch`, `isMultiOrgUser`
+- **`OrganizationSwitcher`** (`components/OrganizationSwitcher.tsx`): Dropdown showing orgs with role badges, primary indicator, and reset option
+
+#### Frontend Hooks
+
+```typescript
+// From OrganizationContext
+const {
+  activeOrganization,    // Currently selected org
+  userOrganization,      // User's primary org
+  organizations,         // All orgs user can access
+  activeRole,            // Role in active org
+  canSwitch,             // Whether switcher should show
+  isMultiOrgUser,        // Has 2+ memberships
+  isViewingOtherOrg,     // Viewing non-primary org
+  switchOrganization,    // (orgId) => void
+  resetToDefault,        // () => void - back to primary
+  getRoleInOrg,          // (orgId) => UserRole | null
+} = useOrganization();
+```
+
+#### Django Admin
+
+- **User admin**: Inline for memberships (see all orgs user belongs to)
+- **User Organization Memberships**: Standalone admin with list editing
+- **User Profile**: Shows membership count column
+
+#### Adding Users to Organizations
+
+**Via Django Admin:**
+1. Go to "User organization memberships"
+2. Click "Add" and select user + organization + role
+3. Check "Is primary" if this should be their default org
+
+**Via API:**
+```bash
+POST /api/v1/auth/memberships/
+{
+  "user": 1,
+  "organization": 2,
+  "role": "viewer",
+  "is_primary": false
+}
+```
+
+**Via Shell:**
+```python
+from apps.authentication.models import UserOrganizationMembership
+UserOrganizationMembership.objects.create(
+    user=user,
+    organization=org,
+    role='manager',
+    is_primary=False
+)
+```
+
+---
+
+## Previous Updates (v2.5)
 
 ### P2P (Procure-to-Pay) Analytics Module
 

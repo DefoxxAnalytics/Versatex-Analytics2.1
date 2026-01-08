@@ -21,6 +21,18 @@ export interface Organization {
   created_at: string;
 }
 
+// Organization Membership (for multi-org users)
+export interface OrganizationMembership {
+  id: number;
+  organization: number;
+  organization_name: string;
+  organization_slug: string;
+  role: UserRole;
+  is_primary: boolean;
+  is_active: boolean;
+  created_at?: string;
+}
+
 // User Profile
 export interface UserProfile {
   id: number;
@@ -32,6 +44,7 @@ export interface UserProfile {
   is_active: boolean;
   created_at: string;
   is_super_admin: boolean;
+  organizations?: OrganizationMembership[];  // Multi-org memberships
 }
 
 // User
@@ -1490,6 +1503,13 @@ export const authAPI = {
 
   getOrganization: (id: number): Promise<AxiosResponse<Organization>> =>
     api.get(`/auth/organizations/${id}/`),
+
+  // User Organization Memberships (multi-org support)
+  getUserOrganizations: (): Promise<AxiosResponse<{ organizations: OrganizationMembership[]; count: number }>> =>
+    api.get('/auth/user/organizations/'),
+
+  switchOrganization: (orgId: number): Promise<AxiosResponse<{ message: string; organization_id: number }>> =>
+    api.post(`/auth/user/organizations/${orgId}/switch/`),
 };
 
 // Procurement API

@@ -17,6 +17,7 @@ from django.db.models import Count, Sum, Q
 from apps.authentication.permissions import CanUploadData, CanDeleteData
 from apps.authentication.utils import log_action
 from apps.authentication.models import Organization
+from apps.authentication.organization_utils import get_target_organization
 from .models import Supplier, Category, Transaction, DataUpload
 from .serializers import (
     SupplierSerializer, CategorySerializer, TransactionSerializer,
@@ -24,39 +25,6 @@ from .serializers import (
     DataUploadSerializer, CSVUploadSerializer
 )
 from .services import CSVProcessor, bulk_delete_transactions, export_transactions_to_csv
-
-
-def get_target_organization(request):
-    """
-    Resolve the target organization for procurement queries.
-
-    For superusers: Checks for organization_id query param, falls back to user's org.
-    For regular users: Always returns their organization.
-
-    Returns:
-        Organization instance or None if user has no profile
-
-    Raises:
-        ValidationError if organization_id is invalid
-    """
-    if not hasattr(request.user, 'profile'):
-        return None
-
-    user_org = request.user.profile.organization
-
-    # Superusers can switch organizations via query param
-    if request.user.is_superuser:
-        org_id = request.query_params.get('organization_id')
-        if org_id:
-            try:
-                org_id = int(org_id)
-                return Organization.objects.get(id=org_id, is_active=True)
-            except (ValueError, TypeError):
-                raise ValidationError({'organization_id': 'Must be a valid integer'})
-            except Organization.DoesNotExist:
-                raise ValidationError({'organization_id': 'Organization not found or inactive'})
-
-    return user_org
 
 
 class UploadThrottle(ScopedRateThrottle):

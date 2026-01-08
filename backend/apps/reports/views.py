@@ -14,6 +14,9 @@ from rest_framework import status
 
 from apps.authentication.utils import log_action
 from apps.authentication.models import Organization
+from apps.authentication.organization_utils import (
+    get_target_organization as get_user_organization
+)
 from .models import Report
 from .serializers import (
     ReportListSerializer,
@@ -138,27 +141,6 @@ REPORT_TEMPLATES = [
         'default_parameters': {},
     },
 ]
-
-
-def get_user_organization(request):
-    """
-    Get the organization for the current user.
-    Superusers can specify organization_id query param.
-    """
-    if not hasattr(request.user, 'profile'):
-        return None
-
-    user_org = request.user.profile.organization
-
-    if request.user.is_superuser:
-        org_id = request.query_params.get('organization_id')
-        if org_id:
-            try:
-                return Organization.objects.get(id=int(org_id), is_active=True)
-            except (ValueError, Organization.DoesNotExist):
-                pass
-
-    return user_org
 
 
 class ReportGenerateThrottle(ScopedRateThrottle):

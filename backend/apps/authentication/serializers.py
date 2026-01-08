@@ -4,7 +4,7 @@ Serializers for authentication
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
-from .models import Organization, UserProfile, AuditLog
+from .models import Organization, UserProfile, AuditLog, UserOrganizationMembership
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
@@ -17,21 +17,42 @@ class OrganizationSerializer(serializers.ModelSerializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    """Serializer for UserProfile model"""
+    """Serializer for UserProfile model with optional organizations list."""
     organization_name = serializers.CharField(source='organization.name', read_only=True)
     is_super_admin = serializers.SerializerMethodField()
+    organizations = serializers.SerializerMethodField()
 
     class Meta:
         model = UserProfile
         fields = [
             'id', 'organization', 'organization_name', 'role',
-            'phone', 'department', 'preferences', 'is_active', 'created_at', 'is_super_admin'
+            'phone', 'department', 'preferences', 'is_active',
+            'created_at', 'is_super_admin', 'organizations'
         ]
-        read_only_fields = ['id', 'created_at', 'is_super_admin']
+        read_only_fields = ['id', 'created_at', 'is_super_admin', 'organizations']
 
     def get_is_super_admin(self, obj):
         """Return whether the user is a super admin (Django superuser)."""
         return obj.is_super_admin()
+
+    def get_organizations(self, obj):
+        """Return all active organization memberships for this user."""
+        memberships = UserOrganizationMembership.objects.filter(
+            user=obj.user,
+            is_active=True
+        ).select_related('organization')
+        # Return simplified list for API response
+        return [
+            {
+                'id': m.id,
+                'organization': m.organization.id,
+                'organization_name': m.organization.name,
+                'organization_slug': m.organization.slug,
+                'role': m.role,
+                'is_primary': m.is_primary,
+            }
+            for m in memberships
+        ]
 
 
 class UserPreferencesSerializer(serializers.Serializer):
@@ -166,3 +187,91 @@ class AuditLogSerializer(serializers.ModelSerializer):
             'ip_address', 'user_agent', 'timestamp'
         ]
         read_only_fields = ['id', 'timestamp']
+
+
+class UserOrganizationMembershipSerializer(serializers.ModelSerializer):
+    """Serializer for organization memberships."""
+    organization_name = serializers.CharField(source='organization.name', read_only=True)
+    organization_slug = serializers.CharField(source='organization.slug', read_only=True)
+    user_username = serializers.CharField(source='user.username', read_only=True)
+    user_email = serializers.CharField(source='user.email', read_only=True)
+
+    class Meta:
+        model = UserOrganizationMembership
+        fields = [
+            'id', 'user', 'user_username', 'user_email',
+            'organization', 'organization_name', 'organization_slug',
+            'role', 'is_primary', 'is_active', 'created_at'
+        ]
+        read_only_fields = ['id', 'created_at']
+
+
+class UserProfileWithOrgsSerializer(serializers.ModelSerializer):
+    """Extended UserProfile serializer that includes all organization memberships."""
+    organization_name = serializers.CharField(source='organization.name', read_only=True)
+    is_super_admin = serializers.SerializerMethodField()
+    organizations = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UserProfile
+        fields = [
+            'id', 'organization', 'organization_name', 'role',
+            'phone', 'department', 'preferences', 'is_active',
+            'created_at', 'is_super_admin', 'organizations'
+        ]
+        read_only_fields = ['id', 'created_at', 'is_super_admin', 'organizations']
+
+    def get_is_super_admin(self, obj):
+        """Return whether the user is a super admin (Django superuser)."""
+        return obj.is_super_admin()
+
+    def get_organizations(self, obj):
+        """Return all active organization memberships for this user."""
+        memberships = UserOrganizationMembership.objects.filter(
+            user=obj.user,
+            is_active=True
+        ).select_related('organization')
+        return UserOrganizationMembershipSerializer(memberships, many=True).data
+
+
+class AddUserToOrgSerializer(serializers.Serializer):
+    """Serializer for adding a user to an organization."""
+    user_id = serializers.IntegerField()
+    organization_id = serializers.IntegerField()
+    role = serializers.ChoiceField(
+        choices=['admin', 'manager', 'viewer'],
+        default='viewer'
+    )
+    is_primary = serializers.BooleanField(default=False)
+
+    def validate_user_id(self, value):
+        from django.contrib.auth.models import User
+        if not User.objects.filter(id=value).exists():
+            raise serializers.ValidationError("User not found")
+        return value
+
+    def validate_organization_id(self, value):
+        if not Organization.objects.filter(id=value, is_active=True).exists():
+            raise serializers.ValidationError("Organization not found or inactive")
+        return value
+
+    def validate(self, attrs):
+        # Check if membership already exists
+        if UserOrganizationMembership.objects.filter(
+            user_id=attrs['user_id'],
+            organization_id=attrs['organization_id']
+        ).exists():
+            raise serializers.ValidationError(
+                "User already has a membership in this organization"
+            )
+        return attrs
+
+
+class UpdateMembershipSerializer(serializers.Serializer):
+    """Serializer for updating a membership."""
+    role = serializers.ChoiceField(
+        choices=['admin', 'manager', 'viewer'],
+        required=False
+    )
+    is_primary = serializers.BooleanField(required=False)
+    is_active = serializers.BooleanField(required=False)

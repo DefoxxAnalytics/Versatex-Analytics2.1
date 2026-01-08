@@ -1,11 +1,13 @@
 /**
- * Organization Switcher component for superusers
+ * Organization Switcher component for multi-org users
  *
- * Allows superusers to switch between organizations to view their analytics data.
- * Non-superusers will not see this component.
+ * Allows superusers and multi-org users to switch between organizations.
+ * Displays role badges for multi-org users to show their role in each org.
+ * Single-org users will not see this component.
  */
-import { Building2, ChevronDown, Check, RotateCcw } from 'lucide-react';
+import { Building2, ChevronDown, Check, RotateCcw, Shield, Star } from 'lucide-react';
 import { useOrganization } from '@/contexts/OrganizationContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -16,24 +18,37 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 import type { ColorScheme } from '@/hooks/useSettings';
+import type { UserRole } from '@/lib/api';
 
 interface OrganizationSwitcherProps {
   colorScheme?: ColorScheme;
 }
 
+// Role badge colors
+const roleColors: Record<UserRole, string> = {
+  admin: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+  manager: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  viewer: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+};
+
 export function OrganizationSwitcher({
   colorScheme = 'navy',
 }: OrganizationSwitcherProps) {
+  const { isSuperAdmin } = useAuth();
   const {
     activeOrganization,
     userOrganization,
     organizations,
+    activeRole,
     canSwitch,
+    isMultiOrgUser,
     isViewingOtherOrg,
     isLoading,
     switchOrganization,
     resetToDefault,
+    getRoleInOrg,
   } = useOrganization();
 
   // Don't render if user can't switch
@@ -99,6 +114,7 @@ export function OrganizationSwitcher({
           {organizations.map((org) => {
             const isActive = activeOrganization?.id === org.id;
             const isUserOrg = userOrganization?.id === org.id;
+            const orgRole = getRoleInOrg(org.id);
 
             return (
               <DropdownMenuItem
@@ -113,14 +129,48 @@ export function OrganizationSwitcher({
                   <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   <span className="truncate">{org.name}</span>
                   {isUserOrg && (
-                    <span className="text-xs text-muted-foreground">(You)</span>
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Star className="h-3 w-3" />
+                      Primary
+                    </span>
                   )}
                 </div>
-                {isActive && <Check className="h-4 w-4 text-primary" />}
+                <div className="flex items-center gap-2">
+                  {/* Show role badge for multi-org users (not superadmins) */}
+                  {isMultiOrgUser && !isSuperAdmin && orgRole && (
+                    <Badge
+                      variant="secondary"
+                      className={cn('text-xs px-1.5 py-0', roleColors[orgRole])}
+                    >
+                      {orgRole}
+                    </Badge>
+                  )}
+                  {/* Superadmin badge */}
+                  {isSuperAdmin && (
+                    <Badge
+                      variant="secondary"
+                      className="text-xs px-1.5 py-0 bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
+                    >
+                      <Shield className="h-3 w-3 mr-0.5" />
+                      super
+                    </Badge>
+                  )}
+                  {isActive && <Check className="h-4 w-4 text-primary" />}
+                </div>
               </DropdownMenuItem>
             );
           })}
         </div>
+
+        {/* Show current role info for multi-org users */}
+        {isMultiOrgUser && !isSuperAdmin && activeRole && (
+          <>
+            <DropdownMenuSeparator />
+            <div className="px-2 py-1.5 text-xs text-muted-foreground">
+              Current role: <span className="font-medium capitalize">{activeRole}</span>
+            </div>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

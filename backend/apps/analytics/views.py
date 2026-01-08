@@ -8,44 +8,12 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.exceptions import ValidationError
 from apps.authentication.utils import log_action
 from apps.authentication.models import Organization
+from apps.authentication.organization_utils import get_target_organization
 from .services import AnalyticsService
 from .ai_services import AIInsightsService
 from .predictive_services import PredictiveAnalyticsService
 from .contract_services import ContractAnalyticsService
 from .compliance_services import ComplianceService
-
-
-def get_target_organization(request):
-    """
-    Resolve the target organization for analytics queries.
-
-    For superusers: Checks for organization_id query param, falls back to user's org.
-    For regular users: Always returns their organization.
-
-    Returns:
-        Organization instance or None if user has no profile
-
-    Raises:
-        ValidationError if organization_id is invalid
-    """
-    if not hasattr(request.user, 'profile'):
-        return None
-
-    user_org = request.user.profile.organization
-
-    # Superusers can switch organizations via query param
-    if request.user.is_superuser:
-        org_id = request.query_params.get('organization_id')
-        if org_id:
-            try:
-                org_id = int(org_id)
-                return Organization.objects.get(id=org_id, is_active=True)
-            except (ValueError, TypeError):
-                raise ValidationError({'organization_id': 'Must be a valid integer'})
-            except Organization.DoesNotExist:
-                raise ValidationError({'organization_id': 'Organization not found or inactive'})
-
-    return user_org
 
 
 def validate_int_param(request, param_name, default, min_val=1, max_val=1000):

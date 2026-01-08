@@ -125,6 +125,143 @@ class UserProfile(models.Model):
         """
         return self.user.is_superuser
 
+    # Multi-organization support helper methods
+    def get_memberships(self):
+        """Get all active organization memberships for this user."""
+        return UserOrganizationMembership.objects.filter(
+            user=self.user,
+            is_active=True
+        ).select_related('organization')
+
+    def get_primary_membership(self):
+        """Get the primary organization membership."""
+        return self.get_memberships().filter(is_primary=True).first()
+
+    def get_membership_for_org(self, organization):
+        """Get membership for a specific organization."""
+        if isinstance(organization, int):
+            return self.get_memberships().filter(organization_id=organization).first()
+        return self.get_memberships().filter(organization=organization).first()
+
+    def has_org_access(self, organization):
+        """Check if user has access to the given organization."""
+        if self.user.is_superuser:
+            return True
+        if isinstance(organization, int):
+            return self.get_memberships().filter(organization_id=organization).exists()
+        return self.get_memberships().filter(organization=organization).exists()
+
+    def get_role_for_org(self, organization):
+        """Get the user's role in a specific organization."""
+        if self.user.is_superuser:
+            return 'admin'  # Superusers have admin access everywhere
+        membership = self.get_membership_for_org(organization)
+        return membership.role if membership else None
+
+    def is_admin_in_org(self, organization):
+        """Check if user is admin in the given organization."""
+        role = self.get_role_for_org(organization)
+        return role == 'admin'
+
+    def is_manager_in_org(self, organization):
+        """Check if user is manager+ in the given organization."""
+        role = self.get_role_for_org(organization)
+        return role in ['admin', 'manager']
+
+    def can_upload_in_org(self, organization):
+        """Check if user can upload data in the given organization."""
+        role = self.get_role_for_org(organization)
+        return role in ['admin', 'manager']
+
+    def can_delete_in_org(self, organization):
+        """Check if user can delete data in the given organization."""
+        role = self.get_role_for_org(organization)
+        return role == 'admin'
+
+
+class UserOrganizationMembership(models.Model):
+    """
+    Many-to-many relationship between Users and Organizations.
+    Allows users to belong to multiple organizations with different roles per org.
+    """
+    ROLE_CHOICES = [
+        ('admin', 'Administrator'),
+        ('manager', 'Manager'),
+        ('viewer', 'Viewer'),
+    ]
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='organization_memberships'
+    )
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name='user_memberships'
+    )
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='viewer')
+    is_primary = models.BooleanField(
+        default=False,
+        help_text="Designates this as the user's default/primary organization"
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    invited_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='sent_invitations',
+        help_text='User who invited this member to the organization'
+    )
+
+    class Meta:
+        ordering = ['-is_primary', 'organization__name']
+        verbose_name = 'User Organization Membership'
+        verbose_name_plural = 'User Organization Memberships'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'organization'],
+                name='unique_user_organization'
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['user', 'is_primary']),
+            models.Index(fields=['organization', 'role']),
+        ]
+
+    def __str__(self):
+        primary_tag = ' (Primary)' if self.is_primary else ''
+        return f"{self.user.username} - {self.organization.name} ({self.role}){primary_tag}"
+
+    def save(self, *args, **kwargs):
+        """Ensure only one primary membership per user."""
+        if self.is_primary:
+            # Unset other primaries for this user
+            UserOrganizationMembership.objects.filter(
+                user=self.user,
+                is_primary=True
+            ).exclude(pk=self.pk).update(is_primary=False)
+        super().save(*args, **kwargs)
+
+    def is_admin(self):
+        """Check if this membership has admin role."""
+        return self.role == 'admin'
+
+    def is_manager(self):
+        """Check if this membership has manager+ role."""
+        return self.role in ['admin', 'manager']
+
+    def can_upload_data(self):
+        """Check if this membership allows data uploads."""
+        return self.role in ['admin', 'manager']
+
+    def can_delete_data(self):
+        """Check if this membership allows data deletion."""
+        return self.role == 'admin'
+
 
 class AuditLog(models.Model):
     """
@@ -221,7 +358,10 @@ class AuditLog(models.Model):
         return f"{self.user} - {self.action} - {self.resource} at {self.timestamp}"
 
 
-# Signal to create UserProfile when User is created
+# =============================================================================
+# Signals to sync UserProfile and UserOrganizationMembership
+# =============================================================================
+
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     """
@@ -231,3 +371,80 @@ def create_user_profile(sender, instance, created, **kwargs):
     if created and not hasattr(instance, 'profile'):
         # Don't auto-create profile, let registration handle it
         pass
+
+
+@receiver(post_save, sender=UserProfile)
+def sync_membership_from_profile(sender, instance, created, **kwargs):
+    """
+    When UserProfile.organization or role changes, sync to UserOrganizationMembership.
+
+    - If no membership exists for the profile's org, create one as primary
+    - If membership exists, update role to match profile
+    - Sets the profile's org membership as primary
+    """
+    if not instance.organization_id:
+        return
+
+    # Prevent infinite recursion
+    if getattr(instance, '_syncing_from_membership', False):
+        return
+
+    membership, created_new = UserOrganizationMembership.objects.get_or_create(
+        user=instance.user,
+        organization=instance.organization,
+        defaults={
+            'role': instance.role,
+            'is_primary': True,
+            'is_active': instance.is_active,
+        }
+    )
+
+    if not created_new:
+        # Update existing membership to match profile
+        updated = False
+        if membership.role != instance.role:
+            membership.role = instance.role
+            updated = True
+        if not membership.is_primary:
+            membership.is_primary = True
+            updated = True
+        if membership.is_active != instance.is_active:
+            membership.is_active = instance.is_active
+            updated = True
+
+        if updated:
+            membership._syncing_from_profile = True
+            membership.save()
+
+
+@receiver(post_save, sender=UserOrganizationMembership)
+def sync_profile_from_membership(sender, instance, **kwargs):
+    """
+    When a membership is set as primary, sync to UserProfile.
+
+    - Updates UserProfile.organization and role to match primary membership
+    """
+    # Only sync if this is the primary membership
+    if not instance.is_primary:
+        return
+
+    # Prevent infinite recursion
+    if getattr(instance, '_syncing_from_profile', False):
+        return
+
+    try:
+        profile = instance.user.profile
+    except UserProfile.DoesNotExist:
+        return
+
+    updated = False
+    if profile.organization_id != instance.organization_id:
+        profile.organization = instance.organization
+        updated = True
+    if profile.role != instance.role:
+        profile.role = instance.role
+        updated = True
+
+    if updated:
+        profile._syncing_from_membership = True
+        profile.save()

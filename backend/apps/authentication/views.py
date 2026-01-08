@@ -12,6 +12,8 @@ from django.contrib.auth.models import User
 from django.utils.decorators import method_decorator
 from django.conf import settings
 from django_ratelimit.decorators import ratelimit
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
 from .models import Organization, UserProfile, AuditLog
 from .serializers import (
     RegisterSerializer, LoginSerializer, UserSerializer,
@@ -75,6 +77,15 @@ def clear_jwt_cookies(response):
     return response
 
 
+@extend_schema(
+    tags=['Authentication'],
+    summary='Register new user',
+    description='Create a new user account. Returns user data and sets JWT tokens as HTTP-only cookies.',
+    responses={
+        201: UserSerializer,
+        400: OpenApiTypes.OBJECT,
+    },
+)
 @method_decorator(ratelimit(key='ip', rate='5/m', method='POST', block=True), name='dispatch')
 class RegisterView(generics.CreateAPIView):
     """
@@ -112,6 +123,23 @@ class RegisterView(generics.CreateAPIView):
         return set_jwt_cookies(response, refresh)
 
 
+@extend_schema(
+    tags=['Authentication'],
+    summary='User login',
+    description='''
+Authenticate user and return JWT tokens.
+
+Rate limited to 5 attempts per minute per IP.
+Additional lockout after 5 failed attempts for 15 minutes.
+
+Tokens are set as HTTP-only cookies for security.
+    ''',
+    responses={
+        200: UserSerializer,
+        401: OpenApiTypes.OBJECT,
+        429: OpenApiTypes.OBJECT,
+    },
+)
 @method_decorator(ratelimit(key='ip', rate='5/m', method='POST', block=True), name='dispatch')
 class LoginView(generics.GenericAPIView):
     """
@@ -196,6 +224,12 @@ class LoginView(generics.GenericAPIView):
         return set_jwt_cookies(response, refresh)
 
 
+@extend_schema(
+    tags=['Authentication'],
+    summary='User logout',
+    description='Logout user by blacklisting refresh token and clearing cookies.',
+    responses={200: OpenApiTypes.OBJECT},
+)
 class LogoutView(generics.GenericAPIView):
     """
     User logout endpoint
@@ -231,6 +265,23 @@ class LogoutView(generics.GenericAPIView):
         return clear_jwt_cookies(response)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        tags=['Authentication'],
+        summary='Get current user',
+        description='Get the currently authenticated user profile.',
+    ),
+    put=extend_schema(
+        tags=['Authentication'],
+        summary='Update current user',
+        description='Update the currently authenticated user profile.',
+    ),
+    patch=extend_schema(
+        tags=['Authentication'],
+        summary='Partial update current user',
+        description='Partially update the currently authenticated user profile.',
+    ),
+)
 class CurrentUserView(generics.RetrieveUpdateAPIView):
     """
     Get and update current user information
@@ -256,13 +307,22 @@ class CurrentUserView(generics.RetrieveUpdateAPIView):
         return response
 
 
+@extend_schema(
+    tags=['Authentication'],
+    summary='Change password',
+    description='Change the current user password. Requires old password verification.',
+    responses={
+        200: OpenApiTypes.OBJECT,
+        400: OpenApiTypes.OBJECT,
+    },
+)
 class ChangePasswordView(generics.GenericAPIView):
     """
     Change user password
     """
     permission_classes = [IsAuthenticated]
     serializer_class = ChangePasswordSerializer
-    
+
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -291,6 +351,14 @@ class ChangePasswordView(generics.GenericAPIView):
         return Response({'message': 'Password changed successfully'})
 
 
+@extend_schema_view(
+    list=extend_schema(tags=['Authentication'], summary='List organizations'),
+    retrieve=extend_schema(tags=['Authentication'], summary='Get organization'),
+    create=extend_schema(tags=['Authentication'], summary='Create organization', description='Admin only'),
+    update=extend_schema(tags=['Authentication'], summary='Update organization', description='Admin only'),
+    partial_update=extend_schema(tags=['Authentication'], summary='Partial update organization', description='Admin only'),
+    destroy=extend_schema(tags=['Authentication'], summary='Delete organization', description='Admin only'),
+)
 class OrganizationViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Organization CRUD
@@ -315,6 +383,14 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         return Organization.objects.none()
 
 
+@extend_schema_view(
+    list=extend_schema(tags=['Authentication'], summary='List user profiles'),
+    retrieve=extend_schema(tags=['Authentication'], summary='Get user profile'),
+    create=extend_schema(tags=['Authentication'], summary='Create user profile', description='Admin only'),
+    update=extend_schema(tags=['Authentication'], summary='Update user profile', description='Admin only'),
+    partial_update=extend_schema(tags=['Authentication'], summary='Partial update user profile', description='Admin only'),
+    destroy=extend_schema(tags=['Authentication'], summary='Delete user profile', description='Admin only'),
+)
 class UserProfileViewSet(viewsets.ModelViewSet):
     """
     ViewSet for UserProfile management
@@ -337,6 +413,10 @@ class UserProfileViewSet(viewsets.ModelViewSet):
         )
 
 
+@extend_schema_view(
+    list=extend_schema(tags=['Authentication'], summary='List audit logs', description='Manager/Admin only'),
+    retrieve=extend_schema(tags=['Authentication'], summary='Get audit log', description='Manager/Admin only'),
+)
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     """
     ViewSet for viewing audit logs
@@ -355,6 +435,15 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         )
 
 
+@extend_schema(
+    tags=['Authentication'],
+    summary='Refresh JWT token',
+    description='Refresh access token using refresh token from HTTP-only cookie.',
+    responses={
+        200: OpenApiTypes.OBJECT,
+        401: OpenApiTypes.OBJECT,
+    },
+)
 class CookieTokenRefreshView(generics.GenericAPIView):
     """
     Custom token refresh endpoint that reads refresh token from HTTP-only cookie
@@ -389,6 +478,23 @@ class CookieTokenRefreshView(generics.GenericAPIView):
             )
 
 
+@extend_schema_view(
+    get=extend_schema(
+        tags=['Authentication'],
+        summary='Get user preferences',
+        description='Get the current user preferences.',
+    ),
+    put=extend_schema(
+        tags=['Authentication'],
+        summary='Replace user preferences',
+        description='Replace all user preferences.',
+    ),
+    patch=extend_schema(
+        tags=['Authentication'],
+        summary='Update user preferences',
+        description='Merge with existing user preferences.',
+    ),
+)
 class UserPreferencesView(generics.GenericAPIView):
     """
     Get and update user preferences
@@ -462,3 +568,146 @@ class UserPreferencesView(generics.GenericAPIView):
         )
 
         return Response(profile.preferences)
+
+
+# =============================================================================
+# User Organization Membership Endpoints
+# =============================================================================
+
+@extend_schema(
+    tags=['Authentication'],
+    summary='List user organization memberships',
+    description='Returns all organizations the current user has access to with their roles.',
+    responses={200: OpenApiTypes.OBJECT},
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_organizations(request):
+    """
+    List all organizations the current user has access to.
+    Returns organization memberships with roles.
+    """
+    from .models import UserOrganizationMembership
+    from .serializers import UserOrganizationMembershipSerializer
+
+    memberships = UserOrganizationMembership.objects.filter(
+        user=request.user,
+        is_active=True
+    ).select_related('organization')
+
+    serializer = UserOrganizationMembershipSerializer(memberships, many=True)
+
+    return Response({
+        'organizations': serializer.data,
+        'count': memberships.count()
+    })
+
+
+@extend_schema(
+    tags=['Authentication'],
+    summary='Switch primary organization',
+    description='Set a new primary organization for the current user.',
+    request=OpenApiTypes.OBJECT,
+    responses={
+        200: OpenApiTypes.OBJECT,
+        403: OpenApiTypes.OBJECT,
+        404: OpenApiTypes.OBJECT,
+    },
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def switch_organization(request, org_id):
+    """
+    Switch the user's primary organization.
+    The user must have an active membership in the target organization.
+    """
+    from .models import UserOrganizationMembership
+    from .organization_utils import user_can_access_org
+
+    # Check if user has access to the target organization
+    if not user_can_access_org(request.user, org_id):
+        return Response(
+            {'error': 'You do not have access to this organization'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Update primary flag
+    UserOrganizationMembership.objects.filter(
+        user=request.user,
+        is_primary=True
+    ).update(is_primary=False)
+
+    updated = UserOrganizationMembership.objects.filter(
+        user=request.user,
+        organization_id=org_id
+    ).update(is_primary=True)
+
+    if not updated:
+        return Response(
+            {'error': 'Membership not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Log action
+    log_action(
+        user=request.user,
+        action='update',
+        resource='organization_membership',
+        resource_id=str(org_id),
+        request=request,
+        details={'organization_id': org_id}
+    )
+
+    return Response({'message': 'Primary organization updated', 'organization_id': org_id})
+
+
+class UserOrganizationMembershipViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing user organization memberships.
+    Only org admins can manage memberships in their organizations.
+    """
+    from .serializers import UserOrganizationMembershipSerializer
+    serializer_class = UserOrganizationMembershipSerializer
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def get_queryset(self):
+        from .models import UserOrganizationMembership
+
+        if not hasattr(self.request.user, 'profile'):
+            return UserOrganizationMembership.objects.none()
+
+        # Superusers can see all memberships
+        if self.request.user.is_superuser:
+            return UserOrganizationMembership.objects.all().select_related(
+                'user', 'organization'
+            )
+
+        # Admins can only see memberships in organizations they are admin of
+        admin_org_ids = UserOrganizationMembership.objects.filter(
+            user=self.request.user,
+            role='admin',
+            is_active=True
+        ).values_list('organization_id', flat=True)
+
+        return UserOrganizationMembership.objects.filter(
+            organization_id__in=admin_org_ids
+        ).select_related('user', 'organization')
+
+    def perform_create(self, serializer):
+        from .models import UserOrganizationMembership
+
+        # Set invited_by to current user
+        serializer.save(invited_by=self.request.user)
+
+        # Log action
+        log_action(
+            user=self.request.user,
+            action='create',
+            resource='organization_membership',
+            resource_id=str(serializer.instance.id),
+            request=self.request,
+            details={
+                'organization_id': serializer.instance.organization_id,
+                'target_id': serializer.instance.user_id,
+            }
+        )

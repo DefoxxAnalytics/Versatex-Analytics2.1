@@ -1,7 +1,17 @@
 """
-Custom permissions for role-based access control
+Custom permissions for role-based access control.
+
+Supports both single-org users (legacy) and multi-org users (via UserOrganizationMembership).
 """
 from rest_framework import permissions
+
+from .organization_utils import (
+    get_target_organization,
+    user_can_access_org,
+    user_is_admin_in_org,
+    user_is_manager_in_org,
+    get_user_role_in_org,
+)
 
 
 class IsAdmin(permissions.BasePermission):
@@ -75,6 +85,7 @@ class IsSameOrganization(permissions.BasePermission):
     """
     Permission class to ensure users can only access their organization's data.
 
+    Supports multi-org users: checks if user has any membership in the object's org.
     Super admins (Django superusers) bypass this check and can access data
     from any organization.
     """
@@ -89,15 +100,18 @@ class IsSameOrganization(permissions.BasePermission):
         if not hasattr(request.user, 'profile'):
             return False
 
-        # Check if object has organization field
+        # Get the object's organization
+        obj_org = None
         if hasattr(obj, 'organization'):
-            return obj.organization == request.user.profile.organization
+            obj_org = obj.organization
+        elif hasattr(obj, 'user') and hasattr(obj.user, 'profile'):
+            obj_org = obj.user.profile.organization
 
-        # Check if object has user field with profile
-        if hasattr(obj, 'user') and hasattr(obj.user, 'profile'):
-            return obj.user.profile.organization == request.user.profile.organization
+        if not obj_org:
+            return False
 
-        return False
+        # Check if user has access to this organization (supports multi-org)
+        return user_can_access_org(request.user, obj_org)
 
 
 # =============================================================================
