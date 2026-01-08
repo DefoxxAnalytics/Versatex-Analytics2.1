@@ -192,6 +192,8 @@ REST_FRAMEWORK = {
         'compliance': '100/hour',  # Compliance rate limiting
         'report_generate': '20/hour',  # Report generation rate limiting (expensive)
         'report_download': '60/hour',  # Report download rate limiting
+        'p2p_analytics': '200/hour',   # P2P analytics read operations
+        'p2p_write': '30/hour',        # P2P write operations (exception resolution)
     },
     'EXCEPTION_HANDLER': 'config.exception_handler.custom_exception_handler',
 }
@@ -298,9 +300,42 @@ CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://localho
 
 # API Documentation
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Analytics Dashboard API',
-    'DESCRIPTION': 'REST API for procurement analytics dashboard',
-    'VERSION': '1.0.0',
+    'TITLE': 'Versatex Analytics API',
+    'DESCRIPTION': '''
+REST API for Versatex Analytics - Enterprise Procurement Analytics Platform.
+
+## Overview
+This API provides endpoints for:
+- **Authentication**: User registration, login, JWT tokens
+- **Procurement**: Suppliers, categories, transactions, CSV uploads
+- **Analytics**: Spend analysis, Pareto, stratification, seasonality, YoY
+- **Reports**: Report generation, scheduling, downloads (PDF/Excel/CSV)
+- **P2P Analytics**: Procure-to-Pay cycle analysis, 3-way matching, invoice aging
+
+## Authentication
+All endpoints require JWT authentication. Include the access token in the Authorization header:
+```
+Authorization: Bearer <access_token>
+```
+
+## Multi-Tenancy
+Data is scoped by organization. Superusers can specify `organization_id` query parameter.
+    ''',
+    'VERSION': '2.5.0',
+    'TAGS': [
+        {'name': 'Authentication', 'description': 'User authentication and authorization'},
+        {'name': 'Procurement', 'description': 'Suppliers, categories, and transactions'},
+        {'name': 'Analytics', 'description': 'Spend analytics and insights'},
+        {'name': 'Reports', 'description': 'Report generation and scheduling'},
+        {'name': 'P2P Analytics - Cycle Time', 'description': 'P2P process cycle time analysis'},
+        {'name': 'P2P Analytics - 3-Way Matching', 'description': 'Invoice matching and exception management'},
+        {'name': 'P2P Analytics - Invoice Aging', 'description': 'Accounts payable aging analysis'},
+        {'name': 'P2P Analytics - Requisitions', 'description': 'Purchase requisition analytics'},
+        {'name': 'P2P Analytics - Purchase Orders', 'description': 'Purchase order analytics and compliance'},
+        {'name': 'P2P Analytics - Supplier Payments', 'description': 'Supplier payment performance (Admin only)'},
+    ],
+    'CONTACT': {'name': 'Defoxx Analytics', 'url': 'https://github.com/DefoxxAnalytics'},
+    'LICENSE': {'name': 'Proprietary'},
 }
 
 # Security Settings - Always applied (not just in production)

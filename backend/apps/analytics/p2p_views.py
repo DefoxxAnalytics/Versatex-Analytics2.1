@@ -10,6 +10,8 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
+from drf_spectacular.types import OpenApiTypes
 
 from apps.authentication.utils import log_action
 from apps.authentication.permissions import (
@@ -22,6 +24,34 @@ from apps.authentication.permissions import (
 from apps.procurement.models import Invoice
 from .views import get_target_organization, validate_int_param
 from .p2p_services import P2PAnalyticsService
+
+
+# =============================================================================
+# Common OpenAPI Parameters
+# =============================================================================
+ORGANIZATION_ID_PARAM = OpenApiParameter(
+    name='organization_id',
+    type=OpenApiTypes.INT,
+    location=OpenApiParameter.QUERY,
+    description='Organization ID (superusers only)',
+    required=False,
+)
+
+MONTHS_PARAM = OpenApiParameter(
+    name='months',
+    type=OpenApiTypes.INT,
+    location=OpenApiParameter.QUERY,
+    description='Number of months to analyze (default: 12, range: 1-36)',
+    required=False,
+)
+
+LIMIT_PARAM = OpenApiParameter(
+    name='limit',
+    type=OpenApiTypes.INT,
+    location=OpenApiParameter.QUERY,
+    description='Maximum number of results to return',
+    required=False,
+)
 
 
 class P2PAnalyticsThrottle(ScopedRateThrottle):
@@ -38,6 +68,25 @@ class P2PWriteThrottle(ScopedRateThrottle):
 # P2P Cycle Time Analysis Endpoints
 # =============================================================================
 
+@extend_schema(
+    tags=['P2P Analytics - Cycle Time'],
+    summary='Get P2P cycle overview',
+    description='''
+Get end-to-end P2P cycle time metrics.
+
+Returns average days for each stage:
+- **PR to PO**: Average days from requisition creation to PO approval
+- **PO to GR**: Average days from PO sent to goods received
+- **GR to Invoice**: Average days from receipt to invoice received
+- **Invoice to Payment**: Average days from invoice to payment
+- **Total Cycle**: End-to-end average cycle time
+    ''',
+    parameters=[ORGANIZATION_ID_PARAM],
+    responses={
+        200: OpenApiTypes.OBJECT,
+        400: OpenApiTypes.OBJECT,
+    },
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, HasP2PAccess])
 @throttle_classes([P2PAnalyticsThrottle])
@@ -73,6 +122,13 @@ def p2p_cycle_overview(request):
     return Response(data)
 
 
+@extend_schema(
+    tags=['P2P Analytics - Cycle Time'],
+    summary='Get P2P cycle times by category',
+    description='Returns P2P cycle time metrics broken down by spend category.',
+    parameters=[ORGANIZATION_ID_PARAM],
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT},
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, HasP2PAccess])
 @throttle_classes([P2PAnalyticsThrottle])
@@ -98,6 +154,13 @@ def p2p_cycle_by_category(request):
     return Response(data)
 
 
+@extend_schema(
+    tags=['P2P Analytics - Cycle Time'],
+    summary='Get P2P cycle times by supplier',
+    description='Returns P2P cycle time metrics broken down by supplier.',
+    parameters=[ORGANIZATION_ID_PARAM],
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT},
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, HasP2PAccess])
 @throttle_classes([P2PAnalyticsThrottle])
@@ -123,6 +186,13 @@ def p2p_cycle_by_supplier(request):
     return Response(data)
 
 
+@extend_schema(
+    tags=['P2P Analytics - Cycle Time'],
+    summary='Get P2P cycle time trends',
+    description='Returns monthly trend of P2P cycle times over the specified period.',
+    parameters=[MONTHS_PARAM, ORGANIZATION_ID_PARAM],
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT},
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, HasP2PAccess])
 @throttle_classes([P2PAnalyticsThrottle])
@@ -146,6 +216,13 @@ def p2p_cycle_trends(request):
     return Response(data)
 
 
+@extend_schema(
+    tags=['P2P Analytics - Cycle Time'],
+    summary='Get P2P process bottlenecks',
+    description='Identifies bottlenecks in the P2P process with variance analysis and recommendations.',
+    parameters=[ORGANIZATION_ID_PARAM],
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT},
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, HasP2PAccess])
 @throttle_classes([P2PAnalyticsThrottle])
@@ -179,6 +256,13 @@ def p2p_bottlenecks(request):
     return Response(data)
 
 
+@extend_schema(
+    tags=['P2P Analytics - Cycle Time'],
+    summary='Get P2P process funnel',
+    description='Returns process funnel visualization data showing document flow (PRs → POs → GRs → Paid).',
+    parameters=[MONTHS_PARAM, ORGANIZATION_ID_PARAM],
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT},
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, HasP2PAccess])
 @throttle_classes([P2PAnalyticsThrottle])
@@ -205,6 +289,22 @@ def p2p_process_funnel(request):
     return Response(data)
 
 
+@extend_schema(
+    tags=['P2P Analytics - Cycle Time'],
+    summary='Get P2P stage drilldown',
+    description='Returns detailed breakdown for a specific P2P stage with the top 10 slowest items.',
+    parameters=[
+        OpenApiParameter(
+            name='stage',
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.PATH,
+            description='Stage: pr_to_po, po_to_gr, gr_to_invoice, or invoice_to_payment',
+            enum=['pr_to_po', 'po_to_gr', 'gr_to_invoice', 'invoice_to_payment'],
+        ),
+        ORGANIZATION_ID_PARAM,
+    ],
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT},
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, HasP2PAccess])
 @throttle_classes([P2PAnalyticsThrottle])
@@ -240,6 +340,22 @@ def p2p_stage_drilldown(request, stage):
 # 3-Way Matching Analysis Endpoints
 # =============================================================================
 
+@extend_schema(
+    tags=['P2P Analytics - 3-Way Matching'],
+    summary='Get matching overview',
+    description='''
+Get 3-way match rates and exception metrics.
+
+Returns:
+- Total invoices processed
+- 3-way matched percentage
+- 2-way matched percentage
+- Exception rate and amount
+- Average resolution time
+    ''',
+    parameters=[ORGANIZATION_ID_PARAM],
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT},
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, HasP2PAccess])
 @throttle_classes([P2PAnalyticsThrottle])
@@ -275,6 +391,38 @@ def matching_overview(request):
     return Response(data)
 
 
+@extend_schema(
+    tags=['P2P Analytics - 3-Way Matching'],
+    summary='Get invoice exceptions',
+    description='Returns list of invoice exceptions with filtering options.',
+    parameters=[
+        OpenApiParameter(
+            name='status',
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description='Filter by status (default: open)',
+            enum=['open', 'resolved', 'all'],
+            required=False,
+        ),
+        OpenApiParameter(
+            name='exception_type',
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description='Filter by exception type',
+            enum=['price_variance', 'quantity_variance', 'no_po', 'duplicate', 'missing_gr', 'other'],
+            required=False,
+        ),
+        OpenApiParameter(
+            name='limit',
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            description='Maximum results (default: 100, max: 500)',
+            required=False,
+        ),
+        ORGANIZATION_ID_PARAM,
+    ],
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT},
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, HasP2PAccess])
 @throttle_classes([P2PAnalyticsThrottle])
@@ -321,6 +469,13 @@ def matching_exceptions(request):
     })
 
 
+@extend_schema(
+    tags=['P2P Analytics - 3-Way Matching'],
+    summary='Get exceptions by type',
+    description='Returns breakdown of exceptions by type with count and amount.',
+    parameters=[ORGANIZATION_ID_PARAM],
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT},
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, HasP2PAccess])
 @throttle_classes([P2PAnalyticsThrottle])
@@ -348,6 +503,13 @@ def exceptions_by_type(request):
     return Response(data)
 
 
+@extend_schema(
+    tags=['P2P Analytics - 3-Way Matching'],
+    summary='Get exceptions by supplier',
+    description='Returns suppliers ranked by exception rate with detailed metrics.',
+    parameters=[ORGANIZATION_ID_PARAM],
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT},
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, HasP2PAccess])
 @throttle_classes([P2PAnalyticsThrottle])
@@ -453,6 +615,33 @@ def invoice_match_detail(request, invoice_id):
     return Response(data)
 
 
+@extend_schema(
+    tags=['P2P Analytics - 3-Way Matching'],
+    summary='Resolve invoice exception',
+    description='Resolves an invoice exception. Only managers and admins can resolve exceptions.',
+    parameters=[
+        OpenApiParameter(
+            name='invoice_id',
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.PATH,
+            description='Invoice ID',
+        ),
+        ORGANIZATION_ID_PARAM,
+    ],
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'resolution_notes': {
+                    'type': 'string',
+                    'description': 'Notes explaining the resolution (required, max 2000 chars)',
+                },
+            },
+            'required': ['resolution_notes'],
+        }
+    },
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT},
+)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, CanResolveExceptions])
 @throttle_classes([P2PWriteThrottle])
@@ -579,6 +768,23 @@ def bulk_resolve_exceptions(request):
 # Invoice Aging / AP Analysis Endpoints
 # =============================================================================
 
+@extend_schema(
+    tags=['P2P Analytics - Invoice Aging'],
+    summary='Get invoice aging overview',
+    description='''
+Get invoice aging overview with bucket totals.
+
+Aging buckets:
+- **Current (0-30 days)**: Not yet due
+- **31-60 days**: Coming due soon
+- **61-90 days**: Overdue
+- **90+ days**: Significantly overdue
+
+Plus total AP, overdue amount, and DPO.
+    ''',
+    parameters=[ORGANIZATION_ID_PARAM],
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT},
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, HasP2PAccess])
 @throttle_classes([P2PAnalyticsThrottle])
@@ -615,6 +821,13 @@ def aging_overview(request):
     return Response(data)
 
 
+@extend_schema(
+    tags=['P2P Analytics - Invoice Aging'],
+    summary='Get aging by supplier',
+    description='Returns invoice aging breakdown by supplier with AP balances and payment metrics.',
+    parameters=[ORGANIZATION_ID_PARAM],
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT},
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, HasP2PAccess])
 @throttle_classes([P2PAnalyticsThrottle])
@@ -732,6 +945,21 @@ def cash_flow_forecast(request):
 # Purchase Requisition Analysis Endpoints
 # =============================================================================
 
+@extend_schema(
+    tags=['P2P Analytics - Requisitions'],
+    summary='Get PR overview',
+    description='''
+Get Purchase Requisition overview metrics.
+
+Returns:
+- Total PRs count
+- Conversion rate (PR to PO)
+- Average approval time
+- Rejection rate
+    ''',
+    parameters=[ORGANIZATION_ID_PARAM],
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT},
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, HasP2PAccess])
 @throttle_classes([P2PAnalyticsThrottle])
@@ -872,6 +1100,21 @@ def pr_detail(request, pr_id):
 # Purchase Order Analysis Endpoints
 # =============================================================================
 
+@extend_schema(
+    tags=['P2P Analytics - Purchase Orders'],
+    summary='Get PO overview',
+    description='''
+Get Purchase Order overview metrics.
+
+Returns:
+- Total POs count and value
+- Contract coverage percentage
+- Amendment rate
+- Average PO value
+    ''',
+    parameters=[ORGANIZATION_ID_PARAM],
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT},
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, HasP2PAccess])
 @throttle_classes([P2PAnalyticsThrottle])
@@ -906,6 +1149,13 @@ def po_overview(request):
     return Response(data)
 
 
+@extend_schema(
+    tags=['P2P Analytics - Purchase Orders'],
+    summary='Get PO leakage analysis',
+    description='Identifies off-contract PO spending (maverick spend) with consolidation recommendations.',
+    parameters=[ORGANIZATION_ID_PARAM],
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT},
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, HasP2PAccess])
 @throttle_classes([P2PAnalyticsThrottle])
@@ -1025,6 +1275,21 @@ def po_detail(request, po_id):
 # Supplier Payment Performance Endpoints
 # =============================================================================
 
+@extend_schema(
+    tags=['P2P Analytics - Supplier Payments'],
+    summary='Get supplier payments overview',
+    description='''
+Get supplier payment performance overview. **Admin access required.**
+
+Returns:
+- Total suppliers with AP
+- Overall on-time payment rate
+- Average DPO by supplier
+- Exception rate overview
+    ''',
+    parameters=[ORGANIZATION_ID_PARAM],
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT, 403: OpenApiTypes.OBJECT},
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, HasP2PAccess, CanViewPaymentData])
 @throttle_classes([P2PAnalyticsThrottle])
@@ -1061,6 +1326,22 @@ def supplier_payments_overview(request):
     return Response(data)
 
 
+@extend_schema(
+    tags=['P2P Analytics - Supplier Payments'],
+    summary='Get supplier payments scorecard',
+    description='Returns suppliers ranked by payment performance score. **Admin access required.**',
+    parameters=[
+        OpenApiParameter(
+            name='limit',
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            description='Maximum results (default: 50, max: 200)',
+            required=False,
+        ),
+        ORGANIZATION_ID_PARAM,
+    ],
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT, 403: OpenApiTypes.OBJECT},
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, HasP2PAccess, CanViewPaymentData])
 @throttle_classes([P2PAnalyticsThrottle])
