@@ -1,7 +1,7 @@
 """
 Authentication models for organization-based multi-tenancy
 """
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -86,7 +86,7 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     organization = models.ForeignKey(
         Organization,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,  # Prevent accidental organization deletion when users exist
         related_name='users'
     )
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='viewer')
@@ -197,7 +197,7 @@ class UserOrganizationMembership(models.Model):
     )
     organization = models.ForeignKey(
         Organization,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,  # Prevent accidental organization deletion when memberships exist
         related_name='user_memberships'
     )
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='viewer')
@@ -237,14 +237,25 @@ class UserOrganizationMembership(models.Model):
         return f"{self.user.username} - {self.organization.name} ({self.role}){primary_tag}"
 
     def save(self, *args, **kwargs):
-        """Ensure only one primary membership per user."""
+        """
+        Ensure only one primary membership per user.
+
+        Uses atomic transaction with select_for_update to prevent race conditions
+        where concurrent requests could both set is_primary=True.
+        """
         if self.is_primary:
-            # Unset other primaries for this user
-            UserOrganizationMembership.objects.filter(
-                user=self.user,
-                is_primary=True
-            ).exclude(pk=self.pk).update(is_primary=False)
-        super().save(*args, **kwargs)
+            # Use atomic transaction to prevent race conditions
+            with transaction.atomic():
+                # Lock existing primary memberships for this user to prevent races
+                existing_primaries = UserOrganizationMembership.objects.select_for_update().filter(
+                    user=self.user,
+                    is_primary=True
+                ).exclude(pk=self.pk)
+                # Unset other primaries for this user
+                existing_primaries.update(is_primary=False)
+                super().save(*args, **kwargs)
+        else:
+            super().save(*args, **kwargs)
 
     def is_admin(self):
         """Check if this membership has admin role."""

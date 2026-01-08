@@ -31,11 +31,15 @@ urlpatterns = [
     path('api/analytics/', include('apps.analytics.urls')),
     path('api/reports/', include('apps.reports.urls')),
 
-    # API Documentation (only in development)
-    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 ]
+
+# API Documentation - only available in DEBUG mode (security: prevent endpoint enumeration in production)
+if settings.DEBUG:
+    urlpatterns += [
+        path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+        path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+        path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    ]
 
 # Serve media files in development only
 if settings.DEBUG:

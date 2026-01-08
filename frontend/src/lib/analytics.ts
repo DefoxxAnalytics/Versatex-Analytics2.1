@@ -12,6 +12,64 @@ import type { Filters } from '../hooks/useFilters';
  */
 
 /**
+ * Format a number as USD currency
+ *
+ * @param amount - The numeric amount to format
+ * @returns Formatted currency string (e.g., "$1,234,567")
+ *
+ * @example
+ * ```ts
+ * formatCurrency(1234567.89) // Returns "$1,234,568"
+ * formatCurrency(0) // Returns "$0"
+ * ```
+ */
+export function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+/**
+ * Format a number as a percentage
+ *
+ * @param value - The numeric value (e.g., 0.75 for 75%)
+ * @param decimals - Number of decimal places (default: 1)
+ * @returns Formatted percentage string (e.g., "75.0%")
+ *
+ * @example
+ * ```ts
+ * formatPercent(0.756) // Returns "75.6%"
+ * formatPercent(1.2345, 2) // Returns "123.45%"
+ * ```
+ */
+export function formatPercent(value: number, decimals: number = 1): string {
+  return `${(value * 100).toFixed(decimals)}%`
+}
+
+/**
+ * Format a number with compact notation for large values
+ *
+ * @param value - The numeric value to format
+ * @returns Formatted string with K/M/B suffix (e.g., "1.2M")
+ *
+ * @example
+ * ```ts
+ * formatCompact(1234567) // Returns "1.2M"
+ * formatCompact(1234) // Returns "1.2K"
+ * ```
+ */
+export function formatCompact(value: number): string {
+  return new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    compactDisplay: 'short',
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
+/**
  * Apply filters to procurement data
  *
  * Filters data based on date range, categories, suppliers, and amount range.

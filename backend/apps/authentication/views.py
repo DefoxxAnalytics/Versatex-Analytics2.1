@@ -438,16 +438,20 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
 @extend_schema(
     tags=['Authentication'],
     summary='Refresh JWT token',
-    description='Refresh access token using refresh token from HTTP-only cookie.',
+    description='Refresh access token using refresh token from HTTP-only cookie. Rate limited to 30 requests per minute.',
     responses={
         200: OpenApiTypes.OBJECT,
         401: OpenApiTypes.OBJECT,
+        429: OpenApiTypes.OBJECT,
     },
 )
+@method_decorator(ratelimit(key='ip', rate='30/m', method='POST', block=True), name='dispatch')
 class CookieTokenRefreshView(generics.GenericAPIView):
     """
     Custom token refresh endpoint that reads refresh token from HTTP-only cookie
     and sets new tokens as HTTP-only cookies.
+
+    Rate limited to 30 requests per minute per IP to prevent token refresh abuse.
     """
     permission_classes = [AllowAny]
 

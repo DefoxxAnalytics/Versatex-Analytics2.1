@@ -189,6 +189,8 @@ class Report(models.Model):
 
     def can_access(self, user):
         """Check if user can access this report."""
+        from apps.authentication.organization_utils import user_can_access_org
+
         if user.is_superuser:
             return True
         if self.created_by == user:
@@ -197,7 +199,8 @@ class Report(models.Model):
             return True
         if self.shared_with.filter(id=user.id).exists():
             return True
-        # Check organization membership
-        if hasattr(user, 'profile') and user.profile.organization == self.organization:
+        # Check organization membership using multi-org aware utility
+        # This supports users with multiple organization memberships
+        if user_can_access_org(user, self.organization):
             return True
         return False
