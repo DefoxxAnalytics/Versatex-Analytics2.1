@@ -37,6 +37,25 @@ urlpatterns = [
     path('ai-insights/risk/', views.ai_insights_risk, name='ai-insights-risk'),
     path('ai-insights/anomalies/', views.ai_insights_anomalies, name='ai-insights-anomalies'),
 
+    # Async AI Enhancement
+    path('ai-insights/enhance/request/', views.request_ai_enhancement, name='request-ai-enhancement'),
+    path('ai-insights/enhance/status/', views.get_ai_enhancement_status, name='ai-enhancement-status'),
+
+    # Deep Analysis
+    path('ai-insights/deep-analysis/request/', views.request_deep_analysis, name='request-deep-analysis'),
+    path('ai-insights/deep-analysis/status/<str:insight_id>/', views.get_deep_analysis_status, name='deep-analysis-status'),
+
+    # AI Insight Feedback
+    path('ai-insights/feedback/', views.record_insight_feedback, name='record-insight-feedback'),
+    path('ai-insights/feedback/list/', views.list_insight_feedback, name='list-insight-feedback'),
+    path('ai-insights/feedback/effectiveness/', views.get_insight_effectiveness, name='insight-effectiveness'),
+    path('ai-insights/feedback/<uuid:feedback_id>/', views.update_insight_outcome, name='update-insight-outcome'),
+
+    # AI Insights Metrics & Monitoring (for Prometheus/Grafana integration)
+    path('ai-insights/metrics/', views.ai_insights_metrics, name='ai-insights-metrics'),
+    path('ai-insights/metrics/prometheus/', views.ai_insights_metrics_prometheus, name='ai-insights-metrics-prometheus'),
+    path('ai-insights/cache/invalidate/', views.ai_insights_cache_invalidate, name='ai-insights-cache-invalidate'),
+
     # Predictive Analytics
     path('predictions/spending/', views.spending_forecast, name='spending-forecast'),
     path('predictions/category/<int:category_id>/', views.category_forecast, name='category-forecast'),
