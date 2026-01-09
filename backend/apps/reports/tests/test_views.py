@@ -248,8 +248,23 @@ class TestReportList:
         assert response.data['total'] == 15
         assert response.data['limit'] == 5
 
-    def test_list_reports_organization_scoped(self, admin_client, other_org_client, organization, other_organization, admin_user, other_org_user):
+    def test_list_reports_organization_scoped(self, admin_client, organization, other_organization, admin_user):
         """Test that reports are scoped by organization."""
+        # Create a user for the other org directly to avoid api_client collision
+        from apps.authentication.models import UserProfile
+        from django.contrib.auth.models import User
+        other_user = User.objects.create_user(
+            username='otheruser_isolated',
+            email='other_isolated@example.com',
+            password='TestPass123!'
+        )
+        UserProfile.objects.create(
+            user=other_user,
+            organization=other_organization,
+            role='admin',
+            is_active=True
+        )
+
         Report.objects.create(
             organization=organization,
             created_by=admin_user,
@@ -258,7 +273,7 @@ class TestReportList:
         )
         Report.objects.create(
             organization=other_organization,
-            created_by=other_org_user,
+            created_by=other_user,
             report_type='spend_analysis',
             name='Org 2 Report'
         )

@@ -294,6 +294,8 @@ class AuditLog(models.Model):
         ('reset', 'Reset'),           # Organization reset
         ('bulk_delete', 'Bulk Delete'),  # Delete all data
         ('generate', 'Generate'),  # Report generation
+        ('share', 'Share'),            # Report sharing
+        ('execute', 'Execute'),        # Schedule execution
     ]
 
     # Allowed keys for the details JSONField (security: prevent arbitrary data injection)
@@ -315,6 +317,7 @@ class AuditLog(models.Model):
         'duplicates', 'skipped', 'template_name', 'mapping_snapshot', 'processing_mode',
         # Reports module keys
         'report_type', 'report_id', 'schedule_id', 'format', 'async', 'name',
+        'is_public', 'shared_count', 'frequency',  # Report sharing and scheduling
         # P2P Analytics keys
         'weeks', 'stage', 'invoice_id', 'pr_id', 'po_id', 'limit',
         'status', 'exception_type', 'resolved_count', 'failed_count'

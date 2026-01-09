@@ -452,3 +452,505 @@ class TestRendererDataHandling:
         # Should render without errors
         result.seek(0)
         assert result.read(4) == b'%PDF'
+
+
+# ============================================================================
+# PDF Renderer Extended Tests
+# ============================================================================
+
+@pytest.mark.django_db
+class TestPDFRendererReportTypes:
+    """Tests for PDF rendering of different report types."""
+
+    def test_render_executive_summary(self):
+        """Test rendering executive summary report type."""
+        data = {
+            'metadata': {
+                'report_type': 'executive_summary',
+                'report_title': 'Executive Summary',
+                'organization': 'Acme Corp',
+                'generated_at': '2024-06-15T10:30:00',
+                'period_start': '2024-01-01',
+                'period_end': '2024-06-30'
+            },
+            'overview': {
+                'total_spend': 2500000,
+                'supplier_count': 150,
+                'transaction_count': 5000,
+                'avg_transaction': 500.00
+            },
+            'insights': [
+                {'type': 'opportunity', 'title': 'Cost Reduction', 'description': 'Consolidate suppliers'}
+            ]
+        }
+        renderer = PDFRenderer(data, "Executive Summary")
+        result = renderer.render()
+
+        result.seek(0)
+        assert result.read(4) == b'%PDF'
+
+    def test_render_supplier_performance(self):
+        """Test rendering supplier performance report type."""
+        data = {
+            'metadata': {
+                'report_type': 'supplier_performance',
+                'report_title': 'Supplier Performance Report',
+                'organization': 'Test Org'
+            },
+            'suppliers': [
+                {
+                    'supplier': 'Top Vendor',
+                    'total_spend': 500000,
+                    'transaction_count': 200,
+                    'percent_of_total': 25.5,
+                    'categories': ['IT', 'Office']
+                },
+                {
+                    'supplier': 'Second Vendor',
+                    'total_spend': 300000,
+                    'transaction_count': 150,
+                    'percent_of_total': 15.2,
+                    'categories': ['Services']
+                }
+            ]
+        }
+        renderer = PDFRenderer(data, "Supplier Performance")
+        result = renderer.render()
+
+        result.seek(0)
+        assert result.read(4) == b'%PDF'
+
+    def test_render_pareto_analysis(self):
+        """Test rendering Pareto analysis report type."""
+        data = {
+            'metadata': {
+                'report_type': 'pareto_analysis',
+                'report_title': 'Pareto Analysis',
+                'organization': 'Test Org'
+            },
+            'supplier_ranking': [
+                {'supplier': f'Supplier {i}', 'amount': 1000 * (20 - i), 'cumulative_percentage': i * 5}
+                for i in range(1, 21)
+            ],
+            'spend_by_classification': {
+                'class_a': 70,
+                'class_b': 20,
+                'class_c': 10
+            }
+        }
+        renderer = PDFRenderer(data, "Pareto Analysis")
+        result = renderer.render()
+
+        result.seek(0)
+        assert result.read(4) == b'%PDF'
+
+    def test_render_stratification_report(self):
+        """Test rendering stratification report type."""
+        data = {
+            'metadata': {
+                'report_type': 'stratification',
+                'report_title': 'Spend Stratification',
+                'organization': 'Test Org'
+            },
+            'segments': [
+                {'segment': 'Strategic', 'spend': 1500000, 'supplier_count': 10, 'percentage': 50},
+                {'segment': 'Leverage', 'spend': 750000, 'supplier_count': 25, 'percentage': 25},
+                {'segment': 'Routine', 'spend': 450000, 'supplier_count': 50, 'percentage': 15},
+                {'segment': 'Tactical', 'spend': 300000, 'supplier_count': 100, 'percentage': 10}
+            ]
+        }
+        renderer = PDFRenderer(data, "Spend Stratification")
+        result = renderer.render()
+
+        result.seek(0)
+        assert result.read(4) == b'%PDF'
+
+    def test_render_seasonality_report(self):
+        """Test rendering seasonality report type."""
+        data = {
+            'metadata': {
+                'report_type': 'seasonality',
+                'report_title': 'Seasonality Analysis',
+                'organization': 'Test Org'
+            },
+            'monthly_analysis': [
+                {'month': f'2024-{i:02d}', 'spend': 100000 + i * 5000, 'seasonal_index': 0.8 + (i % 4) * 0.1}
+                for i in range(1, 13)
+            ],
+            'peak_month': 'December',
+            'trough_month': 'February'
+        }
+        renderer = PDFRenderer(data, "Seasonality Analysis")
+        result = renderer.render()
+
+        result.seek(0)
+        assert result.read(4) == b'%PDF'
+
+    def test_render_yoy_report(self):
+        """Test rendering year-over-year report type."""
+        data = {
+            'metadata': {
+                'report_type': 'year_over_year',
+                'report_title': 'Year-over-Year Analysis',
+                'organization': 'Test Org'
+            },
+            'summary': {
+                'year1': 2023,
+                'year2': 2024,
+                'year1_spend': 2000000,
+                'year2_spend': 2300000,
+                'change': 15.0
+            },
+            'monthly_comparison': [
+                {'month': f'Month {i}', 'year1_spend': 150000 + i * 1000, 'year2_spend': 175000 + i * 1500}
+                for i in range(1, 13)
+            ]
+        }
+        renderer = PDFRenderer(data, "YoY Analysis")
+        result = renderer.render()
+
+        result.seek(0)
+        assert result.read(4) == b'%PDF'
+
+
+@pytest.mark.django_db
+class TestPDFRendererKPICards:
+    """Tests for PDF KPI card rendering."""
+
+    def test_render_with_kpi_data(self):
+        """Test rendering with KPI overview data."""
+        data = {
+            'metadata': {
+                'report_title': 'KPI Report',
+                'organization': 'Test Org'
+            },
+            'overview': {
+                'total_spend': 1500000,
+                'supplier_count': 75,
+                'transaction_count': 2500,
+                'avg_transaction': 600.00,
+                'ytd_change': 12.5,
+                'category_count': 20
+            }
+        }
+        renderer = PDFRenderer(data, "KPI Report")
+        result = renderer.render()
+
+        result.seek(0)
+        assert result.read(4) == b'%PDF'
+
+    def test_render_with_long_kpi_values(self):
+        """Test KPI cards with very long values."""
+        data = {
+            'metadata': {
+                'report_title': 'Long Value Report',
+                'organization': 'Test Org'
+            },
+            'overview': {
+                'total_spend': 9999999999.99,
+                'supplier_count': 9999999,
+                'long_metric': 'This is a very long value string'
+            }
+        }
+        renderer = PDFRenderer(data, "Long Value Report")
+        result = renderer.render()
+
+        result.seek(0)
+        assert result.read(4) == b'%PDF'
+
+    def test_render_with_change_indicators(self):
+        """Test KPI cards with positive and negative changes."""
+        data = {
+            'metadata': {
+                'report_title': 'Change Indicator Report',
+                'organization': 'Test Org'
+            },
+            'overview': {
+                'total_spend': 1500000,
+                'spend_change': '+15%',
+                'supplier_count': 75,
+                'supplier_change': '-5%'
+            }
+        }
+        renderer = PDFRenderer(data, "Change Report")
+        result = renderer.render()
+
+        result.seek(0)
+        assert result.read(4) == b'%PDF'
+
+
+@pytest.mark.django_db
+class TestPDFRendererBranding:
+    """Tests for PDF branding features."""
+
+    def test_full_branding_config(self):
+        """Test rendering with complete branding configuration."""
+        data = {
+            'metadata': {
+                'report_title': 'Branded Report',
+                'organization': 'Custom Brand Corp'
+            },
+            'overview': {'total_spend': 100000}
+        }
+        branding = {
+            'name': 'Custom Brand Corp',
+            'primary_color': '#1e3a5f',
+            'secondary_color': '#2563eb',
+            'report_footer': 'Property of Custom Brand Corp - Confidential',
+            'website': 'https://www.custombrand.com'
+        }
+        renderer = PDFRenderer(data, "Branded Report", branding=branding)
+        result = renderer.render()
+
+        result.seek(0)
+        assert result.read(4) == b'%PDF'
+
+    def test_custom_colors(self):
+        """Test rendering with custom brand colors."""
+        data = {
+            'metadata': {
+                'report_title': 'Custom Colors Report',
+                'organization': 'Color Corp'
+            },
+            'spend_by_category': [
+                {'category': 'IT', 'amount': 50000, 'percentage': 50},
+                {'category': 'Office', 'amount': 30000, 'percentage': 30},
+                {'category': 'Services', 'amount': 20000, 'percentage': 20}
+            ]
+        }
+        branding = {
+            'primary_color': '#8b0000',  # Dark red
+            'secondary_color': '#ff6347'  # Tomato
+        }
+        renderer = PDFRenderer(data, "Custom Colors Report", branding=branding)
+        result = renderer.render()
+
+        result.seek(0)
+        assert result.read(4) == b'%PDF'
+
+    def test_long_footer_truncation(self):
+        """Test that very long footer text is truncated."""
+        data = {
+            'metadata': {
+                'report_title': 'Long Footer Report',
+                'organization': 'Test Org'
+            },
+            'overview': {'total_spend': 100000}
+        }
+        branding = {
+            'report_footer': 'This is an extremely long footer text that should be truncated to fit within the PDF page margins and not overflow'
+        }
+        renderer = PDFRenderer(data, "Long Footer Report", branding=branding)
+        result = renderer.render()
+
+        result.seek(0)
+        assert result.read(4) == b'%PDF'
+
+
+@pytest.mark.django_db
+class TestPDFRendererTables:
+    """Tests for PDF table rendering."""
+
+    def test_empty_table_data(self):
+        """Test rendering with empty table data."""
+        data = {
+            'metadata': {
+                'report_title': 'Empty Table Report',
+                'organization': 'Test Org'
+            },
+            'spend_by_category': []
+        }
+        renderer = PDFRenderer(data, "Empty Table Report")
+        result = renderer.render()
+
+        result.seek(0)
+        assert result.read(4) == b'%PDF'
+
+    def test_wide_table(self):
+        """Test rendering with many columns."""
+        data = {
+            'metadata': {
+                'report_title': 'Wide Table Report',
+                'organization': 'Test Org'
+            },
+            'spend_by_category': [
+                {
+                    'category': 'IT',
+                    'amount': 50000,
+                    'count': 25,
+                    'avg': 2000,
+                    'percentage': 33.3,
+                    'ytd_change': 10.5,
+                    'qoq_change': 5.2,
+                    'status': 'Active'
+                }
+            ]
+        }
+        renderer = PDFRenderer(data, "Wide Table Report")
+        result = renderer.render()
+
+        result.seek(0)
+        assert result.read(4) == b'%PDF'
+
+    def test_multiple_tables(self):
+        """Test rendering with multiple data tables."""
+        data = {
+            'metadata': {
+                'report_title': 'Multi Table Report',
+                'organization': 'Test Org'
+            },
+            'spend_by_category': [
+                {'category': 'IT', 'amount': 50000, 'percentage': 50}
+            ],
+            'spend_by_supplier': [
+                {'supplier': 'Vendor A', 'amount': 30000, 'count': 15}
+            ],
+            'monthly_trend': [
+                {'month': '2024-01', 'spend': 40000},
+                {'month': '2024-02', 'spend': 45000}
+            ]
+        }
+        renderer = PDFRenderer(data, "Multi Table Report")
+        result = renderer.render()
+
+        result.seek(0)
+        assert result.read(4) == b'%PDF'
+
+
+@pytest.mark.django_db
+class TestPDFRendererEdgeCases:
+    """Edge case tests for PDF renderer."""
+
+    def test_missing_metadata(self):
+        """Test rendering with missing metadata."""
+        data = {
+            'overview': {'total_spend': 100000}
+        }
+        renderer = PDFRenderer(data, "No Metadata Report")
+        result = renderer.render()
+
+        result.seek(0)
+        assert result.read(4) == b'%PDF'
+
+    def test_null_values_in_data(self):
+        """Test rendering with null values in numeric data."""
+        data = {
+            'metadata': {
+                'report_title': 'Null Values Report',
+                'organization': 'Test Org'  # Organization should never be null in practice
+            },
+            'overview': {
+                'total_spend': 0,
+                'supplier_count': 0
+            },
+            'spend_by_category': [
+                {'category': 'IT', 'amount': 0, 'percentage': 0}
+            ]
+        }
+        renderer = PDFRenderer(data, "Null Values Report")
+        result = renderer.render()
+
+        result.seek(0)
+        assert result.read(4) == b'%PDF'
+
+    def test_special_characters_in_data(self):
+        """Test rendering with special characters."""
+        data = {
+            'metadata': {
+                'report_title': 'Special Chars: <>&"\'',
+                'organization': 'Test & Co.'
+            },
+            'spend_by_supplier': [
+                {'supplier': 'Vendor <A> & Co.', 'amount': 50000}
+            ]
+        }
+        renderer = PDFRenderer(data, "Special Chars Report")
+        result = renderer.render()
+
+        result.seek(0)
+        assert result.read(4) == b'%PDF'
+
+    def test_very_large_numbers(self):
+        """Test rendering with very large numbers."""
+        data = {
+            'metadata': {
+                'report_title': 'Large Numbers Report',
+                'organization': 'Big Corp'
+            },
+            'overview': {
+                'total_spend': 999999999999.99,
+                'transaction_count': 9999999999
+            }
+        }
+        renderer = PDFRenderer(data, "Large Numbers Report")
+        result = renderer.render()
+
+        result.seek(0)
+        assert result.read(4) == b'%PDF'
+
+    def test_negative_values(self):
+        """Test rendering with negative values."""
+        data = {
+            'metadata': {
+                'report_title': 'Negative Values Report',
+                'organization': 'Test Org'
+            },
+            'overview': {
+                'total_spend': 100000,
+                'ytd_change': -15.5
+            },
+            'spend_by_category': [
+                {'category': 'Refunds', 'amount': -5000, 'percentage': -5.0}
+            ]
+        }
+        renderer = PDFRenderer(data, "Negative Values Report")
+        result = renderer.render()
+
+        result.seek(0)
+        assert result.read(4) == b'%PDF'
+
+    def test_zero_values(self):
+        """Test rendering with all zero values."""
+        data = {
+            'metadata': {
+                'report_title': 'Zero Values Report',
+                'organization': 'Test Org'
+            },
+            'overview': {
+                'total_spend': 0,
+                'supplier_count': 0,
+                'transaction_count': 0
+            }
+        }
+        renderer = PDFRenderer(data, "Zero Values Report")
+        result = renderer.render()
+
+        result.seek(0)
+        assert result.read(4) == b'%PDF'
+
+    def test_deeply_nested_data(self):
+        """Test rendering with deeply nested data structures."""
+        data = {
+            'metadata': {
+                'report_title': 'Nested Data Report',
+                'organization': 'Test Org',
+                'filters': {
+                    'date_range': {
+                        'start': '2024-01-01',
+                        'end': '2024-06-30'
+                    },
+                    'categories': ['IT', 'Office']
+                }
+            },
+            'overview': {
+                'totals': {
+                    'spend': 100000,
+                    'count': 50
+                }
+            }
+        }
+        renderer = PDFRenderer(data, "Nested Data Report")
+        result = renderer.render()
+
+        result.seek(0)
+        assert result.read(4) == b'%PDF'

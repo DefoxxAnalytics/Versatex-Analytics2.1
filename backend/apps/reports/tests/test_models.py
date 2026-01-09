@@ -105,11 +105,12 @@ class TestReportIsExpired:
 
     def test_is_expired_boundary(self, organization, admin_user):
         """Test boundary case at exactly 30 days."""
+        # Use 30 days minus a small buffer to account for test execution time
         report = Report.objects.create(
             organization=organization,
             created_by=admin_user,
             report_type='spend_analysis',
-            generated_at=timezone.now() - timedelta(days=30)
+            generated_at=timezone.now() - timedelta(days=30, seconds=-1)
         )
         # Should not be expired at exactly 30 days
         assert report.is_expired is False

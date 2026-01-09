@@ -259,15 +259,16 @@ class TestPurchaseRequisitionModel:
         """Test creating a purchase requisition."""
         pr = PurchaseRequisition.objects.create(
             organization=organization,
-            created_by=admin_user,
-            supplier=supplier,
+            requested_by=admin_user,
+            supplier_suggested=supplier,
             category=category,
             pr_number='PR-2024-001',
             description='Test requisition',
-            amount=Decimal('5000.00'),
+            estimated_amount=Decimal('5000.00'),
             department='IT',
             cost_center='CC-100',
-            status='draft'
+            status='draft',
+            created_date=date.today()
         )
         assert pr.id is not None
         assert pr.pr_number == 'PR-2024-001'
@@ -277,16 +278,18 @@ class TestPurchaseRequisitionModel:
         """Test PR status transitions."""
         pr = PurchaseRequisition.objects.create(
             organization=organization,
-            created_by=admin_user,
-            supplier=supplier,
+            requested_by=admin_user,
+            supplier_suggested=supplier,
             category=category,
             pr_number='PR-WORKFLOW-001',
-            amount=Decimal('5000.00'),
-            status='draft'
+            estimated_amount=Decimal('5000.00'),
+            status='draft',
+            created_date=date.today()
         )
 
         # Submit for approval
         pr.status = 'pending_approval'
+        pr.submitted_date = date.today()
         pr.save()
         pr.refresh_from_db()
         assert pr.status == 'pending_approval'
@@ -294,6 +297,7 @@ class TestPurchaseRequisitionModel:
         # Approve
         pr.status = 'approved'
         pr.approved_by = admin_user
+        pr.approval_date = date.today()
         pr.save()
         pr.refresh_from_db()
         assert pr.status == 'approved'
@@ -311,8 +315,9 @@ class TestPurchaseOrderModel:
             created_by=admin_user,
             supplier=supplier,
             po_number='PO-2024-001',
-            amount=Decimal('10000.00'),
-            status='draft'
+            total_amount=Decimal('10000.00'),
+            status='draft',
+            created_date=date.today()
         )
         assert po.id is not None
         assert po.po_number == 'PO-2024-001'
@@ -324,12 +329,13 @@ class TestPurchaseOrderModel:
             created_by=admin_user,
             supplier=supplier,
             po_number='PO-CONTRACT-001',
-            amount=Decimal('10000.00'),
+            total_amount=Decimal('10000.00'),
             is_contract_backed=True,
-            contract_number='CTR-2024-001'
+            created_date=date.today()
         )
         assert po.is_contract_backed is True
-        assert po.contract_number == 'CTR-2024-001'
+        # Note: contract is a ForeignKey, not a string field
+        assert po.is_maverick is False
 
     def test_purchase_order_amendments(self, organization, admin_user, supplier):
         """Test PO amendment tracking."""
@@ -338,17 +344,19 @@ class TestPurchaseOrderModel:
             created_by=admin_user,
             supplier=supplier,
             po_number='PO-AMEND-001',
-            amount=Decimal('10000.00'),
-            amendment_count=0
+            total_amount=Decimal('10000.00'),
+            original_amount=Decimal('10000.00'),
+            amendment_count=0,
+            created_date=date.today()
         )
 
         # Simulate amendment
-        po.amount = Decimal('12000.00')
+        po.total_amount = Decimal('12000.00')
         po.amendment_count += 1
         po.save()
 
         po.refresh_from_db()
-        assert po.amount == Decimal('12000.00')
+        assert po.total_amount == Decimal('12000.00')
         assert po.amendment_count == 1
 
 
@@ -363,17 +371,19 @@ class TestGoodsReceiptModel:
             created_by=admin_user,
             supplier=supplier,
             po_number='PO-GR-001',
-            amount=Decimal('10000.00')
+            total_amount=Decimal('10000.00'),
+            created_date=date.today()
         )
 
         gr = GoodsReceipt.objects.create(
             organization=organization,
-            created_by=admin_user,
+            received_by=admin_user,
             purchase_order=po,
             gr_number='GR-2024-001',
+            quantity_ordered=100,
             quantity_received=100,
             quantity_accepted=98,
-            receipt_date=date.today()
+            received_date=date.today()
         )
         assert gr.id is not None
         assert gr.quantity_received == 100
@@ -386,27 +396,32 @@ class TestGoodsReceiptModel:
             created_by=admin_user,
             supplier=supplier,
             po_number='PO-PARTIAL-001',
-            amount=Decimal('10000.00')
+            total_amount=Decimal('10000.00'),
+            created_date=date.today()
         )
 
         # First delivery
         gr1 = GoodsReceipt.objects.create(
             organization=organization,
-            created_by=admin_user,
+            received_by=admin_user,
             purchase_order=po,
             gr_number='GR-PARTIAL-001',
+            quantity_ordered=100,
             quantity_received=50,
-            quantity_accepted=50
+            quantity_accepted=50,
+            received_date=date.today()
         )
 
         # Second delivery
         gr2 = GoodsReceipt.objects.create(
             organization=organization,
-            created_by=admin_user,
+            received_by=admin_user,
             purchase_order=po,
             gr_number='GR-PARTIAL-002',
+            quantity_ordered=100,
             quantity_received=50,
-            quantity_accepted=50
+            quantity_accepted=50,
+            received_date=date.today()
         )
 
         # PO should have 2 goods receipts
@@ -424,9 +439,11 @@ class TestInvoiceModel:
             supplier=supplier,
             invoice_number='INV-2024-001',
             invoice_date=date.today(),
-            amount=Decimal('10000.00'),
+            due_date=date.today() + timedelta(days=30),
+            invoice_amount=Decimal('10000.00'),
+            net_amount=Decimal('10000.00'),
             payment_terms='Net 30',
-            status='pending'
+            status='received'
         )
         assert invoice.id is not None
         assert invoice.invoice_number == 'INV-2024-001'
@@ -438,7 +455,8 @@ class TestInvoiceModel:
             created_by=admin_user,
             supplier=supplier,
             po_number='PO-MATCH-001',
-            amount=Decimal('10000.00')
+            total_amount=Decimal('10000.00'),
+            created_date=date.today()
         )
 
         invoice = Invoice.objects.create(
@@ -446,11 +464,13 @@ class TestInvoiceModel:
             supplier=supplier,
             invoice_number='INV-MATCH-001',
             invoice_date=date.today(),
-            amount=Decimal('10000.00'),
+            due_date=date.today() + timedelta(days=30),
+            invoice_amount=Decimal('10000.00'),
+            net_amount=Decimal('10000.00'),
             purchase_order=po,
-            matching_status='matched'
+            match_status='3way_matched'
         )
-        assert invoice.matching_status == 'matched'
+        assert invoice.match_status == '3way_matched'
         assert invoice.purchase_order == po
 
     def test_invoice_exception_handling(self, organization, admin_user, supplier):
@@ -460,7 +480,8 @@ class TestInvoiceModel:
             created_by=admin_user,
             supplier=supplier,
             po_number='PO-EXC-001',
-            amount=Decimal('10000.00')
+            total_amount=Decimal('10000.00'),
+            created_date=date.today()
         )
 
         # Invoice with price variance
@@ -469,13 +490,16 @@ class TestInvoiceModel:
             supplier=supplier,
             invoice_number='INV-EXC-001',
             invoice_date=date.today(),
-            amount=Decimal('11000.00'),  # Over PO amount
+            due_date=date.today() + timedelta(days=30),
+            invoice_amount=Decimal('11000.00'),  # Over PO amount
+            net_amount=Decimal('11000.00'),
             purchase_order=po,
-            matching_status='exception',
+            match_status='exception',
+            has_exception=True,
             exception_type='price_variance',
             exception_notes='Invoice exceeds PO by 10%'
         )
-        assert invoice.matching_status == 'exception'
+        assert invoice.match_status == 'exception'
         assert invoice.exception_type == 'price_variance'
 
 
