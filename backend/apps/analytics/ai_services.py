@@ -119,6 +119,154 @@ INSIGHT_ENHANCEMENT_TOOL = {
     }
 }
 
+# Tool schema for deep insight analysis
+DEEP_ANALYSIS_TOOL = {
+    "name": "provide_deep_insight_analysis",
+    "description": "Provide comprehensive deep analysis of a specific procurement insight",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "root_cause_analysis": {
+                "type": "object",
+                "description": "Analysis of the root cause of the insight",
+                "properties": {
+                    "primary_cause": {"type": "string"},
+                    "contributing_factors": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                    },
+                    "evidence": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                    }
+                },
+                "required": ["primary_cause", "contributing_factors"]
+            },
+            "implementation_roadmap": {
+                "type": "array",
+                "description": "Phased implementation plan",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "phase": {"type": "string"},
+                        "tasks": {
+                            "type": "array",
+                            "items": {"type": "string"}
+                        },
+                        "timeline": {"type": "string"},
+                        "resources_required": {"type": "string"}
+                    },
+                    "required": ["phase", "tasks", "timeline"]
+                }
+            },
+            "financial_impact": {
+                "type": "object",
+                "description": "Detailed financial analysis",
+                "properties": {
+                    "total_savings_potential": {"type": "number"},
+                    "implementation_cost": {"type": "number"},
+                    "roi_percentage": {"type": "number"},
+                    "payback_period": {"type": "string"},
+                    "savings_breakdown": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "category": {"type": "string"},
+                                "amount": {"type": "number"}
+                            }
+                        }
+                    }
+                },
+                "required": ["total_savings_potential"]
+            },
+            "risk_factors": {
+                "type": "array",
+                "description": "Potential risks and mitigation strategies",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "risk": {"type": "string"},
+                        "likelihood": {
+                            "type": "string",
+                            "enum": ["low", "medium", "high"]
+                        },
+                        "impact": {
+                            "type": "string",
+                            "enum": ["low", "medium", "high"]
+                        },
+                        "mitigation": {"type": "string"}
+                    },
+                    "required": ["risk", "mitigation"]
+                }
+            },
+            "success_metrics": {
+                "type": "array",
+                "description": "KPIs to track implementation success",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "metric": {"type": "string"},
+                        "target": {"type": "string"},
+                        "measurement_method": {"type": "string"}
+                    },
+                    "required": ["metric", "target"]
+                }
+            },
+            "stakeholder_mapping": {
+                "type": "array",
+                "description": "Key stakeholders and their roles",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "role": {"type": "string"},
+                        "responsibility": {"type": "string"},
+                        "engagement_level": {
+                            "type": "string",
+                            "enum": ["inform", "consult", "collaborate", "lead"]
+                        }
+                    },
+                    "required": ["role", "responsibility"]
+                }
+            },
+            "industry_context": {
+                "type": "object",
+                "description": "Industry benchmarks and best practices",
+                "properties": {
+                    "benchmark_comparison": {"type": "string"},
+                    "best_practices": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                    },
+                    "market_trends": {"type": "string"}
+                }
+            },
+            "next_steps": {
+                "type": "array",
+                "description": "Immediate actions to take",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string"},
+                        "owner": {"type": "string"},
+                        "due_date": {"type": "string"},
+                        "priority": {
+                            "type": "string",
+                            "enum": ["high", "medium", "low"]
+                        }
+                    },
+                    "required": ["action", "priority"]
+                }
+            },
+            "executive_summary": {
+                "type": "string",
+                "description": "Brief summary of findings and recommendations"
+            }
+        },
+        "required": ["root_cause_analysis", "implementation_roadmap", "financial_impact", "next_steps", "executive_summary"]
+    }
+}
+
 
 class AIInsightsService:
     """

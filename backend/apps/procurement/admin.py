@@ -10,6 +10,7 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import admin
+from django.contrib.auth import get_user_model
 from django.urls import path
 from django.shortcuts import render, redirect
 from django.contrib import messages
@@ -31,6 +32,8 @@ from .forms import CSVUploadForm, OrganizationResetForm, DeleteAllDataForm
 from .services import CSVProcessor
 from apps.authentication.models import Organization
 from apps.authentication.utils import log_action
+
+User = get_user_model()
 
 
 @admin.register(Supplier)
