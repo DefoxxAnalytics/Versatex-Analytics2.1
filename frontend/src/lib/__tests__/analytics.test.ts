@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyFilters } from '../analytics';
+import { applyFilters, formatCurrency, formatPercent, formatCompact } from '../analytics';
 import type { ProcurementRecord } from '../../hooks/useProcurementData';
 import type { Filters } from '../../hooks/useFilters';
 
@@ -31,6 +31,9 @@ const mockData: ProcurementRecord[] = [
     date: '2024-01-15',
     supplier: 'Acme Corp',
     category: 'Office Supplies',
+    subcategory: 'Writing',
+    location: 'New York',
+    year: 2024,
     amount: 1500,
     description: 'Pens and paper',
   },
@@ -38,6 +41,9 @@ const mockData: ProcurementRecord[] = [
     date: '2024-01-20',
     supplier: 'Tech Solutions',
     category: 'IT Equipment',
+    subcategory: 'Hardware',
+    location: 'Chicago',
+    year: 2024,
     amount: 5000,
     description: 'Laptops',
   },
@@ -45,6 +51,9 @@ const mockData: ProcurementRecord[] = [
     date: '2024-02-10',
     supplier: 'Acme Corp',
     category: 'Office Supplies',
+    subcategory: 'Desktop',
+    location: 'New York',
+    year: 2024,
     amount: 800,
     description: 'Staplers',
   },
@@ -52,13 +61,19 @@ const mockData: ProcurementRecord[] = [
     date: '2024-02-15',
     supplier: 'Office Depot',
     category: 'Office Supplies',
+    subcategory: 'Furniture',
+    location: 'Boston',
+    year: 2024,
     amount: 1200,
     description: 'Chairs',
   },
   {
-    date: '2024-03-01',
+    date: '2023-03-01',
     supplier: 'Tech Solutions',
     category: 'IT Equipment',
+    subcategory: 'Hardware',
+    location: 'Chicago',
+    year: 2023,
     amount: 3000,
     description: 'Monitors',
   },
@@ -74,8 +89,9 @@ describe('applyFilters', () => {
 
       const filtered = applyFilters(mockData, filters);
 
-      // Should include records from Feb 10, Feb 15, Mar 01
-      expect(filtered.length).toBe(3);
+      // Should include records from Feb 10, Feb 15 (2024 records after Feb 1)
+      // 2023-03-01 record is before 2024-02-01 so excluded
+      expect(filtered.length).toBe(2);
       expect(filtered.every(r => r.date >= '2024-02-01')).toBe(true);
     });
 
@@ -86,8 +102,8 @@ describe('applyFilters', () => {
 
       const filtered = applyFilters(mockData, filters);
 
-      // Should include records from Jan 15, Jan 20
-      expect(filtered.length).toBe(2);
+      // Should include records from Jan 15, Jan 20, and 2023-03-01 (all <= 2024-02-01)
+      expect(filtered.length).toBe(3);
       expect(filtered.every(r => r.date <= '2024-02-01')).toBe(true);
     });
 
@@ -160,6 +176,75 @@ describe('applyFilters', () => {
         r.supplier === 'Acme Corp' || r.supplier === 'Tech Solutions'
       )).toBe(true);
       expect(filtered.length).toBe(4);
+    });
+  });
+
+  describe('Subcategory Filtering', () => {
+    it('should filter by single subcategory', () => {
+      const filters = createFilters({
+        subcategories: ['Hardware'],
+      });
+
+      const filtered = applyFilters(mockData, filters);
+
+      expect(filtered.every(r => r.subcategory === 'Hardware')).toBe(true);
+      expect(filtered.length).toBe(2);
+    });
+
+    it('should filter by multiple subcategories', () => {
+      const filters = createFilters({
+        subcategories: ['Hardware', 'Writing'],
+      });
+
+      const filtered = applyFilters(mockData, filters);
+
+      expect(filtered.length).toBe(3);
+    });
+  });
+
+  describe('Location Filtering', () => {
+    it('should filter by single location', () => {
+      const filters = createFilters({
+        locations: ['New York'],
+      });
+
+      const filtered = applyFilters(mockData, filters);
+
+      expect(filtered.every(r => r.location === 'New York')).toBe(true);
+      expect(filtered.length).toBe(2);
+    });
+
+    it('should filter by multiple locations', () => {
+      const filters = createFilters({
+        locations: ['New York', 'Chicago'],
+      });
+
+      const filtered = applyFilters(mockData, filters);
+
+      expect(filtered.length).toBe(4);
+    });
+  });
+
+  describe('Year Filtering', () => {
+    it('should filter by single year', () => {
+      const filters = createFilters({
+        years: ['2024'],
+      });
+
+      const filtered = applyFilters(mockData, filters);
+
+      expect(filtered.every(r => r.year === 2024)).toBe(true);
+      expect(filtered.length).toBe(4);
+    });
+
+    it('should filter by multiple years', () => {
+      const filters = createFilters({
+        years: ['2023', '2024'],
+      });
+
+      const filtered = applyFilters(mockData, filters);
+
+      expect(filtered.length).toBe(5);
     });
   });
 
@@ -268,5 +353,82 @@ describe('applyFilters', () => {
       // Should not match 'Office Supplies' (capital O and S)
       expect(filtered.length).toBe(0);
     });
+  });
+});
+
+// =====================
+// Format Functions Tests
+// =====================
+describe('formatCurrency', () => {
+  it('should format positive numbers as USD currency', () => {
+    expect(formatCurrency(1234567)).toBe('$1,234,567');
+  });
+
+  it('should format small numbers', () => {
+    expect(formatCurrency(100)).toBe('$100');
+  });
+
+  it('should format zero', () => {
+    expect(formatCurrency(0)).toBe('$0');
+  });
+
+  it('should round decimals', () => {
+    expect(formatCurrency(1234.56)).toBe('$1,235');
+  });
+
+  it('should handle negative numbers', () => {
+    expect(formatCurrency(-500)).toBe('-$500');
+  });
+
+  it('should handle very large numbers', () => {
+    expect(formatCurrency(1000000000)).toBe('$1,000,000,000');
+  });
+});
+
+describe('formatPercent', () => {
+  it('should format decimal as percentage', () => {
+    expect(formatPercent(0.756)).toBe('75.6%');
+  });
+
+  it('should use default 1 decimal place', () => {
+    expect(formatPercent(0.5)).toBe('50.0%');
+  });
+
+  it('should support custom decimal places', () => {
+    expect(formatPercent(0.12345, 2)).toBe('12.35%');
+  });
+
+  it('should handle zero', () => {
+    expect(formatPercent(0)).toBe('0.0%');
+  });
+
+  it('should handle values over 100%', () => {
+    expect(formatPercent(1.5)).toBe('150.0%');
+  });
+
+  it('should handle negative percentages', () => {
+    expect(formatPercent(-0.25)).toBe('-25.0%');
+  });
+});
+
+describe('formatCompact', () => {
+  it('should format thousands with K suffix', () => {
+    expect(formatCompact(1234)).toBe('1.2K');
+  });
+
+  it('should format millions with M suffix', () => {
+    expect(formatCompact(1234567)).toBe('1.2M');
+  });
+
+  it('should format billions with B suffix', () => {
+    expect(formatCompact(1234567890)).toBe('1.2B');
+  });
+
+  it('should handle small numbers without suffix', () => {
+    expect(formatCompact(123)).toBe('123');
+  });
+
+  it('should handle zero', () => {
+    expect(formatCompact(0)).toBe('0');
   });
 });

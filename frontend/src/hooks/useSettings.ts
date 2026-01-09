@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { authAPI, type UserPreferences } from '@/lib/api';
+import { queryKeys } from '@/lib/queryKeys';
 
 /**
  * Color scheme type for brand theming
@@ -237,10 +238,10 @@ export function useSettings() {
 
   // Main query - loads from localStorage immediately
   const query = useQuery<UserSettings, Error>({
-    queryKey: ['settings'],
+    queryKey: queryKeys.settings.all,
     queryFn: (): UserSettings => loadSettingsFromStorage(),
     staleTime: Infinity,
-    cacheTime: Infinity, // TODO: Rename to gcTime when upgrading to TanStack Query v5
+    gcTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -262,7 +263,7 @@ export function useSettings() {
 
         // Save to localStorage and update cache
         saveSettingsToStorage(merged);
-        queryClient.setQueryData(['settings'], merged);
+        queryClient.setQueryData(queryKeys.settings.all, merged);
       })
       .catch((error) => {
         // Silently fail - use local settings
@@ -310,7 +311,7 @@ export function useUpdateSettings() {
       return updated;
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(['settings'], data);
+      queryClient.setQueryData(queryKeys.settings.all, data);
     },
   });
 }
@@ -345,7 +346,7 @@ export function useResetSettings() {
       return DEFAULT_SETTINGS;
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(['settings'], data);
+      queryClient.setQueryData(queryKeys.settings.all, data);
     },
   });
 }

@@ -547,12 +547,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     variant="ghost"
                     size="icon"
                     onClick={handleRefresh}
-                    disabled={refreshData.isLoading}
+                    disabled={refreshData.isPending}
                     className={cn("h-9 w-9", headerStyles.button)}
                   >
                     <RefreshCw className={cn(
                       "h-5 w-5",
-                      refreshData.isLoading && "animate-spin"
+                      refreshData.isPending && "animate-spin"
                     )} />
                   </Button>
                 </TooltipTrigger>

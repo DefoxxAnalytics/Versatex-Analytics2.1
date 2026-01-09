@@ -16,9 +16,9 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/queryKeys';
 
 const STORAGE_KEY = 'procurement_filters';
-const QUERY_KEY = ['filters'];
 
 /**
  * Filter state interface
@@ -131,9 +131,11 @@ function clearFilters(): void {
  * ```
  */
 export function useFilters() {
-  return useQuery(QUERY_KEY, loadFilters, {
+  return useQuery({
+    queryKey: queryKeys.filters.all,
+    queryFn: loadFilters,
     staleTime: Infinity,
-    cacheTime: Infinity, // TODO: Rename to gcTime when upgrading to TanStack Query v5
+    gcTime: Infinity,
   });
 }
 
@@ -153,7 +155,7 @@ export function useUpdateFilters() {
 
   return useMutation({
     mutationFn: async (updates: Partial<Filters>) => {
-      const current = queryClient.getQueryData<Filters>(QUERY_KEY) || DEFAULT_FILTERS;
+      const current = queryClient.getQueryData<Filters>(queryKeys.filters.all) || DEFAULT_FILTERS;
       const updated: Filters = {
         ...current,
         ...updates,
@@ -162,7 +164,7 @@ export function useUpdateFilters() {
       return updated;
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(QUERY_KEY, data);
+      queryClient.setQueryData(queryKeys.filters.all, data);
     },
   });
 }
@@ -187,7 +189,7 @@ export function useResetFilters() {
       return DEFAULT_FILTERS;
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(QUERY_KEY, data);
+      queryClient.setQueryData(queryKeys.filters.all, data);
     },
   });
 }

@@ -2,7 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { applyFilters } from '@/lib/analytics';
 import type { Filters } from './useFilters';
-import { procurementAPI, type Transaction } from '@/lib/api';
+import { procurementAPI, getOrganizationParam, type Transaction } from '@/lib/api';
+import { queryKeys } from '@/lib/queryKeys';
 
 /**
  * ProcurementRecord interface for frontend analytics
@@ -19,7 +20,14 @@ export interface ProcurementRecord {
   spendBand?: string;
 }
 
-const QUERY_KEY = ['procurementData'] as const;
+/**
+ * Get the current organization ID for query key inclusion.
+ * Returns undefined if viewing own org (default behavior).
+ */
+function getOrgKeyPart(): number | undefined {
+  const param = getOrganizationParam();
+  return param.organization_id;
+}
 
 /**
  * Transform backend Transaction to frontend ProcurementRecord
@@ -54,8 +62,9 @@ function transformTransaction(tx: Transaction): ProcurementRecord {
  * Upload data via Django Admin Panel at /admin/procurement/dataupload/upload-csv/
  */
 export function useProcurementData() {
+  const orgId = getOrgKeyPart();
   return useQuery<ProcurementRecord[], Error>({
-    queryKey: QUERY_KEY,
+    queryKey: queryKeys.procurement.data(orgId),
     queryFn: async (): Promise<ProcurementRecord[]> => {
       try {
         // Fetch transactions from the backend API
@@ -75,7 +84,7 @@ export function useProcurementData() {
       }
     },
     staleTime: 5 * 60 * 1000, // Data becomes stale after 5 minutes
-    cacheTime: 30 * 60 * 1000, // Keep in cache for 30 minutes (TODO: rename to gcTime for TanStack Query v5)
+    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
     refetchOnMount: true,
     refetchOnWindowFocus: false,
     refetchOnReconnect: true,
@@ -106,11 +115,13 @@ export function useFilteredProcurementData() {
   const queryClient = useQueryClient();
   const { data: rawData = [] as ProcurementRecord[], isLoading: rawLoading, isError: rawError } = useProcurementData();
 
+  const orgId = getOrgKeyPart();
+
   // Set up event listener to invalidate query when filters change
   useEffect(() => {
     const handleFilterUpdate = () => {
       // Invalidate the filtered data query to trigger re-computation
-      queryClient.invalidateQueries(['filteredProcurementData']);
+      queryClient.invalidateQueries({ queryKey: queryKeys.procurement.filtered(orgId) });
     };
 
     window.addEventListener('filtersUpdated', handleFilterUpdate);
@@ -122,7 +133,7 @@ export function useFilteredProcurementData() {
 
   // Use TanStack Query to cache filtered data
   const { data: filteredData = [] as ProcurementRecord[], isLoading: filterLoading, isError: filterError } = useQuery<ProcurementRecord[], Error>({
-    queryKey: ['filteredProcurementData', rawData.length],
+    queryKey: [...queryKeys.procurement.filtered(orgId), rawData.length],
     queryFn: (): ProcurementRecord[] => {
       // Read filters from localStorage
       try {
@@ -142,7 +153,7 @@ export function useFilteredProcurementData() {
       }
     },
     staleTime: Infinity, // Data only becomes stale when explicitly invalidated
-    cacheTime: Infinity, // Keep in cache indefinitely (TODO: rename to gcTime for TanStack Query v5)
+    gcTime: Infinity, // Keep in cache indefinitely
     enabled: !rawLoading && !rawError, // Only run when raw data is ready
   });
 
@@ -163,8 +174,7 @@ export function useRefreshData() {
   return useMutation<void, Error, void>({
     mutationFn: async () => {
       // Just invalidate the query - TanStack Query will refetch
-      await queryClient.invalidateQueries(QUERY_KEY);
-      await queryClient.invalidateQueries(['filteredProcurementData']);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.procurement.all });
     },
   });
 }

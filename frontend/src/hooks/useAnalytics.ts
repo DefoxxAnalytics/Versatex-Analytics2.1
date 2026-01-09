@@ -6,6 +6,7 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { analyticsAPI, procurementAPI, getOrganizationParam } from '@/lib/api';
+import { queryKeys } from '@/lib/queryKeys';
 
 /**
  * Get the current organization ID for query key inclusion.
@@ -22,7 +23,7 @@ function getOrgKeyPart(): number | undefined {
 export function useOverviewStats() {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['overview', { orgId }],
+    queryKey: queryKeys.analytics.overview(orgId),
     queryFn: async () => {
       const response = await analyticsAPI.getOverview();
       return response.data;
@@ -36,7 +37,7 @@ export function useOverviewStats() {
 export function useSpendByCategory() {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['spend-by-category', { orgId }],
+    queryKey: queryKeys.analytics.spendByCategory(orgId),
     queryFn: async () => {
       const response = await analyticsAPI.getSpendByCategory();
       return response.data;
@@ -51,7 +52,7 @@ export function useSpendByCategory() {
 export function useCategoryDetails() {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['category-details', { orgId }],
+    queryKey: queryKeys.analytics.categoryDetails(orgId),
     queryFn: async () => {
       const response = await analyticsAPI.getCategoryDetails();
       return response.data;
@@ -65,7 +66,7 @@ export function useCategoryDetails() {
 export function useSpendBySupplier() {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['spend-by-supplier', { orgId }],
+    queryKey: queryKeys.analytics.spendBySupplier(orgId),
     queryFn: async () => {
       const response = await analyticsAPI.getSpendBySupplier();
       return response.data;
@@ -80,7 +81,7 @@ export function useSpendBySupplier() {
 export function useSupplierDetails() {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['supplier-details', { orgId }],
+    queryKey: queryKeys.analytics.supplierDetails(orgId),
     queryFn: async () => {
       const response = await analyticsAPI.getSupplierDetails();
       return response.data;
@@ -94,7 +95,7 @@ export function useSupplierDetails() {
 export function useMonthlyTrend(months: number = 12) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['monthly-trend', months, { orgId }],
+    queryKey: queryKeys.analytics.monthlyTrend(months, orgId),
     queryFn: async () => {
       const response = await analyticsAPI.getMonthlyTrend(months);
       return response.data;
@@ -108,7 +109,7 @@ export function useMonthlyTrend(months: number = 12) {
 export function useParetoAnalysis() {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['pareto', { orgId }],
+    queryKey: queryKeys.analytics.pareto(orgId),
     queryFn: async () => {
       const response = await analyticsAPI.getParetoAnalysis();
       return response.data;
@@ -123,7 +124,7 @@ export function useParetoAnalysis() {
 export function useSupplierDrilldown(supplierId: number | null) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['supplier-drilldown', supplierId, { orgId }],
+    queryKey: queryKeys.analytics.supplierDrilldown(supplierId!, orgId),
     queryFn: async () => {
       if (!supplierId) return null;
       const response = await analyticsAPI.getSupplierDrilldown(supplierId);
@@ -139,7 +140,7 @@ export function useSupplierDrilldown(supplierId: number | null) {
 export function useTailSpend(threshold: number = 20) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['tail-spend', threshold, { orgId }],
+    queryKey: queryKeys.analytics.tailSpend(threshold, orgId),
     queryFn: async () => {
       const response = await analyticsAPI.getTailSpend(threshold);
       return response.data;
@@ -156,7 +157,7 @@ export function useTailSpend(threshold: number = 20) {
 export function useDetailedTailSpend(threshold: number = 50000) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['tail-spend-detailed', threshold, { orgId }],
+    queryKey: queryKeys.analytics.tailSpendDetailed(threshold, orgId),
     queryFn: async () => {
       const response = await analyticsAPI.getDetailedTailSpend(threshold);
       return response.data;
@@ -174,7 +175,7 @@ export function useTailSpendCategoryDrilldown(
 ) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['tail-spend-category-drilldown', categoryId, threshold, { orgId }],
+    queryKey: queryKeys.analytics.tailSpendCategoryDrilldown(categoryId!, threshold, orgId),
     queryFn: async () => {
       if (!categoryId) return null;
       const response = await analyticsAPI.getTailSpendCategoryDrilldown(categoryId, threshold);
@@ -194,7 +195,7 @@ export function useTailSpendVendorDrilldown(
 ) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['tail-spend-vendor-drilldown', supplierId, threshold, { orgId }],
+    queryKey: queryKeys.analytics.tailSpendVendorDrilldown(supplierId!, threshold, orgId),
     queryFn: async () => {
       if (!supplierId) return null;
       const response = await analyticsAPI.getTailSpendVendorDrilldown(supplierId, threshold);
@@ -210,7 +211,7 @@ export function useTailSpendVendorDrilldown(
 export function useStratification() {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['stratification', { orgId }],
+    queryKey: queryKeys.analytics.stratification(orgId),
     queryFn: async () => {
       const response = await analyticsAPI.getStratification();
       return response.data;
@@ -225,7 +226,7 @@ export function useStratification() {
 export function useDetailedStratification() {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['stratification-detailed', { orgId }],
+    queryKey: queryKeys.analytics.stratificationDetailed(orgId),
     queryFn: async () => {
       const response = await analyticsAPI.getDetailedStratification();
       return response.data;
@@ -240,7 +241,7 @@ export function useDetailedStratification() {
 export function useSegmentDrilldown(segmentName: string | null) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['segment-drilldown', segmentName, { orgId }],
+    queryKey: queryKeys.analytics.segmentDrilldown(segmentName!, orgId),
     queryFn: async () => {
       if (!segmentName) return null;
       const response = await analyticsAPI.getSegmentDrilldown(segmentName);
@@ -257,7 +258,7 @@ export function useSegmentDrilldown(segmentName: string | null) {
 export function useBandDrilldown(bandName: string | null) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['band-drilldown', bandName, { orgId }],
+    queryKey: queryKeys.analytics.bandDrilldown(bandName!, orgId),
     queryFn: async () => {
       if (!bandName) return null;
       const response = await analyticsAPI.getBandDrilldown(bandName);
@@ -273,7 +274,7 @@ export function useBandDrilldown(bandName: string | null) {
 export function useSeasonality() {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['seasonality', { orgId }],
+    queryKey: queryKeys.analytics.seasonality(false, orgId),
     queryFn: async () => {
       const response = await analyticsAPI.getSeasonality();
       return response.data;
@@ -289,7 +290,7 @@ export function useSeasonality() {
 export function useDetailedSeasonality(useFiscalYear: boolean = true) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['seasonality-detailed', useFiscalYear, { orgId }],
+    queryKey: queryKeys.analytics.seasonalityDetailed(useFiscalYear, orgId),
     queryFn: async () => {
       const response = await analyticsAPI.getDetailedSeasonality(useFiscalYear);
       return response.data;
@@ -304,7 +305,7 @@ export function useDetailedSeasonality(useFiscalYear: boolean = true) {
 export function useSeasonalityCategoryDrilldown(categoryId: number | null, useFiscalYear: boolean = true) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['seasonality-category-drilldown', categoryId, useFiscalYear, { orgId }],
+    queryKey: queryKeys.analytics.seasonalityCategoryDrilldown(categoryId!, useFiscalYear, orgId),
     queryFn: async () => {
       if (!categoryId) return null;
       const response = await analyticsAPI.getSeasonalityCategoryDrilldown(categoryId, useFiscalYear);
@@ -320,7 +321,7 @@ export function useSeasonalityCategoryDrilldown(categoryId: number | null, useFi
 export function useYearOverYear() {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['year-over-year', { orgId }],
+    queryKey: queryKeys.analytics.yearOverYear(false, 0, 0, orgId),
     queryFn: async () => {
       const response = await analyticsAPI.getYearOverYear();
       return response.data;
@@ -336,7 +337,7 @@ export function useYearOverYear() {
 export function useDetailedYearOverYear(useFiscalYear: boolean = true, year1?: number, year2?: number) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['year-over-year-detailed', useFiscalYear, year1, year2, { orgId }],
+    queryKey: queryKeys.analytics.yoyDetailed(useFiscalYear, year1 ?? 0, year2 ?? 0, orgId),
     queryFn: async () => {
       const response = await analyticsAPI.getDetailedYearOverYear(useFiscalYear, year1, year2);
       return response.data;
@@ -356,7 +357,7 @@ export function useYoYCategoryDrilldown(
 ) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['yoy-category-drilldown', categoryId, useFiscalYear, year1, year2, { orgId }],
+    queryKey: queryKeys.analytics.yoyCategoryDrilldown(categoryId!, useFiscalYear, year1 ?? 0, year2 ?? 0, orgId),
     queryFn: async () => {
       if (!categoryId) return null;
       const response = await analyticsAPI.getYoYCategoryDrilldown(categoryId, useFiscalYear, year1, year2);
@@ -378,7 +379,7 @@ export function useYoYSupplierDrilldown(
 ) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['yoy-supplier-drilldown', supplierId, useFiscalYear, year1, year2, { orgId }],
+    queryKey: queryKeys.analytics.yoySupplierDrilldown(supplierId!, useFiscalYear, year1 ?? 0, year2 ?? 0, orgId),
     queryFn: async () => {
       if (!supplierId) return null;
       const response = await analyticsAPI.getYoYSupplierDrilldown(supplierId, useFiscalYear, year1, year2);
@@ -394,7 +395,7 @@ export function useYoYSupplierDrilldown(
 export function useConsolidation() {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['consolidation', { orgId }],
+    queryKey: queryKeys.analytics.consolidation(orgId),
     queryFn: async () => {
       const response = await analyticsAPI.getConsolidation();
       return response.data;
@@ -408,7 +409,7 @@ export function useConsolidation() {
 export function useTransactions(params?: Record<string, unknown>) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['transactions', params, { orgId }],
+    queryKey: queryKeys.procurement.transactions.list(params, orgId),
     queryFn: async () => {
       const response = await procurementAPI.getTransactions(params);
       return response.data;
@@ -422,7 +423,7 @@ export function useTransactions(params?: Record<string, unknown>) {
 export function useSuppliers() {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['suppliers', { orgId }],
+    queryKey: queryKeys.procurement.suppliers.list(undefined, orgId),
     queryFn: async () => {
       const response = await procurementAPI.getSuppliers();
       return response.data;
@@ -436,7 +437,7 @@ export function useSuppliers() {
 export function useCategories() {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['categories', { orgId }],
+    queryKey: queryKeys.procurement.categories.list(undefined, orgId),
     queryFn: async () => {
       const response = await procurementAPI.getCategories();
       return response.data;

@@ -109,9 +109,9 @@ export function useReportStatus(reportId: string | null, enabled: boolean = true
       return response.data;
     },
     enabled: !!reportId && enabled,
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Poll every 2 seconds while generating
-      const status = data?.status;
+      const status = query.state.data?.status;
       return status === 'generating' ? 2000 : false;
     },
   });

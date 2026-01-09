@@ -82,11 +82,19 @@ export const queryKeys = {
     paretoDrilldown: (supplierId: number, orgId?: number) =>
       ['analytics', 'pareto-drilldown', supplierId, { orgId }] as const,
 
+    // Detailed views
+    categoryDetails: (orgId?: number) => ['analytics', 'category-details', { orgId }] as const,
+    supplierDetails: (orgId?: number) => ['analytics', 'supplier-details', { orgId }] as const,
+
     // Drilldowns
     supplierDrilldown: (supplierId: number, orgId?: number) =>
       ['analytics', 'supplier-drilldown', supplierId, { orgId }] as const,
     categoryDrilldown: (categoryId: number, orgId?: number) =>
       ['analytics', 'category-drilldown', categoryId, { orgId }] as const,
+    segmentDrilldown: (segment: string, orgId?: number) =>
+      ['analytics', 'segment-drilldown', segment, { orgId }] as const,
+    bandDrilldown: (band: string, orgId?: number) =>
+      ['analytics', 'band-drilldown', band, { orgId }] as const,
 
     // Stratification
     stratification: (orgId?: number) => ['analytics', 'stratification', { orgId }] as const,
@@ -274,6 +282,13 @@ export const queryKeys = {
     all: ['auth'] as const,
     user: () => ['auth', 'user'] as const,
     organizations: () => ['auth', 'organizations'] as const,
+  },
+
+  // =========================================================================
+  // Filters (not org-scoped, stored in localStorage)
+  // =========================================================================
+  filters: {
+    all: ['filters'] as const,
   },
 } as const;
 

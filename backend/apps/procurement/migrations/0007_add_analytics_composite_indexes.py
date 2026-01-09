@@ -56,7 +56,7 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name='purchaseorder',
             index=models.Index(
-                fields=['organization', 'contract', 'order_date'],
+                fields=['organization', 'contract', 'created_date'],
                 name='proc_po_org_contract_date_idx'
             ),
         ),

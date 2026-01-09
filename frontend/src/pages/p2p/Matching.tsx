@@ -890,10 +890,10 @@ export default function Matching() {
             </Button>
             <Button
               onClick={handleResolve}
-              disabled={resolveException.isLoading || !resolutionNotes.trim()}
+              disabled={resolveException.isPending || !resolutionNotes.trim()}
               className="bg-green-600 hover:bg-green-700"
             >
-              {resolveException.isLoading && (
+              {resolveException.isPending && (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               )}
               Resolve
@@ -934,10 +934,10 @@ export default function Matching() {
             </Button>
             <Button
               onClick={handleBulkResolve}
-              disabled={bulkResolve.isLoading || !bulkResolutionNotes.trim()}
+              disabled={bulkResolve.isPending || !bulkResolutionNotes.trim()}
               className="bg-green-600 hover:bg-green-700"
             >
-              {bulkResolve.isLoading && (
+              {bulkResolve.isPending && (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               )}
               Resolve All

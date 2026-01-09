@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '../../contexts/AuthContext';
 import { ThemeProvider } from '../../contexts/ThemeContext';
 import { PermissionProvider } from '../../contexts/PermissionContext';
+import { OrganizationProvider } from '../../contexts/OrganizationContext';
 
 /**
  * Test suite for DashboardLayout component
@@ -24,9 +25,11 @@ function createTestWrapper() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <PermissionProvider>
-            <Router>{children}</Router>
-          </PermissionProvider>
+          <OrganizationProvider>
+            <PermissionProvider>
+              <Router>{children}</Router>
+            </PermissionProvider>
+          </OrganizationProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
