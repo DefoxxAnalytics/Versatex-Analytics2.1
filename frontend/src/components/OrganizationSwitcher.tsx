@@ -5,10 +5,17 @@
  * Displays role badges for multi-org users to show their role in each org.
  * Single-org users will not see this component.
  */
-import { Building2, ChevronDown, Check, RotateCcw, Shield, Star } from 'lucide-react';
-import { useOrganization } from '@/contexts/OrganizationContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
+import {
+  Building2,
+  ChevronDown,
+  Check,
+  RotateCcw,
+  Shield,
+  Star,
+} from "lucide-react";
+import { useOrganization } from "@/contexts/OrganizationContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,11 +23,11 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
-import type { ColorScheme } from '@/hooks/useSettings';
-import type { UserRole } from '@/lib/api';
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import type { ColorScheme } from "@/hooks/useSettings";
+import type { UserRole } from "@/lib/api";
 
 interface OrganizationSwitcherProps {
   colorScheme?: ColorScheme;
@@ -28,13 +35,13 @@ interface OrganizationSwitcherProps {
 
 // Role badge colors
 const roleColors: Record<UserRole, string> = {
-  admin: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-  manager: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-  viewer: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+  admin: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+  manager: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+  viewer: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
 };
 
 export function OrganizationSwitcher({
-  colorScheme = 'navy',
+  colorScheme = "navy",
 }: OrganizationSwitcherProps) {
   const { isSuperAdmin } = useAuth();
   const {
@@ -58,15 +65,15 @@ export function OrganizationSwitcher({
 
   // Get button styles based on color scheme
   const buttonStyles =
-    colorScheme === 'navy'
-      ? 'text-white hover:bg-blue-700 border-blue-700'
-      : 'text-gray-700 hover:bg-gray-100 border-gray-200';
+    colorScheme === "navy"
+      ? "text-white hover:bg-blue-700 border-blue-700"
+      : "text-gray-700 hover:bg-gray-100 border-gray-200";
 
   const activeStyles = isViewingOtherOrg
-    ? colorScheme === 'navy'
-      ? 'bg-amber-500/20 border-amber-400/50 text-amber-100'
-      : 'bg-amber-50 border-amber-200 text-amber-800'
-    : '';
+    ? colorScheme === "navy"
+      ? "bg-amber-500/20 border-amber-400/50 text-amber-100"
+      : "bg-amber-50 border-amber-200 text-amber-800"
+    : "";
 
   return (
     <DropdownMenu>
@@ -75,14 +82,14 @@ export function OrganizationSwitcher({
           variant="outline"
           size="sm"
           className={cn(
-            'flex items-center gap-2 h-9 px-3 transition-colors',
+            "flex items-center gap-2 h-9 px-3 transition-colors",
             buttonStyles,
-            activeStyles
+            activeStyles,
           )}
         >
           <Building2 className="h-4 w-4" />
           <span className="max-w-[120px] truncate hidden sm:inline">
-            {activeOrganization?.name || 'Select Org'}
+            {activeOrganization?.name || "Select Org"}
           </span>
           <ChevronDown className="h-4 w-4" />
         </Button>
@@ -121,8 +128,8 @@ export function OrganizationSwitcher({
                 key={org.id}
                 onClick={() => switchOrganization(org.id)}
                 className={cn(
-                  'flex items-center justify-between gap-2',
-                  isActive && 'bg-accent'
+                  "flex items-center justify-between gap-2",
+                  isActive && "bg-accent",
                 )}
               >
                 <div className="flex items-center gap-2 min-w-0">
@@ -140,7 +147,7 @@ export function OrganizationSwitcher({
                   {isMultiOrgUser && !isSuperAdmin && orgRole && (
                     <Badge
                       variant="secondary"
-                      className={cn('text-xs px-1.5 py-0', roleColors[orgRole])}
+                      className={cn("text-xs px-1.5 py-0", roleColors[orgRole])}
                     >
                       {orgRole}
                     </Badge>
@@ -167,7 +174,8 @@ export function OrganizationSwitcher({
           <>
             <DropdownMenuSeparator />
             <div className="px-2 py-1.5 text-xs text-muted-foreground">
-              Current role: <span className="font-medium capitalize">{activeRole}</span>
+              Current role:{" "}
+              <span className="font-medium capitalize">{activeRole}</span>
             </div>
           </>
         )}

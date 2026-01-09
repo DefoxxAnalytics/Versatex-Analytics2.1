@@ -14,10 +14,10 @@ import {
   useCallback,
   useRef,
   ReactNode,
-} from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { useAuth } from './AuthContext';
-import { api, Organization, OrganizationMembership, UserRole } from '@/lib/api';
+} from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "./AuthContext";
+import { api, Organization, OrganizationMembership, UserRole } from "@/lib/api";
 
 interface OrganizationContextType {
   /** Currently active organization (defaults to user's primary org) */
@@ -45,10 +45,10 @@ interface OrganizationContextType {
 }
 
 const OrganizationContext = createContext<OrganizationContextType | undefined>(
-  undefined
+  undefined,
 );
 
-const STORAGE_KEY = 'active_organization_id';
+const STORAGE_KEY = "active_organization_id";
 
 export function OrganizationProvider({ children }: { children: ReactNode }) {
   const { user, isSuperAdmin, isAuth } = useAuth();
@@ -59,7 +59,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   const [activeOrganization, setActiveOrganization] =
     useState<Organization | null>(null);
   const [userOrganization, setUserOrganization] = useState<Organization | null>(
-    null
+    null,
   );
   const [activeRole, setActiveRole] = useState<UserRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -72,7 +72,8 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   const isMultiOrgUser = (user?.profile?.organizations?.length ?? 0) > 1;
 
   // Determine if user can switch organizations (superuser OR multi-org user)
-  const canSwitch = (isSuperAdmin || isMultiOrgUser) && organizations.length > 1;
+  const canSwitch =
+    (isSuperAdmin || isMultiOrgUser) && organizations.length > 1;
 
   // Check if viewing a different org than primary
   const isViewingOtherOrg =
@@ -84,12 +85,12 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   const getRoleInOrg = useCallback(
     (orgId: number): UserRole | null => {
       // For superusers, they always have admin access
-      if (isSuperAdmin) return 'admin';
+      if (isSuperAdmin) return "admin";
       // Look up from memberships
       const membership = memberships.find((m) => m.organization === orgId);
       return membership?.role ?? null;
     },
-    [isSuperAdmin, memberships]
+    [isSuperAdmin, memberships],
   );
 
   /**
@@ -126,18 +127,18 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
               id: primaryMembership.organization,
               name: primaryMembership.organization_name,
               slug: primaryMembership.organization_slug,
-              description: '',
+              description: "",
               is_active: true,
-              created_at: '',
+              created_at: "",
             }
           : user.profile?.organization
             ? {
                 id: user.profile.organization,
-                name: user.profile.organization_name || 'Unknown',
-                slug: '',
-                description: '',
+                name: user.profile.organization_name || "Unknown",
+                slug: "",
+                description: "",
                 is_active: true,
-                created_at: '',
+                created_at: "",
               }
             : null;
 
@@ -146,19 +147,20 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
         // For superusers, fetch all organizations
         if (isSuperAdmin) {
           try {
-            const response = await api.get('/auth/organizations/');
-            const allOrgs = (response.data.results ?? response.data) as Organization[];
+            const response = await api.get("/auth/organizations/");
+            const allOrgs = (response.data.results ??
+              response.data) as Organization[];
             setOrganizations(allOrgs);
 
             // Check for persisted organization selection
             const storedOrgId = localStorage.getItem(STORAGE_KEY);
             if (storedOrgId) {
               const storedOrg = allOrgs.find(
-                (org) => org.id === parseInt(storedOrgId, 10)
+                (org) => org.id === parseInt(storedOrgId, 10),
               );
               if (storedOrg) {
                 setActiveOrganization(storedOrg);
-                setActiveRole('admin'); // Superusers always admin
+                setActiveRole("admin"); // Superusers always admin
               } else {
                 localStorage.removeItem(STORAGE_KEY);
                 setActiveOrganization(userOrg);
@@ -179,9 +181,9 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
             id: m.organization,
             name: m.organization_name,
             slug: m.organization_slug,
-            description: '',
+            description: "",
             is_active: true,
-            created_at: '',
+            created_at: "",
           }));
           setOrganizations(memberOrgs);
 
@@ -189,22 +191,26 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
           const storedOrgId = localStorage.getItem(STORAGE_KEY);
           if (storedOrgId) {
             const storedMembership = userMemberships.find(
-              (m) => m.organization === parseInt(storedOrgId, 10)
+              (m) => m.organization === parseInt(storedOrgId, 10),
             );
             if (storedMembership) {
               const storedOrg = memberOrgs.find(
-                (org) => org.id === parseInt(storedOrgId, 10)
+                (org) => org.id === parseInt(storedOrgId, 10),
               );
               setActiveOrganization(storedOrg ?? userOrg);
               setActiveRole(storedMembership.role);
             } else {
               localStorage.removeItem(STORAGE_KEY);
               setActiveOrganization(userOrg);
-              setActiveRole(primaryMembership?.role ?? user.profile?.role ?? null);
+              setActiveRole(
+                primaryMembership?.role ?? user.profile?.role ?? null,
+              );
             }
           } else {
             setActiveOrganization(userOrg);
-            setActiveRole(primaryMembership?.role ?? user.profile?.role ?? null);
+            setActiveRole(
+              primaryMembership?.role ?? user.profile?.role ?? null,
+            );
           }
         } else {
           // Single-org user
@@ -259,16 +265,16 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 
       // Dispatch custom event for any listeners
       window.dispatchEvent(
-        new CustomEvent('organizationChanged', {
+        new CustomEvent("organizationChanged", {
           detail: {
             organizationId: orgId,
             organization: newOrg,
             role: newRole,
           },
-        })
+        }),
       );
     },
-    [canSwitch, organizations, queryClient, getRoleInOrg]
+    [canSwitch, organizations, queryClient, getRoleInOrg],
   );
 
   /**
@@ -289,13 +295,13 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 
     // Dispatch custom event
     window.dispatchEvent(
-      new CustomEvent('organizationChanged', {
+      new CustomEvent("organizationChanged", {
         detail: {
           organizationId: userOrganization.id,
           organization: userOrganization,
           role: primaryRole,
         },
-      })
+      }),
     );
   }, [userOrganization, queryClient, getRoleInOrg]);
 
@@ -324,7 +330,7 @@ export function useOrganization() {
   const context = useContext(OrganizationContext);
   if (context === undefined) {
     throw new Error(
-      'useOrganization must be used within an OrganizationProvider'
+      "useOrganization must be used within an OrganizationProvider",
     );
   }
   return context;

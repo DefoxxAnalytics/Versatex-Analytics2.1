@@ -1,18 +1,24 @@
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Checkbox } from '@/components/ui/checkbox';
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -20,8 +26,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import {
   useComplianceOverview,
   useMaverickSpendAnalysis,
@@ -35,8 +41,8 @@ import {
   getRiskLevelDisplay,
   getComplianceScoreColor,
   getComplianceRateStatus,
-} from '@/hooks/useCompliance';
-import type { ViolationSeverity, PolicyViolation } from '@/lib/api';
+} from "@/hooks/useCompliance";
+import type { ViolationSeverity, PolicyViolation } from "@/lib/api";
 import {
   AlertTriangle,
   Shield,
@@ -55,7 +61,7 @@ import {
   AlertCircle,
   CheckSquare,
   Square,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -72,25 +78,32 @@ import {
   Line,
   AreaChart,
   Area,
-} from 'recharts';
+} from "recharts";
 
 const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
 };
 
 const SEVERITY_COLORS = {
-  critical: '#dc2626',
-  high: '#ef4444',
-  medium: '#f59e0b',
-  low: '#3b82f6',
+  critical: "#dc2626",
+  high: "#ef4444",
+  medium: "#f59e0b",
+  low: "#3b82f6",
 };
 
-const CHART_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+const CHART_COLORS = [
+  "#3b82f6",
+  "#22c55e",
+  "#f59e0b",
+  "#ef4444",
+  "#8b5cf6",
+  "#06b6d4",
+];
 
 function StatCard({
   title,
@@ -127,15 +140,26 @@ function StatCard({
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        <Icon className={`h-4 w-4 ${status?.color || 'text-muted-foreground'}`} />
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          {title}
+        </CardTitle>
+        <Icon
+          className={`h-4 w-4 ${status?.color || "text-muted-foreground"}`}
+        />
       </CardHeader>
       <CardContent>
-        <div className={`text-2xl font-bold ${status?.color || ''}`}>{value}</div>
-        {description && <p className="text-xs text-muted-foreground">{description}</p>}
+        <div className={`text-2xl font-bold ${status?.color || ""}`}>
+          {value}
+        </div>
+        {description && (
+          <p className="text-xs text-muted-foreground">{description}</p>
+        )}
         {trend && (
-          <p className={`text-xs ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
-            {trend.isPositive ? '+' : ''}{trend.value}% from last period
+          <p
+            className={`text-xs ${trend.isPositive ? "text-green-600" : "text-red-600"}`}
+          >
+            {trend.isPositive ? "+" : ""}
+            {trend.value}% from last period
           </p>
         )}
       </CardContent>
@@ -145,7 +169,9 @@ function StatCard({
 
 function OverviewSection() {
   const { data: overview, isLoading } = useComplianceOverview();
-  const rateStatus = overview ? getComplianceRateStatus(overview.compliance_rate) : null;
+  const rateStatus = overview
+    ? getComplianceRateStatus(overview.compliance_rate)
+    : null;
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -155,7 +181,11 @@ function OverviewSection() {
         icon={Shield}
         description={rateStatus?.label}
         isLoading={isLoading}
-        status={rateStatus ? { color: rateStatus.color, bgColor: rateStatus.bgColor } : undefined}
+        status={
+          rateStatus
+            ? { color: rateStatus.color, bgColor: rateStatus.bgColor }
+            : undefined
+        }
       />
       <StatCard
         title="Unresolved Violations"
@@ -163,9 +193,11 @@ function OverviewSection() {
         icon={ShieldAlert}
         description={`${overview?.resolved_today ?? 0} resolved today`}
         isLoading={isLoading}
-        status={overview?.unresolved_violations && overview.unresolved_violations > 0
-          ? { color: 'text-red-600', bgColor: 'bg-red-100' }
-          : undefined}
+        status={
+          overview?.unresolved_violations && overview.unresolved_violations > 0
+            ? { color: "text-red-600", bgColor: "bg-red-100" }
+            : undefined
+        }
       />
       <StatCard
         title="Maverick Spend"
@@ -173,9 +205,11 @@ function OverviewSection() {
         icon={AlertTriangle}
         description={`${overview?.maverick_percentage ?? 0}% off-contract`}
         isLoading={isLoading}
-        status={overview?.maverick_percentage && overview.maverick_percentage > 20
-          ? { color: 'text-amber-600', bgColor: 'bg-amber-100' }
-          : undefined}
+        status={
+          overview?.maverick_percentage && overview.maverick_percentage > 20
+            ? { color: "text-amber-600", bgColor: "bg-amber-100" }
+            : undefined
+        }
       />
       <StatCard
         title="Active Policies"
@@ -204,12 +238,30 @@ function SeverityBreakdownChart() {
     );
   }
 
-  const chartData = overview?.severity_breakdown ? [
-    { name: 'Critical', value: overview.severity_breakdown.critical, color: SEVERITY_COLORS.critical },
-    { name: 'High', value: overview.severity_breakdown.high, color: SEVERITY_COLORS.high },
-    { name: 'Medium', value: overview.severity_breakdown.medium, color: SEVERITY_COLORS.medium },
-    { name: 'Low', value: overview.severity_breakdown.low, color: SEVERITY_COLORS.low },
-  ].filter(d => d.value > 0) : [];
+  const chartData = overview?.severity_breakdown
+    ? [
+        {
+          name: "Critical",
+          value: overview.severity_breakdown.critical,
+          color: SEVERITY_COLORS.critical,
+        },
+        {
+          name: "High",
+          value: overview.severity_breakdown.high,
+          color: SEVERITY_COLORS.high,
+        },
+        {
+          name: "Medium",
+          value: overview.severity_breakdown.medium,
+          color: SEVERITY_COLORS.medium,
+        },
+        {
+          name: "Low",
+          value: overview.severity_breakdown.low,
+          color: SEVERITY_COLORS.low,
+        },
+      ].filter((d) => d.value > 0)
+    : [];
 
   const total = chartData.reduce((acc, d) => acc + d.value, 0);
 
@@ -239,7 +291,9 @@ function SeverityBreakdownChart() {
                   innerRadius={40}
                   outerRadius={70}
                   dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }) =>
+                    `${name} ${(percent * 100).toFixed(0)}%`
+                  }
                 >
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
@@ -271,15 +325,20 @@ function MaverickSpendSection() {
     );
   }
 
-  const supplierData = data?.maverick_suppliers.slice(0, 10).map(s => ({
-    name: s.supplier_name.length > 15 ? s.supplier_name.substring(0, 15) + '...' : s.supplier_name,
-    spend: s.spend,
-  })) ?? [];
+  const supplierData =
+    data?.maverick_suppliers.slice(0, 10).map((s) => ({
+      name:
+        s.supplier_name.length > 15
+          ? s.supplier_name.substring(0, 15) + "..."
+          : s.supplier_name,
+      spend: s.spend,
+    })) ?? [];
 
-  const categoryData = data?.maverick_categories.slice(0, 5).map(c => ({
-    name: c.category_name,
-    spend: c.spend,
-  })) ?? [];
+  const categoryData =
+    data?.maverick_categories.slice(0, 5).map((c) => ({
+      name: c.category_name,
+      spend: c.spend,
+    })) ?? [];
 
   return (
     <Card>
@@ -289,7 +348,8 @@ function MaverickSpendSection() {
           Maverick Spend Analysis
         </CardTitle>
         <CardDescription>
-          {formatCurrency(data?.total_maverick_spend ?? 0)} ({data?.maverick_percentage ?? 0}%) off-contract
+          {formatCurrency(data?.total_maverick_spend ?? 0)} (
+          {data?.maverick_percentage ?? 0}%) off-contract
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -301,14 +361,21 @@ function MaverickSpendSection() {
         ) : (
           <div className="space-y-6">
             <div>
-              <h4 className="text-sm font-medium mb-3">Top Off-Contract Suppliers</h4>
+              <h4 className="text-sm font-medium mb-3">
+                Top Off-Contract Suppliers
+              </h4>
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={supplierData} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" tickFormatter={(v) => formatCurrency(v)} />
+                    <XAxis
+                      type="number"
+                      tickFormatter={(v) => formatCurrency(v)}
+                    />
                     <YAxis type="category" dataKey="name" width={100} />
-                    <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                    <Tooltip
+                      formatter={(value: number) => formatCurrency(value)}
+                    />
                     <Bar dataKey="spend" fill="#f59e0b" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -317,12 +384,19 @@ function MaverickSpendSection() {
 
             {categoryData.length > 0 && (
               <div>
-                <h4 className="text-sm font-medium mb-3">Off-Contract by Category</h4>
+                <h4 className="text-sm font-medium mb-3">
+                  Off-Contract by Category
+                </h4>
                 <div className="space-y-2">
                   {categoryData.map((cat, index) => (
-                    <div key={index} className="flex items-center justify-between">
+                    <div
+                      key={index}
+                      className="flex items-center justify-between"
+                    >
                       <span className="text-sm">{cat.name}</span>
-                      <span className="font-medium">{formatCurrency(cat.spend)}</span>
+                      <span className="font-medium">
+                        {formatCurrency(cat.spend)}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -334,16 +408,28 @@ function MaverickSpendSection() {
                 <h4 className="text-sm font-medium mb-3">Recommendations</h4>
                 <div className="space-y-3">
                   {data.recommendations.map((rec, index) => (
-                    <div key={index} className="p-3 rounded-lg border bg-accent/50">
+                    <div
+                      key={index}
+                      className="p-3 rounded-lg border bg-accent/50"
+                    >
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-medium text-sm">{rec.title}</span>
-                        <Badge variant={rec.priority === 'high' ? 'destructive' : 'secondary'}>
+                        <Badge
+                          variant={
+                            rec.priority === "high"
+                              ? "destructive"
+                              : "secondary"
+                          }
+                        >
                           {rec.priority}
                         </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground">{rec.description}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {rec.description}
+                      </p>
                       <p className="text-sm text-green-600 mt-1">
-                        Potential savings: {formatCurrency(rec.potential_savings)}
+                        Potential savings:{" "}
+                        {formatCurrency(rec.potential_savings)}
                       </p>
                     </div>
                   ))}
@@ -358,17 +444,22 @@ function MaverickSpendSection() {
 }
 
 function ViolationsSection() {
-  const [severityFilter, setSeverityFilter] = useState<string>('all');
-  const [resolvedFilter, setResolvedFilter] = useState<string>('unresolved');
-  const [selectedViolation, setSelectedViolation] = useState<PolicyViolation | null>(null);
-  const [resolutionNotes, setResolutionNotes] = useState('');
+  const [severityFilter, setSeverityFilter] = useState<string>("all");
+  const [resolvedFilter, setResolvedFilter] = useState<string>("unresolved");
+  const [selectedViolation, setSelectedViolation] =
+    useState<PolicyViolation | null>(null);
+  const [resolutionNotes, setResolutionNotes] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [isBatchResolveOpen, setIsBatchResolveOpen] = useState(false);
-  const [batchResolutionNotes, setBatchResolutionNotes] = useState('');
+  const [batchResolutionNotes, setBatchResolutionNotes] = useState("");
   const [batchResolving, setBatchResolving] = useState(false);
 
-  const resolvedParam = resolvedFilter === 'all' ? undefined : resolvedFilter === 'resolved';
-  const severityParam = severityFilter === 'all' ? undefined : severityFilter as ViolationSeverity;
+  const resolvedParam =
+    resolvedFilter === "all" ? undefined : resolvedFilter === "resolved";
+  const severityParam =
+    severityFilter === "all"
+      ? undefined
+      : (severityFilter as ViolationSeverity);
 
   const { data, isLoading } = usePolicyViolations({
     resolved: resolvedParam,
@@ -387,21 +478,21 @@ function ViolationsSection() {
         resolutionNotes: resolutionNotes.trim(),
       });
       setSelectedViolation(null);
-      setResolutionNotes('');
+      setResolutionNotes("");
     } catch {
       // Error handled by mutation
     }
   };
 
   const violations = data?.violations ?? [];
-  const unresolvedViolations = violations.filter(v => !v.is_resolved);
+  const unresolvedViolations = violations.filter((v) => !v.is_resolved);
 
   // Handle select all unresolved violations
   const handleSelectAll = () => {
     if (selectedIds.size === unresolvedViolations.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(unresolvedViolations.map(v => v.id)));
+      setSelectedIds(new Set(unresolvedViolations.map((v) => v.id)));
     }
   };
 
@@ -432,7 +523,7 @@ function ViolationsSection() {
       }
       setSelectedIds(new Set());
       setIsBatchResolveOpen(false);
-      setBatchResolutionNotes('');
+      setBatchResolutionNotes("");
     } catch {
       // Error handled by mutation
     } finally {
@@ -479,10 +570,15 @@ function ViolationsSection() {
                   <ShieldAlert className="h-5 w-5" />
                   Policy Violations
                 </CardTitle>
-                <CardDescription>{data?.count ?? 0} violations found</CardDescription>
+                <CardDescription>
+                  {data?.count ?? 0} violations found
+                </CardDescription>
               </div>
               <div className="flex gap-2">
-                <Select value={resolvedFilter} onValueChange={setResolvedFilter}>
+                <Select
+                  value={resolvedFilter}
+                  onValueChange={setResolvedFilter}
+                >
                   <SelectTrigger className="w-[130px]">
                     <SelectValue />
                   </SelectTrigger>
@@ -492,7 +588,10 @@ function ViolationsSection() {
                     <SelectItem value="resolved">Resolved</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={severityFilter} onValueChange={setSeverityFilter}>
+                <Select
+                  value={severityFilter}
+                  onValueChange={setSeverityFilter}
+                >
                   <SelectTrigger className="w-[130px]">
                     <SelectValue />
                   </SelectTrigger>
@@ -512,12 +611,19 @@ function ViolationsSection() {
                 <div className="flex items-center gap-3">
                   <Checkbox
                     id="select-all"
-                    checked={selectedIds.size > 0 && selectedIds.size === unresolvedViolations.length}
+                    checked={
+                      selectedIds.size > 0 &&
+                      selectedIds.size === unresolvedViolations.length
+                    }
                     onCheckedChange={handleSelectAll}
                   />
-                  <label htmlFor="select-all" className="text-sm font-medium cursor-pointer">
-                    {selectedIds.size === unresolvedViolations.length && unresolvedViolations.length > 0
-                      ? 'Deselect All'
+                  <label
+                    htmlFor="select-all"
+                    className="text-sm font-medium cursor-pointer"
+                  >
+                    {selectedIds.size === unresolvedViolations.length &&
+                    unresolvedViolations.length > 0
+                      ? "Deselect All"
                       : `Select All (${unresolvedViolations.length})`}
                   </label>
                   {selectedIds.size > 0 && (
@@ -527,10 +633,7 @@ function ViolationsSection() {
                   )}
                 </div>
                 {selectedIds.size > 0 && (
-                  <Button
-                    size="sm"
-                    onClick={() => setIsBatchResolveOpen(true)}
-                  >
+                  <Button size="sm" onClick={() => setIsBatchResolveOpen(true)}>
                     <CheckSquare className="h-4 w-4 mr-2" />
                     Resolve Selected ({selectedIds.size})
                   </Button>
@@ -548,14 +651,20 @@ function ViolationsSection() {
           ) : (
             <div className="space-y-3">
               {violations.map((violation) => {
-                const severityDisplay = getViolationSeverityDisplay(violation.severity);
-                const typeDisplay = getViolationTypeDisplay(violation.violation_type);
-                const ViolationIcon = getViolationIcon(violation.violation_type);
+                const severityDisplay = getViolationSeverityDisplay(
+                  violation.severity,
+                );
+                const typeDisplay = getViolationTypeDisplay(
+                  violation.violation_type,
+                );
+                const ViolationIcon = getViolationIcon(
+                  violation.violation_type,
+                );
 
                 return (
                   <div
                     key={violation.id}
-                    className={`p-4 rounded-lg border ${violation.is_resolved ? 'bg-muted/30' : 'bg-card'} ${selectedIds.has(violation.id) ? 'ring-2 ring-primary' : ''}`}
+                    className={`p-4 rounded-lg border ${violation.is_resolved ? "bg-muted/30" : "bg-card"} ${selectedIds.has(violation.id) ? "ring-2 ring-primary" : ""}`}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
@@ -563,13 +672,19 @@ function ViolationsSection() {
                         {!violation.is_resolved && (
                           <Checkbox
                             checked={selectedIds.has(violation.id)}
-                            onCheckedChange={() => handleToggleSelect(violation.id)}
+                            onCheckedChange={() =>
+                              handleToggleSelect(violation.id)
+                            }
                             onClick={(e) => e.stopPropagation()}
                           />
                         )}
-                        <ViolationIcon className={`h-4 w-4 ${severityDisplay.color}`} />
+                        <ViolationIcon
+                          className={`h-4 w-4 ${severityDisplay.color}`}
+                        />
                         <span className="font-medium">{typeDisplay.label}</span>
-                        <Badge className={`${severityDisplay.color} ${severityDisplay.bgColor}`}>
+                        <Badge
+                          className={`${severityDisplay.color} ${severityDisplay.bgColor}`}
+                        >
                           {severityDisplay.label}
                         </Badge>
                         {violation.is_resolved && (
@@ -592,7 +707,9 @@ function ViolationsSection() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
                       <div>
                         <span className="text-muted-foreground">Amount:</span>
-                        <span className="ml-1 font-medium">{formatCurrency(violation.transaction_amount)}</span>
+                        <span className="ml-1 font-medium">
+                          {formatCurrency(violation.transaction_amount)}
+                        </span>
                       </div>
                       <div>
                         <span className="text-muted-foreground">Supplier:</span>
@@ -613,7 +730,8 @@ function ViolationsSection() {
                     </div>
                     {violation.is_resolved && violation.resolution_notes && (
                       <div className="mt-2 text-sm text-muted-foreground border-t pt-2">
-                        <span className="font-medium">Resolution:</span> {violation.resolution_notes}
+                        <span className="font-medium">Resolution:</span>{" "}
+                        {violation.resolution_notes}
                       </div>
                     )}
                   </div>
@@ -625,7 +743,10 @@ function ViolationsSection() {
       </Card>
 
       {/* Single violation resolve dialog */}
-      <Dialog open={!!selectedViolation} onOpenChange={() => setSelectedViolation(null)}>
+      <Dialog
+        open={!!selectedViolation}
+        onOpenChange={() => setSelectedViolation(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Resolve Violation</DialogTitle>
@@ -636,9 +757,15 @@ function ViolationsSection() {
           {selectedViolation && (
             <div className="space-y-4">
               <div className="p-3 rounded-lg bg-muted">
-                <div className="font-medium">{getViolationTypeDisplay(selectedViolation.violation_type).label}</div>
+                <div className="font-medium">
+                  {
+                    getViolationTypeDisplay(selectedViolation.violation_type)
+                      .label
+                  }
+                </div>
                 <div className="text-sm text-muted-foreground">
-                  {selectedViolation.supplier_name} • {formatCurrency(selectedViolation.transaction_amount)}
+                  {selectedViolation.supplier_name} •{" "}
+                  {formatCurrency(selectedViolation.transaction_amount)}
                 </div>
               </div>
               <Textarea
@@ -650,14 +777,17 @@ function ViolationsSection() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedViolation(null)}>
+            <Button
+              variant="outline"
+              onClick={() => setSelectedViolation(null)}
+            >
               Cancel
             </Button>
             <Button
               onClick={handleResolve}
               disabled={!resolutionNotes.trim() || resolveViolation.isPending}
             >
-              {resolveViolation.isPending ? 'Resolving...' : 'Resolve'}
+              {resolveViolation.isPending ? "Resolving..." : "Resolve"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -681,14 +811,26 @@ function ViolationsSection() {
                 const violation = violations.find((v) => v.id === id);
                 if (!violation) return null;
                 return (
-                  <div key={id} className="p-2 rounded bg-muted text-sm flex items-center justify-between">
+                  <div
+                    key={id}
+                    className="p-2 rounded bg-muted text-sm flex items-center justify-between"
+                  >
                     <div className="flex items-center gap-2">
-                      <Badge className={`${getViolationSeverityDisplay(violation.severity).bgColor} ${getViolationSeverityDisplay(violation.severity).color} text-xs`}>
+                      <Badge
+                        className={`${getViolationSeverityDisplay(violation.severity).bgColor} ${getViolationSeverityDisplay(violation.severity).color} text-xs`}
+                      >
                         {violation.severity}
                       </Badge>
-                      <span>{getViolationTypeDisplay(violation.violation_type).label}</span>
+                      <span>
+                        {
+                          getViolationTypeDisplay(violation.violation_type)
+                            .label
+                        }
+                      </span>
                     </div>
-                    <span className="text-muted-foreground">{formatCurrency(violation.transaction_amount)}</span>
+                    <span className="text-muted-foreground">
+                      {formatCurrency(violation.transaction_amount)}
+                    </span>
                   </div>
                 );
               })}
@@ -701,14 +843,20 @@ function ViolationsSection() {
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsBatchResolveOpen(false)} disabled={batchResolving}>
+            <Button
+              variant="outline"
+              onClick={() => setIsBatchResolveOpen(false)}
+              disabled={batchResolving}
+            >
               Cancel
             </Button>
             <Button
               onClick={handleBatchResolve}
               disabled={!batchResolutionNotes.trim() || batchResolving}
             >
-              {batchResolving ? `Resolving ${selectedIds.size}...` : `Resolve All (${selectedIds.size})`}
+              {batchResolving
+                ? `Resolving ${selectedIds.size}...`
+                : `Resolve All (${selectedIds.size})`}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -734,12 +882,14 @@ function ViolationTrendsSection() {
   }
 
   const trendData = data?.monthly_trend ?? [];
-  const typeData = data?.by_type ? Object.entries(data.by_type)
-    .map(([type, count]) => ({
-      name: getViolationTypeDisplay(type as any).label,
-      value: count,
-    }))
-    .filter(d => d.value > 0) : [];
+  const typeData = data?.by_type
+    ? Object.entries(data.by_type)
+        .map(([type, count]) => ({
+          name: getViolationTypeDisplay(type as any).label,
+          value: count,
+        }))
+        .filter((d) => d.value > 0)
+    : [];
 
   return (
     <Card>
@@ -766,8 +916,20 @@ function ViolationTrendsSection() {
                   <YAxis />
                   <Tooltip />
                   <Legend />
-                  <Area type="monotone" dataKey="total" name="Total" stroke="#ef4444" fill="#fecaca" />
-                  <Area type="monotone" dataKey="resolved" name="Resolved" stroke="#22c55e" fill="#bbf7d0" />
+                  <Area
+                    type="monotone"
+                    dataKey="total"
+                    name="Total"
+                    stroke="#ef4444"
+                    fill="#fecaca"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="resolved"
+                    name="Resolved"
+                    stroke="#22c55e"
+                    fill="#bbf7d0"
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -784,10 +946,15 @@ function ViolationTrendsSection() {
                         cy="50%"
                         outerRadius={70}
                         dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }) =>
+                          `${name} ${(percent * 100).toFixed(0)}%`
+                        }
                       >
                         {typeData.map((_, index) => (
-                          <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={CHART_COLORS[index % CHART_COLORS.length]}
+                          />
                         ))}
                       </Pie>
                       <Tooltip />
@@ -855,20 +1022,27 @@ function SupplierComplianceSection() {
                       {index + 1}
                     </span>
                     <div>
-                      <div className="font-medium">{supplier.supplier_name}</div>
+                      <div className="font-medium">
+                        {supplier.supplier_name}
+                      </div>
                       <div className="text-sm text-muted-foreground">
-                        {supplier.transaction_count} transactions • {formatCurrency(supplier.total_spend)}
+                        {supplier.transaction_count} transactions •{" "}
+                        {formatCurrency(supplier.total_spend)}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right">
-                      <div className={`text-xl font-bold ${getComplianceScoreColor(supplier.compliance_score)}`}>
+                      <div
+                        className={`text-xl font-bold ${getComplianceScoreColor(supplier.compliance_score)}`}
+                      >
                         {supplier.compliance_score.toFixed(0)}
                       </div>
                       <div className="text-xs text-muted-foreground">score</div>
                     </div>
-                    <Badge className={`${riskDisplay.color} ${riskDisplay.bgColor}`}>
+                    <Badge
+                      className={`${riskDisplay.color} ${riskDisplay.bgColor}`}
+                    >
                       {riskDisplay.label}
                     </Badge>
                     {supplier.has_contract && (
@@ -934,11 +1108,13 @@ function PoliciesSection() {
                   <div>
                     <div className="font-medium">{policy.name}</div>
                     {policy.description && (
-                      <div className="text-sm text-muted-foreground">{policy.description}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {policy.description}
+                      </div>
                     )}
                   </div>
-                  <Badge variant={policy.is_active ? 'default' : 'secondary'}>
-                    {policy.is_active ? 'Active' : 'Inactive'}
+                  <Badge variant={policy.is_active ? "default" : "secondary"}>
+                    {policy.is_active ? "Active" : "Inactive"}
                   </Badge>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
@@ -961,7 +1137,7 @@ function PoliciesSection() {
 }
 
 export default function MaverickPage() {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState("overview");
 
   return (
     <div className="space-y-6">
@@ -971,13 +1147,18 @@ export default function MaverickPage() {
           Maverick Spend & Compliance
         </h1>
         <p className="text-muted-foreground mt-1">
-          Track policy violations, monitor off-contract spending, and ensure compliance
+          Track policy violations, monitor off-contract spending, and ensure
+          compliance
         </p>
       </div>
 
       <OverviewSection />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-4"
+      >
         <TabsList>
           <TabsTrigger value="overview">
             <AlertTriangle className="h-4 w-4 mr-2" />

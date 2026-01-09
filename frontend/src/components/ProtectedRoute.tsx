@@ -1,6 +1,6 @@
-import { useAuth } from '@/contexts/AuthContext';
-import { Redirect } from 'wouter';
-import { Loader2 } from 'lucide-react';
+import { useAuth } from "@/contexts/AuthContext";
+import { Redirect } from "wouter";
+import { Loader2 } from "lucide-react";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;

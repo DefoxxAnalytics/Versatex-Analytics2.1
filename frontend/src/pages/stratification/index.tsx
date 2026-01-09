@@ -1,5 +1,5 @@
-import { PlaceholderPage } from '@/components/PlaceholderPage';
-import { Layers } from 'lucide-react';
+import { PlaceholderPage } from "@/components/PlaceholderPage";
+import { Layers } from "lucide-react";
 
 export default function StratificationPage() {
   return (

@@ -11,8 +11,8 @@
  */
 
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
-const LAST_ACTIVITY_KEY = 'analytics_last_activity';
-const USER_KEY = 'user';
+const LAST_ACTIVITY_KEY = "analytics_last_activity";
+const USER_KEY = "user";
 
 /**
  * Check if user appears to be authenticated
@@ -102,12 +102,15 @@ export function isSessionExpired(): boolean {
  */
 export function isSecureContext(): boolean {
   // Allow localhost for development
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  if (
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1"
+  ) {
     return true;
   }
 
   // Require HTTPS in production
-  return window.location.protocol === 'https:';
+  return window.location.protocol === "https:";
 }
 
 /**

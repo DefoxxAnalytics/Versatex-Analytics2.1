@@ -55,7 +55,7 @@ export function MultiSelect({
           aria-expanded={open}
           className={cn(
             "w-full justify-between h-auto min-h-[2.5rem] px-3 py-2",
-            className
+            className,
           )}
         >
           <div className="flex flex-wrap gap-1 flex-1">
@@ -75,7 +75,9 @@ export function MultiSelect({
                 </Badge>
               ))
             ) : (
-              <span className="text-muted-foreground text-sm">{placeholder}</span>
+              <span className="text-muted-foreground text-sm">
+                {placeholder}
+              </span>
             )}
           </div>
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -97,7 +99,7 @@ export function MultiSelect({
                     "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
                     selected.includes(option)
                       ? "bg-primary text-primary-foreground"
-                      : "opacity-50 [&_svg]:invisible"
+                      : "opacity-50 [&_svg]:invisible",
                   )}
                 >
                   <Check className="h-4 w-4" />

@@ -1,5 +1,5 @@
-import { PlaceholderPage } from '@/components/PlaceholderPage';
-import { Calendar } from 'lucide-react';
+import { PlaceholderPage } from "@/components/PlaceholderPage";
+import { Calendar } from "lucide-react";
 
 export default function SeasonalityPage() {
   return (

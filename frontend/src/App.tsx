@@ -66,11 +66,11 @@ function PageLoader() {
  */
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuth } = useAuth();
-  
+
   if (!isAuth) {
     return <Redirect to="/login" />;
   }
-  
+
   return <>{children}</>;
 }
 
@@ -90,203 +90,203 @@ function Router() {
       {/* Overview route - dashboard (protected) */}
       <Route path="/">
         <ProtectedRoute>
-        <DashboardLayout>
-          <Suspense fallback={<PageLoader />}>
-            <Overview />
-          </Suspense>
-        </DashboardLayout>
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <Overview />
+            </Suspense>
+          </DashboardLayout>
         </ProtectedRoute>
       </Route>
 
       {/* All other routes use DashboardLayout (protected) */}
       <Route path="/categories">
         <ProtectedRoute>
-        <DashboardLayout>
-          <Suspense fallback={<PageLoader />}>
-            <CategoriesPage />
-          </Suspense>
-        </DashboardLayout>
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <CategoriesPage />
+            </Suspense>
+          </DashboardLayout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/suppliers">
         <ProtectedRoute>
-        <DashboardLayout>
-          <Suspense fallback={<PageLoader />}>
-            <SuppliersPage />
-          </Suspense>
-        </DashboardLayout>
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <SuppliersPage />
+            </Suspense>
+          </DashboardLayout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/pareto">
         <ProtectedRoute>
-        <DashboardLayout>
-          <Suspense fallback={<PageLoader />}>
-            <ParetoPage />
-          </Suspense>
-        </DashboardLayout>
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <ParetoPage />
+            </Suspense>
+          </DashboardLayout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/stratification">
         <ProtectedRoute>
-        <DashboardLayout>
-          <Suspense fallback={<PageLoader />}>
-            <StratificationPage />
-          </Suspense>
-        </DashboardLayout>
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <StratificationPage />
+            </Suspense>
+          </DashboardLayout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/seasonality">
         <ProtectedRoute>
-        <DashboardLayout>
-          <Suspense fallback={<PageLoader />}>
-            <SeasonalityPage />
-          </Suspense>
-        </DashboardLayout>
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <SeasonalityPage />
+            </Suspense>
+          </DashboardLayout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/yoy">
         <ProtectedRoute>
-        <DashboardLayout>
-          <Suspense fallback={<PageLoader />}>
-            <YoYPage />
-          </Suspense>
-        </DashboardLayout>
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <YoYPage />
+            </Suspense>
+          </DashboardLayout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/tail-spend">
         <ProtectedRoute>
-        <DashboardLayout>
-          <Suspense fallback={<PageLoader />}>
-            <TailSpendPage />
-          </Suspense>
-        </DashboardLayout>
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <TailSpendPage />
+            </Suspense>
+          </DashboardLayout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/ai-insights">
         <ProtectedRoute>
-        <DashboardLayout>
-          <Suspense fallback={<PageLoader />}>
-            <AIInsightsPage />
-          </Suspense>
-        </DashboardLayout>
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <AIInsightsPage />
+            </Suspense>
+          </DashboardLayout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/predictive">
         <ProtectedRoute>
-        <DashboardLayout>
-          <Suspense fallback={<PageLoader />}>
-            <PredictivePage />
-          </Suspense>
-        </DashboardLayout>
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <PredictivePage />
+            </Suspense>
+          </DashboardLayout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/contracts">
         <ProtectedRoute>
-        <DashboardLayout>
-          <Suspense fallback={<PageLoader />}>
-            <ContractsPage />
-          </Suspense>
-        </DashboardLayout>
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <ContractsPage />
+            </Suspense>
+          </DashboardLayout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/maverick">
         <ProtectedRoute>
-        <DashboardLayout>
-          <Suspense fallback={<PageLoader />}>
-            <MaverickPage />
-          </Suspense>
-        </DashboardLayout>
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <MaverickPage />
+            </Suspense>
+          </DashboardLayout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/reports">
         <ProtectedRoute>
-        <DashboardLayout>
-          <Suspense fallback={<PageLoader />}>
-            <ReportsPage />
-          </Suspense>
-        </DashboardLayout>
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <ReportsPage />
+            </Suspense>
+          </DashboardLayout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/settings">
         <ProtectedRoute>
-        <DashboardLayout>
-          <Suspense fallback={<PageLoader />}>
-            <SettingsPage />
-          </Suspense>
-        </DashboardLayout>
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <SettingsPage />
+            </Suspense>
+          </DashboardLayout>
         </ProtectedRoute>
       </Route>
 
       {/* P2P Analytics Routes */}
       <Route path="/p2p-cycle">
         <ProtectedRoute>
-        <DashboardLayout>
-          <Suspense fallback={<PageLoader />}>
-            <P2PCyclePage />
-          </Suspense>
-        </DashboardLayout>
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <P2PCyclePage />
+            </Suspense>
+          </DashboardLayout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/matching">
         <ProtectedRoute>
-        <DashboardLayout>
-          <Suspense fallback={<PageLoader />}>
-            <MatchingPage />
-          </Suspense>
-        </DashboardLayout>
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <MatchingPage />
+            </Suspense>
+          </DashboardLayout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/invoice-aging">
         <ProtectedRoute>
-        <DashboardLayout>
-          <Suspense fallback={<PageLoader />}>
-            <InvoiceAgingPage />
-          </Suspense>
-        </DashboardLayout>
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <InvoiceAgingPage />
+            </Suspense>
+          </DashboardLayout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/requisitions">
         <ProtectedRoute>
-        <DashboardLayout>
-          <Suspense fallback={<PageLoader />}>
-            <RequisitionsPage />
-          </Suspense>
-        </DashboardLayout>
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <RequisitionsPage />
+            </Suspense>
+          </DashboardLayout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/purchase-orders">
         <ProtectedRoute>
-        <DashboardLayout>
-          <Suspense fallback={<PageLoader />}>
-            <PurchaseOrdersPage />
-          </Suspense>
-        </DashboardLayout>
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <PurchaseOrdersPage />
+            </Suspense>
+          </DashboardLayout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/supplier-payments">
         <ProtectedRoute>
-        <DashboardLayout>
-          <Suspense fallback={<PageLoader />}>
-            <SupplierPaymentsPage />
-          </Suspense>
-        </DashboardLayout>
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <SupplierPaymentsPage />
+            </Suspense>
+          </DashboardLayout>
         </ProtectedRoute>
       </Route>
 

@@ -1,24 +1,30 @@
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   useContractOverview,
   useContracts,
@@ -32,7 +38,7 @@ import {
   getUtilizationStatus,
   formatDaysUntilExpiry,
   getSavingsTypeDisplay,
-} from '@/hooks/useContracts';
+} from "@/hooks/useContracts";
 import {
   FileText,
   AlertTriangle,
@@ -50,7 +56,7 @@ import {
   X,
   Info,
   Users,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -65,18 +71,25 @@ import {
   Legend,
   LineChart,
   Line,
-} from 'recharts';
+} from "recharts";
 
 const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
 };
 
-const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+const COLORS = [
+  "#3b82f6",
+  "#22c55e",
+  "#f59e0b",
+  "#ef4444",
+  "#8b5cf6",
+  "#06b6d4",
+];
 
 function StatCard({
   title,
@@ -111,15 +124,22 @@ function StatCard({
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          {title}
+        </CardTitle>
         <Icon className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>
-        {description && <p className="text-xs text-muted-foreground">{description}</p>}
+        {description && (
+          <p className="text-xs text-muted-foreground">{description}</p>
+        )}
         {trend && (
-          <p className={`text-xs ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
-            {trend.isPositive ? '+' : ''}{trend.value}% from last period
+          <p
+            className={`text-xs ${trend.isPositive ? "text-green-600" : "text-red-600"}`}
+          >
+            {trend.isPositive ? "+" : ""}
+            {trend.value}% from last period
           </p>
         )}
       </CardContent>
@@ -208,7 +228,9 @@ function ContractDetailModal({
             <div className="border-b pb-4">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-lg font-semibold">{contract.title}</h3>
-                <Badge className={`${getContractStatusDisplay(contract.status).color} ${getContractStatusDisplay(contract.status).bgColor}`}>
+                <Badge
+                  className={`${getContractStatusDisplay(contract.status).color} ${getContractStatusDisplay(contract.status).bgColor}`}
+                >
                   {getContractStatusDisplay(contract.status).label}
                 </Badge>
               </div>
@@ -223,11 +245,17 @@ function ContractDetailModal({
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="p-3 rounded-lg bg-muted/50">
                 <div className="text-xs text-muted-foreground">Total Value</div>
-                <div className="text-lg font-bold">{formatCurrency(contract.total_value)}</div>
+                <div className="text-lg font-bold">
+                  {formatCurrency(contract.total_value)}
+                </div>
               </div>
               <div className="p-3 rounded-lg bg-muted/50">
-                <div className="text-xs text-muted-foreground">Actual Spend</div>
-                <div className="text-lg font-bold">{formatCurrency(contract.actual_spend || 0)}</div>
+                <div className="text-xs text-muted-foreground">
+                  Actual Spend
+                </div>
+                <div className="text-lg font-bold">
+                  {formatCurrency(contract.actual_spend || 0)}
+                </div>
               </div>
               <div className="p-3 rounded-lg bg-muted/50">
                 <div className="text-xs text-muted-foreground">Remaining</div>
@@ -237,7 +265,9 @@ function ContractDetailModal({
               </div>
               <div className="p-3 rounded-lg bg-muted/50">
                 <div className="text-xs text-muted-foreground">Utilization</div>
-                <div className={`text-lg font-bold ${getUtilizationStatus(contract.utilization_percentage).color}`}>
+                <div
+                  className={`text-lg font-bold ${getUtilizationStatus(contract.utilization_percentage).color}`}
+                >
                   {contract.utilization_percentage.toFixed(1)}%
                 </div>
               </div>
@@ -246,12 +276,21 @@ function ContractDetailModal({
             {/* Utilization Progress */}
             <div>
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-muted-foreground">Contract Utilization</span>
-                <span className={getUtilizationStatus(contract.utilization_percentage).color}>
+                <span className="text-muted-foreground">
+                  Contract Utilization
+                </span>
+                <span
+                  className={
+                    getUtilizationStatus(contract.utilization_percentage).color
+                  }
+                >
                   {getUtilizationStatus(contract.utilization_percentage).label}
                 </span>
               </div>
-              <Progress value={contract.utilization_percentage} className="h-3" />
+              <Progress
+                value={contract.utilization_percentage}
+                className="h-3"
+              />
             </div>
 
             {/* Dates & Terms */}
@@ -262,9 +301,15 @@ function ContractDetailModal({
                   <span className="text-sm font-medium">Contract Period</span>
                 </div>
                 <div className="text-sm">
-                  <div>Start: {new Date(contract.start_date).toLocaleDateString()}</div>
-                  <div>End: {new Date(contract.end_date).toLocaleDateString()}</div>
-                  <div className={`mt-1 ${contract.days_until_expiry <= 30 ? 'text-red-600' : contract.days_until_expiry <= 90 ? 'text-amber-600' : 'text-green-600'}`}>
+                  <div>
+                    Start: {new Date(contract.start_date).toLocaleDateString()}
+                  </div>
+                  <div>
+                    End: {new Date(contract.end_date).toLocaleDateString()}
+                  </div>
+                  <div
+                    className={`mt-1 ${contract.days_until_expiry <= 30 ? "text-red-600" : contract.days_until_expiry <= 90 ? "text-amber-600" : "text-green-600"}`}
+                  >
                     {formatDaysUntilExpiry(contract.days_until_expiry)}
                   </div>
                 </div>
@@ -277,43 +322,58 @@ function ContractDetailModal({
                 <div className="text-sm">
                   <div className="font-medium">{contract.supplier_name}</div>
                   {contract.categories && contract.categories.length > 0 && (
-                    <div className="text-muted-foreground">Categories: {contract.categories.join(', ')}</div>
+                    <div className="text-muted-foreground">
+                      Categories: {contract.categories.join(", ")}
+                    </div>
                   )}
                 </div>
               </div>
             </div>
 
             {/* Category Breakdown */}
-            {contract.category_breakdown && contract.category_breakdown.length > 0 && (
-              <div className="p-3 rounded-lg border">
-                <div className="text-sm font-medium mb-2">Spend by Category</div>
-                <div className="space-y-2">
-                  {contract.category_breakdown.map((cat, index) => (
-                    <div key={index} className="flex justify-between text-sm">
-                      <span>{cat.category}</span>
-                      <span className="font-medium">{formatCurrency(cat.amount)}</span>
-                    </div>
-                  ))}
+            {contract.category_breakdown &&
+              contract.category_breakdown.length > 0 && (
+                <div className="p-3 rounded-lg border">
+                  <div className="text-sm font-medium mb-2">
+                    Spend by Category
+                  </div>
+                  <div className="space-y-2">
+                    {contract.category_breakdown.map((cat, index) => (
+                      <div key={index} className="flex justify-between text-sm">
+                        <span>{cat.category}</span>
+                        <span className="font-medium">
+                          {formatCurrency(cat.amount)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* Monthly Spend */}
             {contract.monthly_spend && contract.monthly_spend.length > 0 && (
               <div className="p-3 rounded-lg border">
-                <div className="text-sm font-medium mb-2">Monthly Spend (Recent)</div>
+                <div className="text-sm font-medium mb-2">
+                  Monthly Spend (Recent)
+                </div>
                 <div className="space-y-2">
                   {contract.monthly_spend.slice(-6).map((month, index) => (
                     <div key={index} className="flex justify-between text-sm">
                       <span>{month.month}</span>
-                      <span className="font-medium">{formatCurrency(month.amount)}</span>
+                      <span className="font-medium">
+                        {formatCurrency(month.amount)}
+                      </span>
                     </div>
                   ))}
                 </div>
                 {contract.average_monthly_spend > 0 && (
                   <div className="mt-2 pt-2 border-t text-sm flex justify-between">
-                    <span className="text-muted-foreground">Monthly Average</span>
-                    <span className="font-medium">{formatCurrency(contract.average_monthly_spend)}</span>
+                    <span className="text-muted-foreground">
+                      Monthly Average
+                    </span>
+                    <span className="font-medium">
+                      {formatCurrency(contract.average_monthly_spend)}
+                    </span>
                   </div>
                 )}
               </div>
@@ -323,7 +383,9 @@ function ContractDetailModal({
             {contract.auto_renew && (
               <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 border border-blue-100">
                 <RefreshCw className="h-4 w-4 text-blue-600" />
-                <span className="text-sm text-blue-700">This contract is set to auto-renew</span>
+                <span className="text-sm text-blue-700">
+                  This contract is set to auto-renew
+                </span>
               </div>
             )}
           </div>
@@ -335,13 +397,16 @@ function ContractDetailModal({
 
 function ContractsListSection() {
   const { data, isLoading } = useContracts();
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [selectedContractId, setSelectedContractId] = useState<number | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [selectedContractId, setSelectedContractId] = useState<number | null>(
+    null,
+  );
 
   const contracts = data?.contracts ?? [];
-  const filteredContracts = statusFilter === 'all'
-    ? contracts
-    : contracts.filter(c => c.status === statusFilter);
+  const filteredContracts =
+    statusFilter === "all"
+      ? contracts
+      : contracts.filter((c) => c.status === statusFilter);
 
   if (isLoading) {
     return (
@@ -366,7 +431,9 @@ function ContractsListSection() {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle>Contracts</CardTitle>
-            <CardDescription>{contracts.length} total contracts</CardDescription>
+            <CardDescription>
+              {contracts.length} total contracts
+            </CardDescription>
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[180px]">
@@ -387,13 +454,17 @@ function ContractsListSection() {
           <div className="text-center py-8 text-muted-foreground">
             <FileText className="mx-auto h-12 w-12 mb-4 opacity-50" />
             <p>No contracts found</p>
-            <p className="text-sm mt-1">Contact your administrator to add contracts to your organization</p>
+            <p className="text-sm mt-1">
+              Contact your administrator to add contracts to your organization
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
             {filteredContracts.map((contract) => {
               const statusDisplay = getContractStatusDisplay(contract.status);
-              const utilizationStatus = getUtilizationStatus(contract.utilization_percentage);
+              const utilizationStatus = getUtilizationStatus(
+                contract.utilization_percentage,
+              );
 
               return (
                 <div
@@ -404,7 +475,10 @@ function ContractsListSection() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-medium">{contract.title}</span>
-                      <Badge variant="outline" className={`${statusDisplay.color} ${statusDisplay.bgColor}`}>
+                      <Badge
+                        variant="outline"
+                        className={`${statusDisplay.color} ${statusDisplay.bgColor}`}
+                      >
                         {statusDisplay.label}
                       </Badge>
                     </div>
@@ -415,20 +489,31 @@ function ContractsListSection() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-medium">{formatCurrency(contract.total_value)}</div>
+                    <div className="font-medium">
+                      {formatCurrency(contract.total_value)}
+                    </div>
                     <div className="text-sm text-muted-foreground">
                       {formatDaysUntilExpiry(contract.days_until_expiry)}
                     </div>
                   </div>
                   <div className="ml-4 w-24">
-                    <div className="text-xs text-muted-foreground mb-1">Utilization</div>
-                    <Progress value={contract.utilization_percentage} className="h-2" />
+                    <div className="text-xs text-muted-foreground mb-1">
+                      Utilization
+                    </div>
+                    <Progress
+                      value={contract.utilization_percentage}
+                      className="h-2"
+                    />
                     <div className={`text-xs ${utilizationStatus.color}`}>
                       {contract.utilization_percentage.toFixed(0)}%
                     </div>
                   </div>
                   <div className="ml-4">
-                    <Button variant="ghost" size="sm" className="text-muted-foreground">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground"
+                    >
                       <Eye className="h-4 w-4" />
                     </Button>
                   </div>
@@ -483,7 +568,10 @@ function ExpiringContractsSection() {
             </CardTitle>
             <CardDescription>Contracts requiring attention</CardDescription>
           </div>
-          <Select value={String(daysThreshold)} onValueChange={(v) => setDaysThreshold(Number(v))}>
+          <Select
+            value={String(daysThreshold)}
+            onValueChange={(v) => setDaysThreshold(Number(v))}
+          >
             <SelectTrigger className="w-[140px]">
               <SelectValue />
             </SelectTrigger>
@@ -506,13 +594,16 @@ function ExpiringContractsSection() {
         ) : (
           <div className="space-y-4">
             {contracts.map((contract) => {
-              const recDisplay = getRecommendationDisplay(contract.recommendation);
-              const RecommendationIcon = {
-                'check-circle': CheckCircle,
-                'refresh': RefreshCw,
-                'x-circle': XCircle,
-                'eye': Eye,
-              }[recDisplay.icon] || Eye;
+              const recDisplay = getRecommendationDisplay(
+                contract.recommendation,
+              );
+              const RecommendationIcon =
+                {
+                  "check-circle": CheckCircle,
+                  refresh: RefreshCw,
+                  "x-circle": XCircle,
+                  eye: Eye,
+                }[recDisplay.icon] || Eye;
 
               return (
                 <div
@@ -526,7 +617,9 @@ function ExpiringContractsSection() {
                         {contract.contract_number} • {contract.supplier_name}
                       </div>
                     </div>
-                    <Badge className={`${recDisplay.color} ${recDisplay.bgColor}`}>
+                    <Badge
+                      className={`${recDisplay.color} ${recDisplay.bgColor}`}
+                    >
                       <RecommendationIcon className="h-3 w-3 mr-1" />
                       {recDisplay.label}
                     </Badge>
@@ -534,19 +627,33 @@ function ExpiringContractsSection() {
                   <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
                       <span className="text-muted-foreground">Value:</span>
-                      <span className="ml-2 font-medium">{formatCurrency(contract.total_value)}</span>
+                      <span className="ml-2 font-medium">
+                        {formatCurrency(contract.total_value)}
+                      </span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Spent:</span>
-                      <span className="ml-2 font-medium">{formatCurrency(contract.actual_spend)}</span>
+                      <span className="ml-2 font-medium">
+                        {formatCurrency(contract.actual_spend)}
+                      </span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Utilization:</span>
-                      <span className="ml-2 font-medium">{contract.utilization_percentage.toFixed(0)}%</span>
+                      <span className="text-muted-foreground">
+                        Utilization:
+                      </span>
+                      <span className="ml-2 font-medium">
+                        {contract.utilization_percentage.toFixed(0)}%
+                      </span>
                     </div>
                   </div>
                   <div className="mt-3 text-sm">
-                    <span className={contract.days_until_expiry <= 30 ? 'text-red-600 font-medium' : 'text-amber-600'}>
+                    <span
+                      className={
+                        contract.days_until_expiry <= 30
+                          ? "text-red-600 font-medium"
+                          : "text-amber-600"
+                      }
+                    >
                       <Calendar className="inline h-4 w-4 mr-1" />
                       {formatDaysUntilExpiry(contract.days_until_expiry)}
                     </span>
@@ -589,13 +696,22 @@ function SavingsOpportunitiesSection() {
     );
   }
 
-  const savingsByType = opportunities.reduce((acc, opp) => {
-    acc[opp.type] = (acc[opp.type] || 0) + opp.potential_savings;
-    return acc;
-  }, {} as Record<string, number>);
+  const savingsByType = opportunities.reduce(
+    (acc, opp) => {
+      acc[opp.type] = (acc[opp.type] || 0) + opp.potential_savings;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
 
   const chartData = Object.entries(savingsByType).map(([type, value]) => ({
-    name: getSavingsTypeDisplay(type as 'underutilized' | 'off_contract' | 'consolidation' | 'price_variance').label,
+    name: getSavingsTypeDisplay(
+      type as
+        | "underutilized"
+        | "off_contract"
+        | "consolidation"
+        | "price_variance",
+    ).label,
     value,
   }));
 
@@ -630,10 +746,15 @@ function SavingsOpportunitiesSection() {
                       innerRadius={50}
                       outerRadius={80}
                       dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }) =>
+                        `${name} ${(percent * 100).toFixed(0)}%`
+                      }
                     >
                       {chartData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
                       ))}
                     </Pie>
                     <Tooltip
@@ -648,13 +769,12 @@ function SavingsOpportunitiesSection() {
                 const typeDisplay = getSavingsTypeDisplay(opportunity.type);
 
                 return (
-                  <div
-                    key={index}
-                    className="p-4 rounded-lg border bg-card"
-                  >
+                  <div key={index} className="p-4 rounded-lg border bg-card">
                     <div className="flex items-start justify-between mb-2">
                       <div>
-                        <Badge className={`${typeDisplay.color} ${typeDisplay.bgColor} mb-1`}>
+                        <Badge
+                          className={`${typeDisplay.color} ${typeDisplay.bgColor} mb-1`}
+                        >
                           {typeDisplay.label}
                         </Badge>
                         <div className="font-medium">{opportunity.title}</div>
@@ -664,7 +784,8 @@ function SavingsOpportunitiesSection() {
                           {formatCurrency(opportunity.potential_savings)}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {(opportunity.confidence * 100).toFixed(0)}% confidence
+                          {(opportunity.confidence * 100).toFixed(0)}%
+                          confidence
                         </div>
                       </div>
                     </div>
@@ -710,7 +831,7 @@ function RenewalRecommendationsSection() {
 
   const priorityOrder = { high: 0, medium: 1, low: 2 };
   const sortedRecommendations = [...recommendations].sort(
-    (a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]
+    (a, b) => priorityOrder[a.priority] - priorityOrder[b.priority],
   );
 
   return (
@@ -720,7 +841,9 @@ function RenewalRecommendationsSection() {
           <RefreshCw className="h-5 w-5" />
           Renewal Recommendations
         </CardTitle>
-        <CardDescription>{recommendations.length} contracts with recommendations</CardDescription>
+        <CardDescription>
+          {recommendations.length} contracts with recommendations
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {sortedRecommendations.length === 0 ? (
@@ -733,9 +856,9 @@ function RenewalRecommendationsSection() {
             {sortedRecommendations.map((rec) => {
               const recDisplay = getRecommendationDisplay(rec.recommendation);
               const priorityColors = {
-                high: 'border-l-red-500',
-                medium: 'border-l-amber-500',
-                low: 'border-l-blue-500',
+                high: "border-l-red-500",
+                medium: "border-l-amber-500",
+                low: "border-l-blue-500",
               };
 
               return (
@@ -747,18 +870,24 @@ function RenewalRecommendationsSection() {
                     <div>
                       <div className="font-medium">{rec.title}</div>
                       <div className="text-sm text-muted-foreground">
-                        {rec.supplier_name} • Expires: {new Date(rec.end_date).toLocaleDateString()}
+                        {rec.supplier_name} • Expires:{" "}
+                        {new Date(rec.end_date).toLocaleDateString()}
                       </div>
                     </div>
-                    <Badge className={`${recDisplay.color} ${recDisplay.bgColor}`}>
+                    <Badge
+                      className={`${recDisplay.color} ${recDisplay.bgColor}`}
+                    >
                       {recDisplay.label}
                     </Badge>
                   </div>
                   <div className="mt-2 text-sm">
-                    <span className="text-muted-foreground">{rec.recommendation_reason}</span>
+                    <span className="text-muted-foreground">
+                      {rec.recommendation_reason}
+                    </span>
                     {rec.suggested_new_value && (
                       <span className="ml-2 text-green-600 font-medium">
-                        Suggested value: {formatCurrency(rec.suggested_new_value)}
+                        Suggested value:{" "}
+                        {formatCurrency(rec.suggested_new_value)}
                       </span>
                     )}
                   </div>
@@ -793,7 +922,7 @@ function ContractVsActualSection() {
   }
 
   const chartData = contracts.slice(0, 10).map((c) => ({
-    name: c.title.length > 20 ? c.title.substring(0, 20) + '...' : c.title,
+    name: c.title.length > 20 ? c.title.substring(0, 20) + "..." : c.title,
     contracted: c.contracted_value,
     actual: c.actual_spend,
   }));
@@ -822,18 +951,28 @@ function ContractVsActualSection() {
             {summary && (
               <div className="grid grid-cols-3 gap-4 mb-6">
                 <div className="text-center p-3 rounded-lg bg-muted">
-                  <div className="text-sm text-muted-foreground">Contracted</div>
-                  <div className="text-lg font-bold">{formatCurrency(summary.total_contracted)}</div>
+                  <div className="text-sm text-muted-foreground">
+                    Contracted
+                  </div>
+                  <div className="text-lg font-bold">
+                    {formatCurrency(summary.total_contracted)}
+                  </div>
                 </div>
                 <div className="text-center p-3 rounded-lg bg-muted">
                   <div className="text-sm text-muted-foreground">Actual</div>
-                  <div className="text-lg font-bold">{formatCurrency(summary.total_actual)}</div>
+                  <div className="text-lg font-bold">
+                    {formatCurrency(summary.total_actual)}
+                  </div>
                 </div>
                 <div className="text-center p-3 rounded-lg bg-muted">
                   <div className="text-sm text-muted-foreground">Variance</div>
-                  <div className={`text-lg font-bold ${summary.total_variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <div
+                    className={`text-lg font-bold ${summary.total_variance >= 0 ? "text-green-600" : "text-red-600"}`}
+                  >
                     {formatCurrency(Math.abs(summary.total_variance))}
-                    <span className="text-sm ml-1">{summary.total_variance >= 0 ? 'under' : 'over'}</span>
+                    <span className="text-sm ml-1">
+                      {summary.total_variance >= 0 ? "under" : "over"}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -841,11 +980,20 @@ function ContractVsActualSection() {
 
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} layout="vertical" margin={{ left: 20 }}>
+                <BarChart
+                  data={chartData}
+                  layout="vertical"
+                  margin={{ left: 20 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" tickFormatter={(value) => formatCurrency(value)} />
+                  <XAxis
+                    type="number"
+                    tickFormatter={(value) => formatCurrency(value)}
+                  />
                   <YAxis type="category" dataKey="name" width={100} />
-                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                  <Tooltip
+                    formatter={(value: number) => formatCurrency(value)}
+                  />
                   <Legend />
                   <Bar dataKey="contracted" name="Contracted" fill="#3b82f6" />
                   <Bar dataKey="actual" name="Actual" fill="#22c55e" />
@@ -862,10 +1010,22 @@ function ContractVsActualSection() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="month" />
                       <YAxis tickFormatter={(value) => formatCurrency(value)} />
-                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                      <Tooltip
+                        formatter={(value: number) => formatCurrency(value)}
+                      />
                       <Legend />
-                      <Line type="monotone" dataKey="contracted" name="Contracted" stroke="#3b82f6" />
-                      <Line type="monotone" dataKey="actual" name="Actual" stroke="#22c55e" />
+                      <Line
+                        type="monotone"
+                        dataKey="contracted"
+                        name="Contracted"
+                        stroke="#3b82f6"
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="actual"
+                        name="Actual"
+                        stroke="#22c55e"
+                      />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -879,7 +1039,7 @@ function ContractVsActualSection() {
 }
 
 export default function ContractsPage() {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState("overview");
 
   return (
     <div className="space-y-6">
@@ -889,13 +1049,18 @@ export default function ContractsPage() {
           Contract Optimization
         </h1>
         <p className="text-muted-foreground mt-1">
-          Analyze contract performance, track renewals, and identify savings opportunities
+          Analyze contract performance, track renewals, and identify savings
+          opportunities
         </p>
       </div>
 
       <OverviewSection />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-4"
+      >
         <TabsList>
           <TabsTrigger value="overview">
             <Building2 className="h-4 w-4 mr-2" />

@@ -4,9 +4,9 @@
  * All hooks include organization_id in query keys to properly
  * invalidate cache when switching organizations (superuser feature).
  */
-import { useQuery } from '@tanstack/react-query';
-import { analyticsAPI, procurementAPI, getOrganizationParam } from '@/lib/api';
-import { queryKeys } from '@/lib/queryKeys';
+import { useQuery } from "@tanstack/react-query";
+import { analyticsAPI, procurementAPI, getOrganizationParam } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
 
 /**
  * Get the current organization ID for query key inclusion.
@@ -171,14 +171,21 @@ export function useDetailedTailSpend(threshold: number = 50000) {
  */
 export function useTailSpendCategoryDrilldown(
   categoryId: number | null,
-  threshold: number = 50000
+  threshold: number = 50000,
 ) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: queryKeys.analytics.tailSpendCategoryDrilldown(categoryId!, threshold, orgId),
+    queryKey: queryKeys.analytics.tailSpendCategoryDrilldown(
+      categoryId!,
+      threshold,
+      orgId,
+    ),
     queryFn: async () => {
       if (!categoryId) return null;
-      const response = await analyticsAPI.getTailSpendCategoryDrilldown(categoryId, threshold);
+      const response = await analyticsAPI.getTailSpendCategoryDrilldown(
+        categoryId,
+        threshold,
+      );
       return response.data;
     },
     enabled: !!categoryId, // Only fetch when categoryId is provided
@@ -191,14 +198,21 @@ export function useTailSpendCategoryDrilldown(
  */
 export function useTailSpendVendorDrilldown(
   supplierId: number | null,
-  threshold: number = 50000
+  threshold: number = 50000,
 ) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: queryKeys.analytics.tailSpendVendorDrilldown(supplierId!, threshold, orgId),
+    queryKey: queryKeys.analytics.tailSpendVendorDrilldown(
+      supplierId!,
+      threshold,
+      orgId,
+    ),
     queryFn: async () => {
       if (!supplierId) return null;
-      const response = await analyticsAPI.getTailSpendVendorDrilldown(supplierId, threshold);
+      const response = await analyticsAPI.getTailSpendVendorDrilldown(
+        supplierId,
+        threshold,
+      );
       return response.data;
     },
     enabled: !!supplierId, // Only fetch when supplierId is provided
@@ -302,13 +316,23 @@ export function useDetailedSeasonality(useFiscalYear: boolean = true) {
  * Get seasonality category drill-down data for Seasonality page modal.
  * Fetches supplier-level seasonal patterns on-demand when a category is selected.
  */
-export function useSeasonalityCategoryDrilldown(categoryId: number | null, useFiscalYear: boolean = true) {
+export function useSeasonalityCategoryDrilldown(
+  categoryId: number | null,
+  useFiscalYear: boolean = true,
+) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: queryKeys.analytics.seasonalityCategoryDrilldown(categoryId!, useFiscalYear, orgId),
+    queryKey: queryKeys.analytics.seasonalityCategoryDrilldown(
+      categoryId!,
+      useFiscalYear,
+      orgId,
+    ),
     queryFn: async () => {
       if (!categoryId) return null;
-      const response = await analyticsAPI.getSeasonalityCategoryDrilldown(categoryId, useFiscalYear);
+      const response = await analyticsAPI.getSeasonalityCategoryDrilldown(
+        categoryId,
+        useFiscalYear,
+      );
       return response.data;
     },
     enabled: !!categoryId, // Only fetch when categoryId is provided
@@ -334,12 +358,25 @@ export function useYearOverYear() {
  * category/supplier comparisons, monthly trends, and top gainers/decliners.
  * Use this for the YearOverYear dashboard page.
  */
-export function useDetailedYearOverYear(useFiscalYear: boolean = true, year1?: number, year2?: number) {
+export function useDetailedYearOverYear(
+  useFiscalYear: boolean = true,
+  year1?: number,
+  year2?: number,
+) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: queryKeys.analytics.yoyDetailed(useFiscalYear, year1 ?? 0, year2 ?? 0, orgId),
+    queryKey: queryKeys.analytics.yoyDetailed(
+      useFiscalYear,
+      year1 ?? 0,
+      year2 ?? 0,
+      orgId,
+    ),
     queryFn: async () => {
-      const response = await analyticsAPI.getDetailedYearOverYear(useFiscalYear, year1, year2);
+      const response = await analyticsAPI.getDetailedYearOverYear(
+        useFiscalYear,
+        year1,
+        year2,
+      );
       return response.data;
     },
   });
@@ -353,14 +390,25 @@ export function useYoYCategoryDrilldown(
   categoryId: number | null,
   useFiscalYear: boolean = true,
   year1?: number,
-  year2?: number
+  year2?: number,
 ) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: queryKeys.analytics.yoyCategoryDrilldown(categoryId!, useFiscalYear, year1 ?? 0, year2 ?? 0, orgId),
+    queryKey: queryKeys.analytics.yoyCategoryDrilldown(
+      categoryId!,
+      useFiscalYear,
+      year1 ?? 0,
+      year2 ?? 0,
+      orgId,
+    ),
     queryFn: async () => {
       if (!categoryId) return null;
-      const response = await analyticsAPI.getYoYCategoryDrilldown(categoryId, useFiscalYear, year1, year2);
+      const response = await analyticsAPI.getYoYCategoryDrilldown(
+        categoryId,
+        useFiscalYear,
+        year1,
+        year2,
+      );
       return response.data;
     },
     enabled: !!categoryId, // Only fetch when categoryId is provided
@@ -375,14 +423,25 @@ export function useYoYSupplierDrilldown(
   supplierId: number | null,
   useFiscalYear: boolean = true,
   year1?: number,
-  year2?: number
+  year2?: number,
 ) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: queryKeys.analytics.yoySupplierDrilldown(supplierId!, useFiscalYear, year1 ?? 0, year2 ?? 0, orgId),
+    queryKey: queryKeys.analytics.yoySupplierDrilldown(
+      supplierId!,
+      useFiscalYear,
+      year1 ?? 0,
+      year2 ?? 0,
+      orgId,
+    ),
     queryFn: async () => {
       if (!supplierId) return null;
-      const response = await analyticsAPI.getYoYSupplierDrilldown(supplierId, useFiscalYear, year1, year2);
+      const response = await analyticsAPI.getYoYSupplierDrilldown(
+        supplierId,
+        useFiscalYear,
+        year1,
+        year2,
+      );
       return response.data;
     },
     enabled: !!supplierId, // Only fetch when supplierId is provided

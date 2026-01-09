@@ -5,8 +5,8 @@
  * Matches the visual structure of StatCard for seamless loading transitions.
  */
 
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface SkeletonCardProps {
   /** Whether to show the icon placeholder */

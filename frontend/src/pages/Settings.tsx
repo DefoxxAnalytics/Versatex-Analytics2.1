@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import {
   useSettings,
   useUpdateSettings,
@@ -6,22 +6,28 @@ import {
   type ColorScheme,
   type AIProvider,
   type ForecastingModel,
-} from '@/hooks/useSettings';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+} from "@/hooks/useSettings";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Slider } from '@/components/ui/slider';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { toast } from 'sonner';
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
 import {
   User,
   Bell,
@@ -36,8 +42,8 @@ import {
   Key,
   TrendingUp,
   AlertTriangle,
-} from 'lucide-react';
-import { useTheme } from '@/contexts/ThemeContext';
+} from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
 
 /**
  * Settings Page Component
@@ -69,17 +75,17 @@ export default function Settings() {
   const { setTheme, setColorScheme } = useTheme();
 
   // Local state for form inputs - initialized empty, synced via useEffect
-  const [userName, setUserName] = useState('');
-  const [userEmail, setUserEmail] = useState('');
-  const [userRole, setUserRole] = useState('');
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [userRole, setUserRole] = useState("");
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Sync local state when settings load (once)
   useEffect(() => {
     if (settings && !isInitialized) {
-      setUserName(settings.userName || '');
-      setUserEmail(settings.userEmail || '');
-      setUserRole(settings.userRole || '');
+      setUserName(settings.userName || "");
+      setUserEmail(settings.userEmail || "");
+      setUserRole(settings.userRole || "");
       setIsInitialized(true);
     }
   }, [settings, isInitialized]);
@@ -91,7 +97,7 @@ export default function Settings() {
   const handleProfileUpdate = () => {
     // Basic validation
     if (userEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userEmail)) {
-      toast.error('Please enter a valid email address');
+      toast.error("Please enter a valid email address");
       return;
     }
 
@@ -103,12 +109,12 @@ export default function Settings() {
       },
       {
         onSuccess: () => {
-          toast.success('Profile updated successfully');
+          toast.success("Profile updated successfully");
         },
         onError: () => {
-          toast.error('Failed to update profile');
+          toast.error("Failed to update profile");
         },
-      }
+      },
     );
   };
 
@@ -116,7 +122,7 @@ export default function Settings() {
    * Handle theme change (light/dark mode)
    * Updates both settings and applies theme immediately
    */
-  const handleThemeChange = (theme: 'light' | 'dark') => {
+  const handleThemeChange = (theme: "light" | "dark") => {
     // Apply theme immediately for instant feedback
     if (setTheme) {
       setTheme(theme);
@@ -129,7 +135,7 @@ export default function Settings() {
         onSuccess: () => {
           toast.success(`Theme changed to ${theme} mode`);
         },
-      }
+      },
     );
   };
 
@@ -148,10 +154,10 @@ export default function Settings() {
       { colorScheme: scheme },
       {
         onSuccess: () => {
-          const schemeName = scheme === 'navy' ? 'Navy Blue' : 'Classic';
+          const schemeName = scheme === "navy" ? "Navy Blue" : "Classic";
           toast.success(`Color scheme changed to ${schemeName}`);
         },
-      }
+      },
     );
   };
 
@@ -163,23 +169,23 @@ export default function Settings() {
       { notifications: enabled },
       {
         onSuccess: () => {
-          toast.success(`Notifications ${enabled ? 'enabled' : 'disabled'}`);
+          toast.success(`Notifications ${enabled ? "enabled" : "disabled"}`);
         },
-      }
+      },
     );
   };
 
   /**
    * Handle export format change
    */
-  const handleExportFormatChange = (format: 'csv' | 'xlsx' | 'pdf') => {
+  const handleExportFormatChange = (format: "csv" | "xlsx" | "pdf") => {
     updateSettings.mutate(
       { exportFormat: format },
       {
         onSuccess: () => {
           toast.success(`Default export format set to ${format.toUpperCase()}`);
         },
-      }
+      },
     );
   };
 
@@ -187,19 +193,19 @@ export default function Settings() {
    * Handle reset to defaults
    */
   const handleReset = () => {
-    if (confirm('Are you sure you want to reset all settings to defaults?')) {
+    if (confirm("Are you sure you want to reset all settings to defaults?")) {
       resetSettings.mutate(undefined, {
         onSuccess: () => {
-          setUserName('');
-          setUserEmail('');
-          setUserRole('');
+          setUserName("");
+          setUserEmail("");
+          setUserRole("");
           // Reset theme context state
-          if (setTheme) setTheme('light');
-          if (setColorScheme) setColorScheme('navy');
-          toast.success('Settings reset to defaults');
+          if (setTheme) setTheme("light");
+          if (setColorScheme) setColorScheme("navy");
+          toast.success("Settings reset to defaults");
         },
         onError: () => {
-          toast.error('Failed to reset settings');
+          toast.error("Failed to reset settings");
         },
       });
     }
@@ -231,9 +237,7 @@ export default function Settings() {
             <User className="h-5 w-5 text-blue-600" />
             <CardTitle>User Profile</CardTitle>
           </div>
-          <CardDescription>
-            Update your personal information
-          </CardDescription>
+          <CardDescription>Update your personal information</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -299,8 +303,10 @@ export default function Settings() {
           <div className="space-y-3">
             <Label htmlFor="colorScheme">Color Scheme</Label>
             <Select
-              value={settings?.colorScheme || 'navy'}
-              onValueChange={(value) => handleColorSchemeChange(value as ColorScheme)}
+              value={settings?.colorScheme || "navy"}
+              onValueChange={(value) =>
+                handleColorSchemeChange(value as ColorScheme)
+              }
             >
               <SelectTrigger id="colorScheme" className="w-full sm:w-[280px]">
                 <SelectValue placeholder="Select color scheme" />
@@ -331,8 +337,10 @@ export default function Settings() {
           <div className="space-y-3">
             <Label htmlFor="theme">Appearance</Label>
             <Select
-              value={settings?.theme || 'light'}
-              onValueChange={(value) => handleThemeChange(value as 'light' | 'dark')}
+              value={settings?.theme || "light"}
+              onValueChange={(value) =>
+                handleThemeChange(value as "light" | "dark")
+              }
             >
               <SelectTrigger id="theme" className="w-full sm:w-[280px]">
                 <SelectValue placeholder="Select appearance" />
@@ -396,16 +404,16 @@ export default function Settings() {
             <Download className="h-5 w-5 text-green-600" />
             <CardTitle>Export Preferences</CardTitle>
           </div>
-          <CardDescription>
-            Set your default export format
-          </CardDescription>
+          <CardDescription>Set your default export format</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
             <Label htmlFor="exportFormat">Default Export Format</Label>
             <Select
-              value={settings?.exportFormat || 'csv'}
-              onValueChange={(value) => handleExportFormatChange(value as 'csv' | 'xlsx' | 'pdf')}
+              value={settings?.exportFormat || "csv"}
+              onValueChange={(value) =>
+                handleExportFormatChange(value as "csv" | "xlsx" | "pdf")
+              }
             >
               <SelectTrigger id="exportFormat" className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Select format" />
@@ -436,19 +444,24 @@ export default function Settings() {
           <div className="space-y-3">
             <Label htmlFor="forecastingModel">Forecasting Model</Label>
             <Select
-              value={settings?.forecastingModel || 'standard'}
+              value={settings?.forecastingModel || "standard"}
               onValueChange={(value) => {
                 updateSettings.mutate(
                   { forecastingModel: value as ForecastingModel },
                   {
                     onSuccess: () => {
-                      toast.success(`Forecasting model set to ${value === 'standard' ? 'Standard ML' : 'Simple (Moving Average)'}`);
+                      toast.success(
+                        `Forecasting model set to ${value === "standard" ? "Standard ML" : "Simple (Moving Average)"}`,
+                      );
                     },
-                  }
+                  },
                 );
               }}
             >
-              <SelectTrigger id="forecastingModel" className="w-full sm:w-[280px]">
+              <SelectTrigger
+                id="forecastingModel"
+                className="w-full sm:w-[280px]"
+              >
                 <SelectValue placeholder="Select forecasting model" />
               </SelectTrigger>
               <SelectContent>
@@ -467,7 +480,8 @@ export default function Settings() {
               </SelectContent>
             </Select>
             <p className="text-sm text-muted-foreground">
-              Standard ML provides more accurate forecasts with trend and seasonality detection
+              Standard ML provides more accurate forecasts with trend and
+              seasonality detection
             </p>
           </div>
 
@@ -481,7 +495,8 @@ export default function Settings() {
                   Enable External AI Enhancement
                 </Label>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Use Claude or OpenAI to enhance insights with strategic recommendations
+                  Use Claude or OpenAI to enhance insights with strategic
+                  recommendations
                 </p>
               </div>
               <Switch
@@ -492,9 +507,11 @@ export default function Settings() {
                     { useExternalAI: checked },
                     {
                       onSuccess: () => {
-                        toast.success(`External AI ${checked ? 'enabled' : 'disabled'}`);
+                        toast.success(
+                          `External AI ${checked ? "enabled" : "disabled"}`,
+                        );
                       },
-                    }
+                    },
                   );
                 }}
               />
@@ -507,20 +524,26 @@ export default function Settings() {
                 <div className="space-y-2">
                   <Label htmlFor="aiProvider">AI Provider</Label>
                   <Select
-                    value={settings?.aiProvider || 'anthropic'}
+                    value={settings?.aiProvider || "anthropic"}
                     onValueChange={(value) => {
                       updateSettings.mutate(
                         { aiProvider: value as AIProvider },
                         {
                           onSuccess: () => {
-                            const name = value === 'anthropic' ? 'Anthropic (Claude)' : 'OpenAI (GPT)';
+                            const name =
+                              value === "anthropic"
+                                ? "Anthropic (Claude)"
+                                : "OpenAI (GPT)";
                             toast.success(`AI provider set to ${name}`);
                           },
-                        }
+                        },
                       );
                     }}
                   >
-                    <SelectTrigger id="aiProvider" className="w-full sm:w-[280px]">
+                    <SelectTrigger
+                      id="aiProvider"
+                      className="w-full sm:w-[280px]"
+                    >
                       <SelectValue placeholder="Select AI provider" />
                     </SelectTrigger>
                     <SelectContent>
@@ -549,7 +572,11 @@ export default function Settings() {
                       <Input
                         id="aiApiKey"
                         type="password"
-                        placeholder={settings?.aiApiKey ? '••••••••••••••••' : 'Enter your API key'}
+                        placeholder={
+                          settings?.aiApiKey
+                            ? "••••••••••••••••"
+                            : "Enter your API key"
+                        }
                         className="pl-10"
                         maxLength={200}
                         onBlur={(e) => {
@@ -558,10 +585,10 @@ export default function Settings() {
                               { aiApiKey: e.target.value },
                               {
                                 onSuccess: () => {
-                                  toast.success('API key saved securely');
-                                  e.target.value = '';
+                                  toast.success("API key saved securely");
+                                  e.target.value = "";
                                 },
-                              }
+                              },
                             );
                           }
                         }}
@@ -598,9 +625,11 @@ export default function Settings() {
                   { forecastHorizonMonths: value[0] },
                   {
                     onSuccess: () => {
-                      toast.success(`Forecast horizon set to ${value[0]} months`);
+                      toast.success(
+                        `Forecast horizon set to ${value[0]} months`,
+                      );
                     },
-                  }
+                  },
                 );
               }}
               className="w-full"
@@ -615,14 +644,16 @@ export default function Settings() {
           {/* Anomaly Sensitivity */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label htmlFor="anomalySensitivity">Anomaly Detection Sensitivity</Label>
+              <Label htmlFor="anomalySensitivity">
+                Anomaly Detection Sensitivity
+              </Label>
               <span className="text-sm font-medium">
                 {settings?.anomalySensitivity || 2} (
                 {(settings?.anomalySensitivity || 2) <= 2
-                  ? 'High'
+                  ? "High"
                   : (settings?.anomalySensitivity || 2) <= 3
-                    ? 'Medium'
-                    : 'Low'}
+                    ? "Medium"
+                    : "Low"}
                 )
               </span>
             </div>
@@ -637,16 +668,22 @@ export default function Settings() {
                   { anomalySensitivity: value[0] },
                   {
                     onSuccess: () => {
-                      const level = value[0] <= 2 ? 'High' : value[0] <= 3 ? 'Medium' : 'Low';
+                      const level =
+                        value[0] <= 2
+                          ? "High"
+                          : value[0] <= 3
+                            ? "Medium"
+                            : "Low";
                       toast.success(`Anomaly sensitivity set to ${level}`);
                     },
-                  }
+                  },
                 );
               }}
               className="w-full"
             />
             <p className="text-sm text-muted-foreground">
-              Lower values detect more anomalies, higher values only flag extreme outliers
+              Lower values detect more anomalies, higher values only flag
+              extreme outliers
             </p>
           </div>
         </CardContent>

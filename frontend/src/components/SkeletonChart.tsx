@@ -5,9 +5,9 @@
  * Shows animated bar placeholders to indicate chart loading state.
  */
 
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 interface SkeletonChartProps {
   /** Height of the chart area in pixels */
@@ -15,7 +15,7 @@ interface SkeletonChartProps {
   /** Additional CSS classes */
   className?: string;
   /** Chart type to determine skeleton shape */
-  type?: 'bar' | 'line' | 'pie' | 'area';
+  type?: "bar" | "line" | "pie" | "area";
   /** Whether to show card wrapper */
   showCard?: boolean;
 }
@@ -23,15 +23,12 @@ interface SkeletonChartProps {
 export function SkeletonChart({
   height = 300,
   className,
-  type = 'bar',
+  type = "bar",
   showCard = true,
 }: SkeletonChartProps) {
   const chartContent = (
-    <div
-      className={cn('w-full', className)}
-      style={{ height }}
-    >
-      {type === 'bar' && (
+    <div className={cn("w-full", className)} style={{ height }}>
+      {type === "bar" && (
         <div className="flex items-end justify-around gap-2 h-full p-4">
           {[40, 70, 55, 90, 65, 80, 45, 75, 60, 85].map((h, i) => (
             <Skeleton
@@ -42,7 +39,7 @@ export function SkeletonChart({
           ))}
         </div>
       )}
-      {type === 'line' && (
+      {type === "line" && (
         <div className="relative h-full p-4">
           {/* Grid lines */}
           <div className="absolute inset-4 flex flex-col justify-between">
@@ -64,12 +61,12 @@ export function SkeletonChart({
           </div>
         </div>
       )}
-      {type === 'pie' && (
+      {type === "pie" && (
         <div className="flex items-center justify-center h-full p-4">
           <Skeleton className="w-48 h-48 rounded-full" />
         </div>
       )}
-      {type === 'area' && (
+      {type === "area" && (
         <div className="relative h-full p-4">
           {/* Grid lines */}
           <div className="absolute inset-4 flex flex-col justify-between">
@@ -129,7 +126,10 @@ export function SkeletonTable({
       {Array.from({ length: rows }).map((_, rowIndex) => (
         <div key={`row-${rowIndex}`} className="flex gap-4">
           {Array.from({ length: columns }).map((_, colIndex) => (
-            <Skeleton key={`cell-${rowIndex}-${colIndex}`} className="h-4 flex-1" />
+            <Skeleton
+              key={`cell-${rowIndex}-${colIndex}`}
+              className="h-4 flex-1"
+            />
           ))}
         </div>
       ))}

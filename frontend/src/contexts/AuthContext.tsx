@@ -1,7 +1,19 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { isAuthenticated, clearSession, updateActivity, getRemainingSessionTime, getUserData } from '@/lib/auth';
-import { authAPI, type User, type UserRole } from '@/lib/api';
-import { toast } from 'sonner';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
+import {
+  isAuthenticated,
+  clearSession,
+  updateActivity,
+  getRemainingSessionTime,
+  getUserData,
+} from "@/lib/auth";
+import { authAPI, type User, type UserRole } from "@/lib/api";
+import { toast } from "sonner";
 
 interface AuthContextType {
   isAuth: boolean;
@@ -61,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearSession();
     setIsAuth(false);
     setUser(null);
-    toast.info('Logged out successfully');
+    toast.info("Logged out successfully");
   };
 
   // Check authentication on mount
@@ -81,13 +93,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         // Session expired
         setIsAuth(false);
-        toast.error('Session expired. Please login again.');
+        toast.error("Session expired. Please login again.");
       }
     };
 
     // Track various user activities
-    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
-    events.forEach(event => {
+    const events = ["mousedown", "keydown", "scroll", "touchstart"];
+    events.forEach((event) => {
       window.addEventListener(event, handleActivity);
     });
 
@@ -95,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const intervalId = setInterval(() => {
       if (!isAuthenticated()) {
         setIsAuth(false);
-        toast.error('Session expired due to inactivity');
+        toast.error("Session expired due to inactivity");
       }
     }, 60000); // Check every minute
 
@@ -103,17 +115,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const warningIntervalId = setInterval(() => {
       const remaining = getRemainingSessionTime();
       const fiveMinutes = 5 * 60 * 1000;
-      
-      if (remaining > 0 && remaining <= fiveMinutes && remaining > fiveMinutes - 60000) {
+
+      if (
+        remaining > 0 &&
+        remaining <= fiveMinutes &&
+        remaining > fiveMinutes - 60000
+      ) {
         const minutes = Math.ceil(remaining / 60000);
-        toast.warning(`Session will expire in ${minutes} minute${minutes > 1 ? 's' : ''}`, {
-          duration: 10000,
-        });
+        toast.warning(
+          `Session will expire in ${minutes} minute${minutes > 1 ? "s" : ""}`,
+          {
+            duration: 10000,
+          },
+        );
       }
     }, 60000); // Check every minute
 
     return () => {
-      events.forEach(event => {
+      events.forEach((event) => {
         window.removeEventListener(event, handleActivity);
       });
       clearInterval(intervalId);
@@ -133,7 +152,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ isAuth, user, role, isSuperAdmin, logout, checkAuth, refreshUser }}>
+    <AuthContext.Provider
+      value={{
+        isAuth,
+        user,
+        role,
+        isSuperAdmin,
+        logout,
+        checkAuth,
+        refreshUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -142,7 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

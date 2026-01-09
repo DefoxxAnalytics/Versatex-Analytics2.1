@@ -8,7 +8,7 @@
  * - Growth metrics
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo } from "react";
 import {
   LineChart,
   TrendingUp,
@@ -23,19 +23,25 @@ import {
   RefreshCw,
   Info,
   HelpCircle,
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip as UITooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { StatCard } from '@/components/StatCard';
-import { SkeletonCard } from '@/components/SkeletonCard';
+} from "@/components/ui/tooltip";
+import { StatCard } from "@/components/StatCard";
+import { SkeletonCard } from "@/components/SkeletonCard";
 import {
   AreaChart,
   Area,
@@ -49,22 +55,28 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
-} from 'recharts';
+} from "recharts";
 import {
   useSpendingForecast,
   useTrendAnalysis,
   getTrendDisplay,
   formatChangeRate,
-} from '@/hooks/usePredictions';
-import type { ForecastPoint, TrendDirection } from '@/lib/api';
+} from "@/hooks/usePredictions";
+import type { ForecastPoint, TrendDirection } from "@/lib/api";
 
 // Trend indicator component
-function TrendIndicator({ direction, rate }: { direction: TrendDirection; rate: number }) {
+function TrendIndicator({
+  direction,
+  rate,
+}: {
+  direction: TrendDirection;
+  rate: number;
+}) {
   const display = getTrendDisplay(direction);
   const Icon =
-    direction === 'increasing'
+    direction === "increasing"
       ? TrendingUp
-      : direction === 'decreasing'
+      : direction === "decreasing"
         ? TrendingDown
         : Minus;
 
@@ -80,9 +92,9 @@ function TrendIndicator({ direction, rate }: { direction: TrendDirection; rate: 
 
 // Format currency
 function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
@@ -102,10 +114,12 @@ function ForecastTooltip({ active, payload, label }: any) {
           Predicted: {formatCurrency(data.predicted_spend)}
         </p>
         <p className="text-gray-600">
-          80% Range: {formatCurrency(data.lower_bound_80)} - {formatCurrency(data.upper_bound_80)}
+          80% Range: {formatCurrency(data.lower_bound_80)} -{" "}
+          {formatCurrency(data.upper_bound_80)}
         </p>
         <p className="text-gray-500 text-xs">
-          95% Range: {formatCurrency(data.lower_bound_95)} - {formatCurrency(data.upper_bound_95)}
+          95% Range: {formatCurrency(data.lower_bound_95)} -{" "}
+          {formatCurrency(data.upper_bound_95)}
         </p>
       </div>
     </div>
@@ -153,7 +167,9 @@ export default function PredictivePage() {
     const forecast = forecastData.forecast;
     return {
       nextMonth: forecast[0]?.predicted_spend || 0,
-      nextQuarter: forecast.slice(0, 3).reduce((sum, f) => sum + f.predicted_spend, 0),
+      nextQuarter: forecast
+        .slice(0, 3)
+        .reduce((sum, f) => sum + f.predicted_spend, 0),
       forecastTotal: forecast.reduce((sum, f) => sum + f.predicted_spend, 0),
     };
   }, [forecastData]);
@@ -237,8 +253,8 @@ export default function PredictivePage() {
               Not Enough Data
             </h2>
             <p className="text-gray-600">
-              Predictive analytics requires historical spending data.
-              Upload procurement transactions to generate forecasts.
+              Predictive analytics requires historical spending data. Upload
+              procurement transactions to generate forecasts.
             </p>
           </div>
         </div>
@@ -277,7 +293,9 @@ export default function PredictivePage() {
             variant="outline"
             disabled={forecastFetching}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${forecastFetching ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${forecastFetching ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
         </div>
@@ -311,11 +329,12 @@ export default function PredictivePage() {
             <TrendingUp className="h-5 w-5 text-gray-400" />
           </CardHeader>
           <CardContent>
-            <TrendIndicator direction={trend.direction} rate={trend.monthly_change_rate} />
+            <TrendIndicator
+              direction={trend.direction}
+              rate={trend.monthly_change_rate}
+            />
             {trend.seasonality_detected && (
-              <p className="text-xs text-gray-500 mt-2">
-                Seasonality detected
-              </p>
+              <p className="text-xs text-gray-500 mt-2">Seasonality detected</p>
             )}
           </CardContent>
         </Card>
@@ -344,7 +363,12 @@ export default function PredictivePage() {
                     </Badge>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
-                    <p>Based on MAPE of {model_accuracy.mape}%. A {(100 - model_accuracy.mape).toFixed(0)}% accuracy means predictions are typically within {model_accuracy.mape}% of actual values.</p>
+                    <p>
+                      Based on MAPE of {model_accuracy.mape}%. A{" "}
+                      {(100 - model_accuracy.mape).toFixed(0)}% accuracy means
+                      predictions are typically within {model_accuracy.mape}% of
+                      actual values.
+                    </p>
                   </TooltipContent>
                 </UITooltip>
               </TooltipProvider>
@@ -353,13 +377,12 @@ export default function PredictivePage() {
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={400}>
-            <AreaChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+            <AreaChart
+              data={chartData}
+              margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis
-                dataKey="month"
-                tick={{ fontSize: 12 }}
-                stroke="#6b7280"
-              />
+              <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#6b7280" />
               <YAxis
                 tick={{ fontSize: 12 }}
                 stroke="#6b7280"
@@ -407,7 +430,7 @@ export default function PredictivePage() {
                 dataKey="predicted_spend"
                 stroke="#0ea5e9"
                 strokeWidth={3}
-                dot={{ fill: '#0ea5e9', strokeWidth: 2 }}
+                dot={{ fill: "#0ea5e9", strokeWidth: 2 }}
                 name="Predicted Spend"
               />
             </AreaChart>
@@ -417,7 +440,8 @@ export default function PredictivePage() {
           {trend.peak_months && trend.peak_months.length > 0 && (
             <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-100">
               <p className="text-sm text-amber-800">
-                <strong>Peak Spending Months:</strong> {trend.peak_months.join(', ')}
+                <strong>Peak Spending Months:</strong>{" "}
+                {trend.peak_months.join(", ")}
               </p>
             </div>
           )}
@@ -446,24 +470,34 @@ export default function PredictivePage() {
 
               <TabsContent value="growth">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {trendData.growth_metrics.three_month_growth !== undefined && (
+                  {trendData.growth_metrics.three_month_growth !==
+                    undefined && (
                     <Card>
                       <CardContent className="pt-6">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">3-Month Growth</span>
+                          <span className="text-sm text-gray-600">
+                            3-Month Growth
+                          </span>
                           {trendData.growth_metrics.three_month_growth >= 0 ? (
                             <ArrowUpRight className="h-5 w-5 text-red-500" />
                           ) : (
                             <ArrowDownRight className="h-5 w-5 text-green-500" />
                           )}
                         </div>
-                        <p className={`text-2xl font-bold mt-2 ${
-                          trendData.growth_metrics.three_month_growth >= 0
-                            ? 'text-red-600'
-                            : 'text-green-600'
-                        }`}>
-                          {trendData.growth_metrics.three_month_growth >= 0 ? '+' : ''}
-                          {trendData.growth_metrics.three_month_growth.toFixed(1)}%
+                        <p
+                          className={`text-2xl font-bold mt-2 ${
+                            trendData.growth_metrics.three_month_growth >= 0
+                              ? "text-red-600"
+                              : "text-green-600"
+                          }`}
+                        >
+                          {trendData.growth_metrics.three_month_growth >= 0
+                            ? "+"
+                            : ""}
+                          {trendData.growth_metrics.three_month_growth.toFixed(
+                            1,
+                          )}
+                          %
                         </p>
                       </CardContent>
                     </Card>
@@ -473,20 +507,27 @@ export default function PredictivePage() {
                     <Card>
                       <CardContent className="pt-6">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">6-Month Growth</span>
+                          <span className="text-sm text-gray-600">
+                            6-Month Growth
+                          </span>
                           {trendData.growth_metrics.six_month_growth >= 0 ? (
                             <ArrowUpRight className="h-5 w-5 text-red-500" />
                           ) : (
                             <ArrowDownRight className="h-5 w-5 text-green-500" />
                           )}
                         </div>
-                        <p className={`text-2xl font-bold mt-2 ${
-                          trendData.growth_metrics.six_month_growth >= 0
-                            ? 'text-red-600'
-                            : 'text-green-600'
-                        }`}>
-                          {trendData.growth_metrics.six_month_growth >= 0 ? '+' : ''}
-                          {trendData.growth_metrics.six_month_growth.toFixed(1)}%
+                        <p
+                          className={`text-2xl font-bold mt-2 ${
+                            trendData.growth_metrics.six_month_growth >= 0
+                              ? "text-red-600"
+                              : "text-green-600"
+                          }`}
+                        >
+                          {trendData.growth_metrics.six_month_growth >= 0
+                            ? "+"
+                            : ""}
+                          {trendData.growth_metrics.six_month_growth.toFixed(1)}
+                          %
                         </p>
                       </CardContent>
                     </Card>
@@ -496,19 +537,23 @@ export default function PredictivePage() {
                     <Card>
                       <CardContent className="pt-6">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">Year-over-Year</span>
+                          <span className="text-sm text-gray-600">
+                            Year-over-Year
+                          </span>
                           {trendData.growth_metrics.yoy_growth >= 0 ? (
                             <ArrowUpRight className="h-5 w-5 text-red-500" />
                           ) : (
                             <ArrowDownRight className="h-5 w-5 text-green-500" />
                           )}
                         </div>
-                        <p className={`text-2xl font-bold mt-2 ${
-                          trendData.growth_metrics.yoy_growth >= 0
-                            ? 'text-red-600'
-                            : 'text-green-600'
-                        }`}>
-                          {trendData.growth_metrics.yoy_growth >= 0 ? '+' : ''}
+                        <p
+                          className={`text-2xl font-bold mt-2 ${
+                            trendData.growth_metrics.yoy_growth >= 0
+                              ? "text-red-600"
+                              : "text-green-600"
+                          }`}
+                        >
+                          {trendData.growth_metrics.yoy_growth >= 0 ? "+" : ""}
                           {trendData.growth_metrics.yoy_growth.toFixed(1)}%
                         </p>
                       </CardContent>
@@ -531,10 +576,14 @@ export default function PredictivePage() {
                             {cat.category_name}
                           </span>
                           <div className="flex items-center gap-3">
-                            <Badge className={`${display.bgColor} ${display.color} border-0`}>
+                            <Badge
+                              className={`${display.bgColor} ${display.color} border-0`}
+                            >
                               {display.label}
                             </Badge>
-                            <span className={`text-sm font-medium ${display.color}`}>
+                            <span
+                              className={`text-sm font-medium ${display.color}`}
+                            >
                               {formatChangeRate(cat.change_rate)}/month
                             </span>
                           </div>
@@ -563,10 +612,14 @@ export default function PredictivePage() {
                             {sup.supplier_name}
                           </span>
                           <div className="flex items-center gap-3">
-                            <Badge className={`${display.bgColor} ${display.color} border-0`}>
+                            <Badge
+                              className={`${display.bgColor} ${display.color} border-0`}
+                            >
                               {display.label}
                             </Badge>
-                            <span className={`text-sm font-medium ${display.color}`}>
+                            <span
+                              className={`text-sm font-medium ${display.color}`}
+                            >
                               {formatChangeRate(sup.change_rate)}/month
                             </span>
                           </div>
@@ -604,11 +657,17 @@ export default function PredictivePage() {
                       <HelpCircle className="h-3 w-3 text-gray-400" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
-                      <p>The number of historical months used to train the prediction model. More data points generally improve accuracy.</p>
+                      <p>
+                        The number of historical months used to train the
+                        prediction model. More data points generally improve
+                        accuracy.
+                      </p>
                     </TooltipContent>
                   </UITooltip>
                 </div>
-                <p className="font-medium">{model_accuracy.data_points_used} months</p>
+                <p className="font-medium">
+                  {model_accuracy.data_points_used} months
+                </p>
               </div>
               {model_accuracy.mape && (
                 <div>
@@ -619,8 +678,13 @@ export default function PredictivePage() {
                         <HelpCircle className="h-3 w-3 text-gray-400" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
-                        <p><strong>Mean Absolute Percentage Error</strong></p>
-                        <p className="mt-1">Measures average prediction error as a percentage. Lower is better:</p>
+                        <p>
+                          <strong>Mean Absolute Percentage Error</strong>
+                        </p>
+                        <p className="mt-1">
+                          Measures average prediction error as a percentage.
+                          Lower is better:
+                        </p>
                         <ul className="mt-1 text-xs space-y-1">
                           <li>&lt;10%: Excellent accuracy</li>
                           <li>10-20%: Good accuracy</li>
@@ -642,8 +706,15 @@ export default function PredictivePage() {
                         <HelpCircle className="h-3 w-3 text-gray-400" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
-                        <p><strong>R-squared (Coefficient of Determination)</strong></p>
-                        <p className="mt-1">Measures how well the model explains spending patterns. Higher is better:</p>
+                        <p>
+                          <strong>
+                            R-squared (Coefficient of Determination)
+                          </strong>
+                        </p>
+                        <p className="mt-1">
+                          Measures how well the model explains spending
+                          patterns. Higher is better:
+                        </p>
                         <ul className="mt-1 text-xs space-y-1">
                           <li>&gt;90%: Excellent fit</li>
                           <li>70-90%: Good fit</li>
@@ -653,7 +724,9 @@ export default function PredictivePage() {
                       </TooltipContent>
                     </UITooltip>
                   </div>
-                  <p className="font-medium">{(model_accuracy.r_squared * 100).toFixed(1)}%</p>
+                  <p className="font-medium">
+                    {(model_accuracy.r_squared * 100).toFixed(1)}%
+                  </p>
                 </div>
               )}
               <div>
@@ -664,7 +737,10 @@ export default function PredictivePage() {
                       <HelpCircle className="h-3 w-3 text-gray-400" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
-                      <p>How far into the future the model is predicting. Shorter horizons are typically more accurate than longer ones.</p>
+                      <p>
+                        How far into the future the model is predicting. Shorter
+                        horizons are typically more accurate than longer ones.
+                      </p>
                     </TooltipContent>
                   </UITooltip>
                 </div>

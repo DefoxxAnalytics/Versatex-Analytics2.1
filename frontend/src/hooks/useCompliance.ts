@@ -4,9 +4,9 @@
  * All hooks include organization_id in query keys to properly
  * invalidate cache when switching organizations (superuser feature).
  */
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { analyticsAPI, getOrganizationParam } from '@/lib/api';
-import type { ViolationType, ViolationSeverity, RiskLevel } from '@/lib/api';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { analyticsAPI, getOrganizationParam } from "@/lib/api";
+import type { ViolationType, ViolationSeverity, RiskLevel } from "@/lib/api";
 
 /**
  * Get the current organization ID for query key inclusion.
@@ -23,7 +23,7 @@ function getOrgKeyPart(): number | undefined {
 export function useComplianceOverview() {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['compliance-overview', { orgId }],
+    queryKey: ["compliance-overview", { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getComplianceOverview();
       return response.data;
@@ -39,7 +39,7 @@ export function useComplianceOverview() {
 export function useMaverickSpendAnalysis() {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['maverick-spend-analysis', { orgId }],
+    queryKey: ["maverick-spend-analysis", { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getMaverickSpendAnalysis();
       return response.data;
@@ -58,7 +58,7 @@ export function usePolicyViolations(params?: {
 }) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['policy-violations', params, { orgId }],
+    queryKey: ["policy-violations", params, { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getPolicyViolations(params);
       return response.data;
@@ -73,7 +73,7 @@ export function usePolicyViolations(params?: {
 export function useViolationTrends(months: number = 12) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['violation-trends', months, { orgId }],
+    queryKey: ["violation-trends", months, { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getViolationTrends(months);
       return response.data;
@@ -88,7 +88,7 @@ export function useViolationTrends(months: number = 12) {
 export function useSupplierComplianceScores() {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['supplier-compliance-scores', { orgId }],
+    queryKey: ["supplier-compliance-scores", { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getSupplierComplianceScores();
       return response.data;
@@ -103,7 +103,7 @@ export function useSupplierComplianceScores() {
 export function useSpendingPolicies() {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['spending-policies', { orgId }],
+    queryKey: ["spending-policies", { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getSpendingPolicies();
       return response.data;
@@ -119,15 +119,26 @@ export function useResolveViolation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ violationId, resolutionNotes }: { violationId: number; resolutionNotes: string }) => {
-      const response = await analyticsAPI.resolveViolation(violationId, resolutionNotes);
+    mutationFn: async ({
+      violationId,
+      resolutionNotes,
+    }: {
+      violationId: number;
+      resolutionNotes: string;
+    }) => {
+      const response = await analyticsAPI.resolveViolation(
+        violationId,
+        resolutionNotes,
+      );
       return response.data;
     },
     onSuccess: () => {
       // Invalidate related queries
-      queryClient.invalidateQueries({ queryKey: ['policy-violations'] });
-      queryClient.invalidateQueries({ queryKey: ['compliance-overview'] });
-      queryClient.invalidateQueries({ queryKey: ['supplier-compliance-scores'] });
+      queryClient.invalidateQueries({ queryKey: ["policy-violations"] });
+      queryClient.invalidateQueries({ queryKey: ["compliance-overview"] });
+      queryClient.invalidateQueries({
+        queryKey: ["supplier-compliance-scores"],
+      });
     },
   });
 }
@@ -140,26 +151,29 @@ export function getViolationSeverityDisplay(severity: ViolationSeverity): {
   color: string;
   bgColor: string;
 } {
-  const displays: Record<ViolationSeverity, { label: string; color: string; bgColor: string }> = {
+  const displays: Record<
+    ViolationSeverity,
+    { label: string; color: string; bgColor: string }
+  > = {
     critical: {
-      label: 'Critical',
-      color: 'text-red-700',
-      bgColor: 'bg-red-100',
+      label: "Critical",
+      color: "text-red-700",
+      bgColor: "bg-red-100",
     },
     high: {
-      label: 'High',
-      color: 'text-red-600',
-      bgColor: 'bg-red-50',
+      label: "High",
+      color: "text-red-600",
+      bgColor: "bg-red-50",
     },
     medium: {
-      label: 'Medium',
-      color: 'text-amber-600',
-      bgColor: 'bg-amber-100',
+      label: "Medium",
+      color: "text-amber-600",
+      bgColor: "bg-amber-100",
     },
     low: {
-      label: 'Low',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100',
+      label: "Low",
+      color: "text-blue-600",
+      bgColor: "bg-blue-100",
     },
   };
   return displays[severity] || displays.medium;
@@ -174,27 +188,27 @@ export function getViolationTypeDisplay(type: ViolationType): {
 } {
   const displays: Record<ViolationType, { label: string; icon: string }> = {
     amount_exceeded: {
-      label: 'Amount Exceeded',
-      icon: 'dollar-sign',
+      label: "Amount Exceeded",
+      icon: "dollar-sign",
     },
     non_preferred_supplier: {
-      label: 'Non-Preferred Supplier',
-      icon: 'user-x',
+      label: "Non-Preferred Supplier",
+      icon: "user-x",
     },
     restricted_category: {
-      label: 'Restricted Category',
-      icon: 'ban',
+      label: "Restricted Category",
+      icon: "ban",
     },
     no_contract: {
-      label: 'No Contract',
-      icon: 'file-x',
+      label: "No Contract",
+      icon: "file-x",
     },
     approval_missing: {
-      label: 'Approval Missing',
-      icon: 'check-circle',
+      label: "Approval Missing",
+      icon: "check-circle",
     },
   };
-  return displays[type] || { label: type, icon: 'alert-triangle' };
+  return displays[type] || { label: type, icon: "alert-triangle" };
 }
 
 /**
@@ -205,21 +219,24 @@ export function getRiskLevelDisplay(level: RiskLevel): {
   color: string;
   bgColor: string;
 } {
-  const displays: Record<RiskLevel, { label: string; color: string; bgColor: string }> = {
+  const displays: Record<
+    RiskLevel,
+    { label: string; color: string; bgColor: string }
+  > = {
     high: {
-      label: 'High Risk',
-      color: 'text-red-600',
-      bgColor: 'bg-red-100',
+      label: "High Risk",
+      color: "text-red-600",
+      bgColor: "bg-red-100",
     },
     medium: {
-      label: 'Medium Risk',
-      color: 'text-amber-600',
-      bgColor: 'bg-amber-100',
+      label: "Medium Risk",
+      color: "text-amber-600",
+      bgColor: "bg-amber-100",
     },
     low: {
-      label: 'Low Risk',
-      color: 'text-green-600',
-      bgColor: 'bg-green-100',
+      label: "Low Risk",
+      color: "text-green-600",
+      bgColor: "bg-green-100",
     },
   };
   return displays[level] || displays.medium;
@@ -229,9 +246,9 @@ export function getRiskLevelDisplay(level: RiskLevel): {
  * Get compliance score color based on value
  */
 export function getComplianceScoreColor(score: number): string {
-  if (score >= 90) return 'text-green-600';
-  if (score >= 70) return 'text-amber-600';
-  return 'text-red-600';
+  if (score >= 90) return "text-green-600";
+  if (score >= 70) return "text-amber-600";
+  return "text-red-600";
 }
 
 /**
@@ -244,27 +261,27 @@ export function getComplianceRateStatus(rate: number): {
 } {
   if (rate >= 95) {
     return {
-      label: 'Excellent',
-      color: 'text-green-600',
-      bgColor: 'bg-green-100',
+      label: "Excellent",
+      color: "text-green-600",
+      bgColor: "bg-green-100",
     };
   } else if (rate >= 85) {
     return {
-      label: 'Good',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100',
+      label: "Good",
+      color: "text-blue-600",
+      bgColor: "bg-blue-100",
     };
   } else if (rate >= 70) {
     return {
-      label: 'Needs Improvement',
-      color: 'text-amber-600',
-      bgColor: 'bg-amber-100',
+      label: "Needs Improvement",
+      color: "text-amber-600",
+      bgColor: "bg-amber-100",
     };
   } else {
     return {
-      label: 'Critical',
-      color: 'text-red-600',
-      bgColor: 'bg-red-100',
+      label: "Critical",
+      color: "text-red-600",
+      bgColor: "bg-red-100",
     };
   }
 }

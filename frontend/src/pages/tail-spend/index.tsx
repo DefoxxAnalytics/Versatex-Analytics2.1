@@ -1,5 +1,5 @@
-import { PlaceholderPage } from '@/components/PlaceholderPage';
-import { Target } from 'lucide-react';
+import { PlaceholderPage } from "@/components/PlaceholderPage";
+import { Target } from "lucide-react";
 
 export default function TailSpendPage() {
   return (

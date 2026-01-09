@@ -6,9 +6,9 @@
  * Performance: Optimized configurations for fast rendering
  */
 
-import type { EChartsOption } from 'echarts';
-import type { ProcurementRecord } from '../hooks/useProcurementData';
-import type { SpendByCategory, SpendBySupplier, MonthlyTrend } from './api';
+import type { EChartsOption } from "echarts";
+import type { ProcurementRecord } from "../hooks/useProcurementData";
+import type { SpendByCategory, SpendBySupplier, MonthlyTrend } from "./api";
 
 // ============================================================
 // API Data Chart Configs (use pre-aggregated server-side data)
@@ -17,16 +17,18 @@ import type { SpendByCategory, SpendBySupplier, MonthlyTrend } from './api';
 /**
  * Generate Spend by Category Bar Chart from API data
  */
-export function getCategoryChartFromAPI(data: SpendByCategory[]): EChartsOption {
+export function getCategoryChartFromAPI(
+  data: SpendByCategory[],
+): EChartsOption {
   // Data is already sorted by backend
-  const categories = data.map((item) => item.category || 'Uncategorized');
+  const categories = data.map((item) => item.category || "Uncategorized");
   const amounts = data.map((item) => item.amount || 0);
 
   return {
     tooltip: {
-      trigger: 'axis',
+      trigger: "axis",
       axisPointer: {
-        type: 'shadow',
+        type: "shadow",
       },
       formatter: (params: unknown) => {
         const p = params as { name: string; value: number }[];
@@ -35,13 +37,13 @@ export function getCategoryChartFromAPI(data: SpendByCategory[]): EChartsOption 
       },
     },
     grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
+      left: "3%",
+      right: "4%",
+      bottom: "3%",
       containLabel: true,
     },
     xAxis: {
-      type: 'category',
+      type: "category",
       data: categories,
       axisLabel: {
         rotate: 45,
@@ -49,18 +51,18 @@ export function getCategoryChartFromAPI(data: SpendByCategory[]): EChartsOption 
       },
     },
     yAxis: {
-      type: 'value',
+      type: "value",
       axisLabel: {
         formatter: (value: number) => `$${(value / 1000).toFixed(0)}K`,
       },
     },
     series: [
       {
-        name: 'Spend',
-        type: 'bar',
+        name: "Spend",
+        type: "bar",
         data: amounts,
         itemStyle: {
-          color: '#3b82f6',
+          color: "#3b82f6",
         },
       },
     ],
@@ -76,7 +78,7 @@ export function getTrendChartFromAPI(data: MonthlyTrend[]): EChartsOption {
 
   return {
     tooltip: {
-      trigger: 'axis',
+      trigger: "axis",
       formatter: (params: unknown) => {
         const p = params as { name: string; value: number }[];
         const d = p[0];
@@ -84,41 +86,41 @@ export function getTrendChartFromAPI(data: MonthlyTrend[]): EChartsOption {
       },
     },
     grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
+      left: "3%",
+      right: "4%",
+      bottom: "3%",
       containLabel: true,
     },
     xAxis: {
-      type: 'category',
+      type: "category",
       data: months,
       boundaryGap: false,
     },
     yAxis: {
-      type: 'value',
+      type: "value",
       axisLabel: {
         formatter: (value: number) => `$${(value / 1000).toFixed(0)}K`,
       },
     },
     series: [
       {
-        name: 'Spend',
-        type: 'line',
+        name: "Spend",
+        type: "line",
         data: amounts,
         smooth: true,
         itemStyle: {
-          color: '#10b981',
+          color: "#10b981",
         },
         areaStyle: {
           color: {
-            type: 'linear',
+            type: "linear",
             x: 0,
             y: 0,
             x2: 0,
             y2: 1,
             colorStops: [
-              { offset: 0, color: 'rgba(16, 185, 129, 0.3)' },
-              { offset: 1, color: 'rgba(16, 185, 129, 0.05)' },
+              { offset: 0, color: "rgba(16, 185, 129, 0.3)" },
+              { offset: 1, color: "rgba(16, 185, 129, 0.05)" },
             ],
           },
         },
@@ -130,17 +132,20 @@ export function getTrendChartFromAPI(data: MonthlyTrend[]): EChartsOption {
 /**
  * Generate Top Suppliers Horizontal Bar Chart from API data
  */
-export function getSupplierChartFromAPI(data: SpendBySupplier[], limit: number = 10): EChartsOption {
+export function getSupplierChartFromAPI(
+  data: SpendBySupplier[],
+  limit: number = 10,
+): EChartsOption {
   // Take top N suppliers (data is already sorted by backend)
   const topSuppliers = data.slice(0, limit);
-  const suppliers = topSuppliers.map((item) => item.supplier || 'Unknown');
+  const suppliers = topSuppliers.map((item) => item.supplier || "Unknown");
   const amounts = topSuppliers.map((item) => item.amount || 0);
 
   return {
     tooltip: {
-      trigger: 'axis',
+      trigger: "axis",
       axisPointer: {
-        type: 'shadow',
+        type: "shadow",
       },
       formatter: (params: unknown) => {
         const p = params as { name: string; value: number }[];
@@ -149,29 +154,29 @@ export function getSupplierChartFromAPI(data: SpendBySupplier[], limit: number =
       },
     },
     grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
+      left: "3%",
+      right: "4%",
+      bottom: "3%",
       containLabel: true,
     },
     xAxis: {
-      type: 'value',
+      type: "value",
       axisLabel: {
         formatter: (value: number) => `$${(value / 1000).toFixed(0)}K`,
       },
     },
     yAxis: {
-      type: 'category',
+      type: "category",
       data: suppliers,
       inverse: true,
     },
     series: [
       {
-        name: 'Spend',
-        type: 'bar',
+        name: "Spend",
+        type: "bar",
         data: amounts,
         itemStyle: {
-          color: '#8b5cf6',
+          color: "#8b5cf6",
         },
       },
     ],
@@ -185,28 +190,31 @@ export function getSupplierChartFromAPI(data: SpendBySupplier[], limit: number =
 /**
  * Generate Spend by Category Bar Chart configuration
  */
-export function getSpendByCategoryConfig(data: ProcurementRecord[]): EChartsOption {
+export function getSpendByCategoryConfig(
+  data: ProcurementRecord[],
+): EChartsOption {
   // Group by category and sum amounts
   const categoryMap = new Map<string, number>();
-  
+
   data.forEach((record) => {
-    const category = record.category || 'Uncategorized';
+    const category = record.category || "Uncategorized";
     const amount = record.amount || 0;
     categoryMap.set(category, (categoryMap.get(category) || 0) + amount);
   });
 
   // Sort by amount descending
-  const sortedCategories = Array.from(categoryMap.entries())
-    .sort((a, b) => b[1] - a[1]);
+  const sortedCategories = Array.from(categoryMap.entries()).sort(
+    (a, b) => b[1] - a[1],
+  );
 
   const categories = sortedCategories.map(([cat]) => cat);
   const amounts = sortedCategories.map(([, amt]) => amt);
 
   return {
     tooltip: {
-      trigger: 'axis',
+      trigger: "axis",
       axisPointer: {
-        type: 'shadow',
+        type: "shadow",
       },
       formatter: (params: any) => {
         const data = params[0];
@@ -214,13 +222,13 @@ export function getSpendByCategoryConfig(data: ProcurementRecord[]): EChartsOpti
       },
     },
     grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
+      left: "3%",
+      right: "4%",
+      bottom: "3%",
       containLabel: true,
     },
     xAxis: {
-      type: 'category',
+      type: "category",
       data: categories,
       axisLabel: {
         rotate: 45,
@@ -228,18 +236,18 @@ export function getSpendByCategoryConfig(data: ProcurementRecord[]): EChartsOpti
       },
     },
     yAxis: {
-      type: 'value',
+      type: "value",
       axisLabel: {
         formatter: (value: number) => `$${(value / 1000).toFixed(0)}K`,
       },
     },
     series: [
       {
-        name: 'Spend',
-        type: 'bar',
+        name: "Spend",
+        type: "bar",
         data: amounts,
         itemStyle: {
-          color: '#3b82f6',
+          color: "#3b82f6",
         },
       },
     ],
@@ -252,67 +260,68 @@ export function getSpendByCategoryConfig(data: ProcurementRecord[]): EChartsOpti
 export function getSpendTrendConfig(data: ProcurementRecord[]): EChartsOption {
   // Group by month and sum amounts
   const monthMap = new Map<string, number>();
-  
+
   data.forEach((record) => {
     if (!record.date) return;
-    
+
     const date = new Date(record.date);
-    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
     const amount = record.amount || 0;
     monthMap.set(monthKey, (monthMap.get(monthKey) || 0) + amount);
   });
 
   // Sort by month
-  const sortedMonths = Array.from(monthMap.entries())
-    .sort((a, b) => a[0].localeCompare(b[0]));
+  const sortedMonths = Array.from(monthMap.entries()).sort((a, b) =>
+    a[0].localeCompare(b[0]),
+  );
 
   const months = sortedMonths.map(([month]) => month);
   const amounts = sortedMonths.map(([, amt]) => amt);
 
   return {
     tooltip: {
-      trigger: 'axis',
+      trigger: "axis",
       formatter: (params: any) => {
         const data = params[0];
         return `${data.name}<br/>$${data.value.toLocaleString()}`;
       },
     },
     grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
+      left: "3%",
+      right: "4%",
+      bottom: "3%",
       containLabel: true,
     },
     xAxis: {
-      type: 'category',
+      type: "category",
       data: months,
       boundaryGap: false,
     },
     yAxis: {
-      type: 'value',
+      type: "value",
       axisLabel: {
         formatter: (value: number) => `$${(value / 1000).toFixed(0)}K`,
       },
     },
     series: [
       {
-        name: 'Spend',
-        type: 'line',
+        name: "Spend",
+        type: "line",
         data: amounts,
         smooth: true,
         itemStyle: {
-          color: '#10b981',
+          color: "#10b981",
         },
         areaStyle: {
           color: {
-            type: 'linear',
+            type: "linear",
             x: 0,
             y: 0,
             x2: 0,
             y2: 1,
             colorStops: [
-              { offset: 0, color: 'rgba(16, 185, 129, 0.3)' },
-              { offset: 1, color: 'rgba(16, 185, 129, 0.05)' },
+              { offset: 0, color: "rgba(16, 185, 129, 0.3)" },
+              { offset: 1, color: "rgba(16, 185, 129, 0.05)" },
             ],
           },
         },
@@ -324,12 +333,14 @@ export function getSpendTrendConfig(data: ProcurementRecord[]): EChartsOption {
 /**
  * Generate Top 10 Suppliers Horizontal Bar Chart configuration
  */
-export function getTopSuppliersConfig(data: ProcurementRecord[]): EChartsOption {
+export function getTopSuppliersConfig(
+  data: ProcurementRecord[],
+): EChartsOption {
   // Group by supplier and sum amounts
   const supplierMap = new Map<string, number>();
-  
+
   data.forEach((record) => {
-    const supplier = record.supplier || 'Unknown';
+    const supplier = record.supplier || "Unknown";
     const amount = record.amount || 0;
     supplierMap.set(supplier, (supplierMap.get(supplier) || 0) + amount);
   });
@@ -344,9 +355,9 @@ export function getTopSuppliersConfig(data: ProcurementRecord[]): EChartsOption 
 
   return {
     tooltip: {
-      trigger: 'axis',
+      trigger: "axis",
       axisPointer: {
-        type: 'shadow',
+        type: "shadow",
       },
       formatter: (params: any) => {
         const data = params[0];
@@ -354,29 +365,29 @@ export function getTopSuppliersConfig(data: ProcurementRecord[]): EChartsOption 
       },
     },
     grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
+      left: "3%",
+      right: "4%",
+      bottom: "3%",
       containLabel: true,
     },
     xAxis: {
-      type: 'value',
+      type: "value",
       axisLabel: {
         formatter: (value: number) => `$${(value / 1000).toFixed(0)}K`,
       },
     },
     yAxis: {
-      type: 'category',
+      type: "category",
       data: suppliers,
       inverse: true,
     },
     series: [
       {
-        name: 'Spend',
-        type: 'bar',
+        name: "Spend",
+        type: "bar",
         data: amounts,
         itemStyle: {
-          color: '#8b5cf6',
+          color: "#8b5cf6",
         },
       },
     ],
@@ -386,17 +397,19 @@ export function getTopSuppliersConfig(data: ProcurementRecord[]): EChartsOption 
 /**
  * Generate Spend Distribution Donut Chart configuration
  */
-export function getSpendDistributionConfig(data: ProcurementRecord[]): EChartsOption {
+export function getSpendDistributionConfig(
+  data: ProcurementRecord[],
+): EChartsOption {
   // Calculate distribution tiers
-  const amounts = data.map(r => r.amount || 0).filter(a => a > 0);
+  const amounts = data.map((r) => r.amount || 0).filter((a) => a > 0);
   const totalSpend = amounts.reduce((sum, amt) => sum + amt, 0);
-  
+
   if (amounts.length === 0) {
     return {
       title: {
-        text: 'No Data',
-        left: 'center',
-        top: 'center',
+        text: "No Data",
+        left: "center",
+        top: "center",
       },
     };
   }
@@ -405,7 +418,7 @@ export function getSpendDistributionConfig(data: ProcurementRecord[]): EChartsOp
   const sortedAmounts = [...amounts].sort((a, b) => b - a);
   const p80Index = Math.floor(sortedAmounts.length * 0.2);
   const p50Index = Math.floor(sortedAmounts.length * 0.5);
-  
+
   const highThreshold = sortedAmounts[p80Index];
   const mediumThreshold = sortedAmounts[p50Index];
 
@@ -413,7 +426,7 @@ export function getSpendDistributionConfig(data: ProcurementRecord[]): EChartsOp
   let mediumSpend = 0;
   let lowSpend = 0;
 
-  amounts.forEach(amount => {
+  amounts.forEach((amount) => {
     if (amount >= highThreshold) {
       highSpend += amount;
     } else if (amount >= mediumThreshold) {
@@ -425,45 +438,57 @@ export function getSpendDistributionConfig(data: ProcurementRecord[]): EChartsOp
 
   return {
     tooltip: {
-      trigger: 'item',
+      trigger: "item",
       formatter: (params: any) => {
         const percent = ((params.value / totalSpend) * 100).toFixed(1);
         return `${params.name}<br/>$${params.value.toLocaleString()} (${percent}%)`;
       },
     },
     legend: {
-      orient: 'vertical',
-      left: 'left',
+      orient: "vertical",
+      left: "left",
     },
     series: [
       {
-        name: 'Spend Distribution',
-        type: 'pie',
-        radius: ['40%', '70%'],
+        name: "Spend Distribution",
+        type: "pie",
+        radius: ["40%", "70%"],
         avoidLabelOverlap: false,
         itemStyle: {
           borderRadius: 10,
-          borderColor: '#fff',
+          borderColor: "#fff",
           borderWidth: 2,
         },
         label: {
           show: false,
-          position: 'center',
+          position: "center",
         },
         emphasis: {
           label: {
             show: true,
             fontSize: 20,
-            fontWeight: 'bold',
+            fontWeight: "bold",
           },
         },
         labelLine: {
           show: false,
         },
         data: [
-          { value: highSpend, name: 'High Value', itemStyle: { color: '#ef4444' } },
-          { value: mediumSpend, name: 'Medium Value', itemStyle: { color: '#f59e0b' } },
-          { value: lowSpend, name: 'Low Value', itemStyle: { color: '#22c55e' } },
+          {
+            value: highSpend,
+            name: "High Value",
+            itemStyle: { color: "#ef4444" },
+          },
+          {
+            value: mediumSpend,
+            name: "Medium Value",
+            itemStyle: { color: "#f59e0b" },
+          },
+          {
+            value: lowSpend,
+            name: "Low Value",
+            itemStyle: { color: "#22c55e" },
+          },
         ],
       },
     ],

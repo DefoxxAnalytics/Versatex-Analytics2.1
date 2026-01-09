@@ -1,9 +1,9 @@
 /**
  * FilterPane Component
- * 
+ *
  * Persistent filter pane that allows users to filter procurement data.
  * Filters persist across all tabs using TanStack Query.
- * 
+ *
  * Features:
  * - Date range picker
  * - Category multi-select
@@ -11,42 +11,47 @@
  * - Amount range inputs
  * - Reset filters button
  * - Active filter badges
- * 
+ *
  * Security:
  * - All inputs validated and sanitized
  * - No XSS vulnerabilities
- * 
+ *
  * Accessibility:
  * - Proper labels and ARIA attributes
  * - Keyboard navigation support
  */
 
-import { useState, useMemo } from 'react';
-import { X, Filter, RotateCcw, Bookmark, Trash2, Check } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { MultiSelect } from '@/components/ui/multi-select';
+import { useState, useMemo } from "react";
+import { X, Filter, RotateCcw, Bookmark, Trash2, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { MultiSelect } from "@/components/ui/multi-select";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog';
-import { useFilters, useUpdateFilters, useResetFilters, type Filters } from '@/hooks/useFilters';
-import { useProcurementData } from '@/hooks/useProcurementData';
-import { useFilterPresets, type FilterPreset } from '@/hooks/useFilterPresets';
-import { toast } from 'sonner';
+} from "@/components/ui/dialog";
+import {
+  useFilters,
+  useUpdateFilters,
+  useResetFilters,
+  type Filters,
+} from "@/hooks/useFilters";
+import { useProcurementData } from "@/hooks/useProcurementData";
+import { useFilterPresets, type FilterPreset } from "@/hooks/useFilterPresets";
+import { toast } from "sonner";
 
 export function FilterPane() {
   const { data: filters } = useFilters() as { data: Filters | undefined };
@@ -56,37 +61,56 @@ export function FilterPane() {
   const { presets, savePreset, deletePreset, nameExists } = useFilterPresets();
 
   // Local state for form inputs
-  const [startDate, setStartDate] = useState(filters?.dateRange.start || '');
-  const [endDate, setEndDate] = useState(filters?.dateRange.end || '');
-  const [minAmount, setMinAmount] = useState(filters?.amountRange.min?.toString() || '');
-  const [maxAmount, setMaxAmount] = useState(filters?.amountRange.max?.toString() || '');
+  const [startDate, setStartDate] = useState(filters?.dateRange.start || "");
+  const [endDate, setEndDate] = useState(filters?.dateRange.end || "");
+  const [minAmount, setMinAmount] = useState(
+    filters?.amountRange.min?.toString() || "",
+  );
+  const [maxAmount, setMaxAmount] = useState(
+    filters?.amountRange.max?.toString() || "",
+  );
 
   // Preset dialog state
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-  const [presetName, setPresetName] = useState('');
+  const [presetName, setPresetName] = useState("");
 
   // Get unique categories, suppliers, locations, and years from data
-  const { uniqueCategories, uniqueSubcategories, uniqueSuppliers, uniqueLocations, uniqueYears } = useMemo(() => {
+  const {
+    uniqueCategories,
+    uniqueSubcategories,
+    uniqueSuppliers,
+    uniqueLocations,
+    uniqueYears,
+  } = useMemo(() => {
     const categories = new Set<string>();
     const subcategories = new Set<string>();
     const suppliers = new Set<string>();
     const locations = new Set<string>();
     const years = new Set<string>();
 
-    procurementData.forEach((item: { category?: string; subcategory?: string; supplier?: string; location?: string; date?: string; year?: number }) => {
-      if (item.category) categories.add(item.category);
-      if (item.subcategory) subcategories.add(item.subcategory);
-      if (item.supplier) suppliers.add(item.supplier);
-      if (item.location) locations.add(item.location);
-      
-      // Use year field if available, otherwise extract from date
-      if (item.year) {
-        years.add(item.year.toString());
-      } else if (item.date) {
-        const year = new Date(item.date).getFullYear().toString();
-        years.add(year);
-      }
-    });
+    procurementData.forEach(
+      (item: {
+        category?: string;
+        subcategory?: string;
+        supplier?: string;
+        location?: string;
+        date?: string;
+        year?: number;
+      }) => {
+        if (item.category) categories.add(item.category);
+        if (item.subcategory) subcategories.add(item.subcategory);
+        if (item.supplier) suppliers.add(item.supplier);
+        if (item.location) locations.add(item.location);
+
+        // Use year field if available, otherwise extract from date
+        if (item.year) {
+          years.add(item.year.toString());
+        } else if (item.date) {
+          const year = new Date(item.date).getFullYear().toString();
+          years.add(year);
+        }
+      },
+    );
 
     return {
       uniqueCategories: Array.from(categories).sort(),
@@ -107,7 +131,8 @@ export function FilterPane() {
     if (filters.suppliers.length > 0) count++;
     if (filters.locations.length > 0) count++;
     if (filters.years.length > 0) count++;
-    if (filters.amountRange.min !== null || filters.amountRange.max !== null) count++;
+    if (filters.amountRange.min !== null || filters.amountRange.max !== null)
+      count++;
     return count;
   }, [filters]);
 
@@ -127,7 +152,7 @@ export function FilterPane() {
     const updated = current.includes(category)
       ? current.filter((c) => c !== category)
       : [...current, category];
-    
+
     updateFilters.mutate({ categories: updated });
   };
 
@@ -137,7 +162,7 @@ export function FilterPane() {
     const updated = current.includes(subcategory)
       ? current.filter((sc) => sc !== subcategory)
       : [...current, subcategory];
-    
+
     updateFilters.mutate({ subcategories: updated });
   };
 
@@ -147,7 +172,7 @@ export function FilterPane() {
     const updated = current.includes(supplier)
       ? current.filter((s) => s !== supplier)
       : [...current, supplier];
-    
+
     updateFilters.mutate({ suppliers: updated });
   };
 
@@ -157,7 +182,7 @@ export function FilterPane() {
     const updated = current.includes(location)
       ? current.filter((l) => l !== location)
       : [...current, location];
-    
+
     updateFilters.mutate({ locations: updated });
   };
 
@@ -174,27 +199,27 @@ export function FilterPane() {
   // Handle reset
   const handleReset = () => {
     resetFilters.mutate();
-    setStartDate('');
-    setEndDate('');
-    setMinAmount('');
-    setMaxAmount('');
+    setStartDate("");
+    setEndDate("");
+    setMinAmount("");
+    setMaxAmount("");
   };
 
   // Handle save preset
   const handleSavePreset = () => {
     if (!presetName.trim()) {
-      toast.error('Please enter a preset name');
+      toast.error("Please enter a preset name");
       return;
     }
     if (nameExists(presetName)) {
-      toast.error('A preset with this name already exists');
+      toast.error("A preset with this name already exists");
       return;
     }
     if (!filters) return;
 
     savePreset(presetName.trim(), filters);
     toast.success(`Preset "${presetName}" saved`);
-    setPresetName('');
+    setPresetName("");
     setSaveDialogOpen(false);
   };
 
@@ -204,10 +229,10 @@ export function FilterPane() {
     updateFilters.mutate(preset.filters);
 
     // Update local state
-    setStartDate(preset.filters.dateRange.start || '');
-    setEndDate(preset.filters.dateRange.end || '');
-    setMinAmount(preset.filters.amountRange.min?.toString() || '');
-    setMaxAmount(preset.filters.amountRange.max?.toString() || '');
+    setStartDate(preset.filters.dateRange.start || "");
+    setEndDate(preset.filters.dateRange.end || "");
+    setMinAmount(preset.filters.amountRange.min?.toString() || "");
+    setMaxAmount(preset.filters.amountRange.max?.toString() || "");
 
     toast.success(`Applied preset "${preset.name}"`);
   };
@@ -312,7 +337,7 @@ export function FilterPane() {
                 value={presetName}
                 onChange={(e) => setPresetName(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === "Enter") {
                     handleSavePreset();
                   }
                 }}
@@ -322,7 +347,10 @@ export function FilterPane() {
               <p>This will save:</p>
               <ul className="list-disc list-inside mt-1 space-y-0.5">
                 {filters.dateRange.start && (
-                  <li>Date: {filters.dateRange.start} - {filters.dateRange.end || 'Now'}</li>
+                  <li>
+                    Date: {filters.dateRange.start} -{" "}
+                    {filters.dateRange.end || "Now"}
+                  </li>
                 )}
                 {filters.categories.length > 0 && (
                   <li>{filters.categories.length} categories</li>
@@ -333,7 +361,8 @@ export function FilterPane() {
                 {filters.locations.length > 0 && (
                   <li>{filters.locations.length} locations</li>
                 )}
-                {(filters.amountRange.min !== null || filters.amountRange.max !== null) && (
+                {(filters.amountRange.min !== null ||
+                  filters.amountRange.max !== null) && (
                   <li>Amount range filter</li>
                 )}
                 {activeFilterCount === 0 && (
@@ -369,11 +398,13 @@ export function FilterPane() {
                 const today = new Date();
                 const start = new Date(today);
                 start.setDate(start.getDate() - 7);
-                const startStr = start.toISOString().split('T')[0];
-                const endStr = today.toISOString().split('T')[0];
+                const startStr = start.toISOString().split("T")[0];
+                const endStr = today.toISOString().split("T")[0];
                 setStartDate(startStr);
                 setEndDate(endStr);
-                updateFilters.mutate({ dateRange: { start: startStr, end: endStr } });
+                updateFilters.mutate({
+                  dateRange: { start: startStr, end: endStr },
+                });
               }}
             >
               Last 7 days
@@ -386,11 +417,13 @@ export function FilterPane() {
                 const today = new Date();
                 const start = new Date(today);
                 start.setDate(start.getDate() - 30);
-                const startStr = start.toISOString().split('T')[0];
-                const endStr = today.toISOString().split('T')[0];
+                const startStr = start.toISOString().split("T")[0];
+                const endStr = today.toISOString().split("T")[0];
                 setStartDate(startStr);
                 setEndDate(endStr);
-                updateFilters.mutate({ dateRange: { start: startStr, end: endStr } });
+                updateFilters.mutate({
+                  dateRange: { start: startStr, end: endStr },
+                });
               }}
             >
               Last 30 days
@@ -403,11 +436,13 @@ export function FilterPane() {
                 const today = new Date();
                 const start = new Date(today);
                 start.setDate(start.getDate() - 90);
-                const startStr = start.toISOString().split('T')[0];
-                const endStr = today.toISOString().split('T')[0];
+                const startStr = start.toISOString().split("T")[0];
+                const endStr = today.toISOString().split("T")[0];
                 setStartDate(startStr);
                 setEndDate(endStr);
-                updateFilters.mutate({ dateRange: { start: startStr, end: endStr } });
+                updateFilters.mutate({
+                  dateRange: { start: startStr, end: endStr },
+                });
               }}
             >
               Last 90 days
@@ -420,8 +455,10 @@ export function FilterPane() {
                 const year = new Date().getFullYear();
                 const startStr = `${year}-01-01`;
                 setStartDate(startStr);
-                setEndDate('');
-                updateFilters.mutate({ dateRange: { start: startStr, end: null } });
+                setEndDate("");
+                updateFilters.mutate({
+                  dateRange: { start: startStr, end: null },
+                });
               }}
             >
               This Year
@@ -436,7 +473,9 @@ export function FilterPane() {
                 const endStr = `${year}-12-31`;
                 setStartDate(startStr);
                 setEndDate(endStr);
-                updateFilters.mutate({ dateRange: { start: startStr, end: endStr } });
+                updateFilters.mutate({
+                  dateRange: { start: startStr, end: endStr },
+                });
               }}
             >
               Last Year
@@ -479,8 +518,10 @@ export function FilterPane() {
                   <X
                     className="h-3 w-3 ml-1 cursor-pointer"
                     onClick={() => {
-                      setStartDate('');
-                      updateFilters.mutate({ dateRange: { ...filters.dateRange, start: null } });
+                      setStartDate("");
+                      updateFilters.mutate({
+                        dateRange: { ...filters.dateRange, start: null },
+                      });
                     }}
                   />
                 </Badge>
@@ -491,8 +532,10 @@ export function FilterPane() {
                   <X
                     className="h-3 w-3 ml-1 cursor-pointer"
                     onClick={() => {
-                      setEndDate('');
-                      updateFilters.mutate({ dateRange: { ...filters.dateRange, end: null } });
+                      setEndDate("");
+                      updateFilters.mutate({
+                        dateRange: { ...filters.dateRange, end: null },
+                      });
                     }}
                   />
                 </Badge>
@@ -507,7 +550,9 @@ export function FilterPane() {
           <MultiSelect
             options={uniqueCategories}
             selected={filters.categories}
-            onChange={(selected) => updateFilters.mutate({ categories: selected })}
+            onChange={(selected) =>
+              updateFilters.mutate({ categories: selected })
+            }
             placeholder="Select categories..."
             emptyMessage="No categories available"
           />
@@ -519,7 +564,9 @@ export function FilterPane() {
           <MultiSelect
             options={uniqueSubcategories}
             selected={filters.subcategories}
-            onChange={(selected) => updateFilters.mutate({ subcategories: selected })}
+            onChange={(selected) =>
+              updateFilters.mutate({ subcategories: selected })
+            }
             placeholder="Select subcategories..."
             emptyMessage="No subcategories available"
           />
@@ -531,7 +578,9 @@ export function FilterPane() {
           <MultiSelect
             options={uniqueSuppliers}
             selected={filters.suppliers}
-            onChange={(selected) => updateFilters.mutate({ suppliers: selected })}
+            onChange={(selected) =>
+              updateFilters.mutate({ suppliers: selected })
+            }
             placeholder="Select suppliers..."
             emptyMessage="No suppliers available"
           />
@@ -543,7 +592,9 @@ export function FilterPane() {
           <MultiSelect
             options={uniqueLocations}
             selected={filters.locations}
-            onChange={(selected) => updateFilters.mutate({ locations: selected })}
+            onChange={(selected) =>
+              updateFilters.mutate({ locations: selected })
+            }
             placeholder="Select locations..."
             emptyMessage="No locations available"
           />
@@ -598,7 +649,8 @@ export function FilterPane() {
               />
             </div>
           </div>
-          {(filters.amountRange.min !== null || filters.amountRange.max !== null) && (
+          {(filters.amountRange.min !== null ||
+            filters.amountRange.max !== null) && (
             <div className="flex flex-wrap gap-2">
               {filters.amountRange.min !== null && (
                 <Badge variant="secondary" className="text-xs">
@@ -606,8 +658,10 @@ export function FilterPane() {
                   <X
                     className="h-3 w-3 ml-1 cursor-pointer"
                     onClick={() => {
-                      setMinAmount('');
-                      updateFilters.mutate({ amountRange: { ...filters.amountRange, min: null } });
+                      setMinAmount("");
+                      updateFilters.mutate({
+                        amountRange: { ...filters.amountRange, min: null },
+                      });
                     }}
                   />
                 </Badge>
@@ -618,8 +672,10 @@ export function FilterPane() {
                   <X
                     className="h-3 w-3 ml-1 cursor-pointer"
                     onClick={() => {
-                      setMaxAmount('');
-                      updateFilters.mutate({ amountRange: { ...filters.amountRange, max: null } });
+                      setMaxAmount("");
+                      updateFilters.mutate({
+                        amountRange: { ...filters.amountRange, max: null },
+                      });
                     }}
                   />
                 </Badge>

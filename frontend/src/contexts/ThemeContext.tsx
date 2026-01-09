@@ -48,7 +48,8 @@ export function ThemeProvider({
 
   // Initialize theme from defaults - will sync from settings when loaded
   const [theme, setThemeState] = useState<Theme>(defaultTheme);
-  const [colorScheme, setColorSchemeState] = useState<ColorScheme>(defaultColorScheme);
+  const [colorScheme, setColorSchemeState] =
+    useState<ColorScheme>(defaultColorScheme);
 
   // Sync theme and color scheme with settings when they load
   useEffect(() => {

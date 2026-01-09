@@ -29,16 +29,21 @@
  * ```
  */
 
-import { type ReactNode, cloneElement, isValidElement, type ReactElement } from 'react';
-import { usePermissions } from '@/contexts/PermissionContext';
+import {
+  type ReactNode,
+  cloneElement,
+  isValidElement,
+  type ReactElement,
+} from "react";
+import { usePermissions } from "@/contexts/PermissionContext";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
-import type { Permission } from '@/types/permissions';
+} from "@/components/ui/tooltip";
+import type { Permission } from "@/types/permissions";
 
-type GateBehavior = 'hide' | 'disable';
+type GateBehavior = "hide" | "disable";
 
 interface PermissionGateProps {
   /** Content to render/protect */
@@ -65,7 +70,7 @@ interface PermissionGateProps {
 export function PermissionGate({
   children,
   requires,
-  behavior = 'hide',
+  behavior = "hide",
   tooltip,
   fallback = null,
 }: PermissionGateProps) {
@@ -80,7 +85,7 @@ export function PermissionGate({
   }
 
   // HIDE behavior: remove from DOM entirely
-  if (behavior === 'hide') {
+  if (behavior === "hide") {
     return <>{fallback}</>;
   }
 
@@ -91,14 +96,15 @@ export function PermissionGate({
   if (isValidElement(children)) {
     const childElement = children as ReactElement<{
       disabled?: boolean;
-      'aria-disabled'?: boolean;
+      "aria-disabled"?: boolean;
       className?: string;
     }>;
 
     const disabledChild = cloneElement(childElement, {
       disabled: true,
-      'aria-disabled': true,
-      className: `${childElement.props.className || ''} opacity-50 cursor-not-allowed`.trim(),
+      "aria-disabled": true,
+      className:
+        `${childElement.props.className || ""} opacity-50 cursor-not-allowed`.trim(),
     });
 
     return (
@@ -110,14 +116,12 @@ export function PermissionGate({
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => {
               // Prevent keyboard activation (Enter/Space)
-              if (e.key === 'Enter' || e.key === ' ') {
+              if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
               }
             }}
           >
-            <div style={{ pointerEvents: 'none' }}>
-              {disabledChild}
-            </div>
+            <div style={{ pointerEvents: "none" }}>{disabledChild}</div>
           </span>
         </TooltipTrigger>
         <TooltipContent>
@@ -129,7 +133,9 @@ export function PermissionGate({
 
   // Fallback for non-element children - treat as hidden for safety
   if (import.meta.env.DEV) {
-    console.warn('PermissionGate: behavior="disable" requires a single React element as children');
+    console.warn(
+      'PermissionGate: behavior="disable" requires a single React element as children',
+    );
   }
   return null;
 }
@@ -157,7 +163,7 @@ export function AdminOnly({
 export function CanExport({
   children,
   tooltip,
-  behavior = 'disable',
+  behavior = "disable",
 }: {
   children: ReactNode;
   tooltip?: string;
@@ -176,7 +182,7 @@ export function CanExport({
 export function CanDelete({
   children,
   fallback,
-  behavior = 'hide',
+  behavior = "hide",
 }: {
   children: ReactNode;
   fallback?: ReactNode;
@@ -196,7 +202,7 @@ export function CanDelete({
 export function CanClear({
   children,
   fallback,
-  behavior = 'hide',
+  behavior = "hide",
 }: {
   children: ReactNode;
   fallback?: ReactNode;

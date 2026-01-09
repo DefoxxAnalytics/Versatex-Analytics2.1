@@ -18,15 +18,15 @@
  * ```
  */
 
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
-import { useAuth } from './AuthContext';
-import type { UserRole } from '@/lib/api';
+import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { useAuth } from "./AuthContext";
+import type { UserRole } from "@/lib/api";
 import {
   type Permission,
   PERMISSION_MATRIX,
   PERMISSION_DENIAL_MESSAGES,
   ROLE_HIERARCHY,
-} from '@/types/permissions';
+} from "@/types/permissions";
 
 /**
  * Permission context value interface
@@ -63,7 +63,9 @@ interface PermissionContextType {
   canUploadForAnyOrg: boolean;
 }
 
-const PermissionContext = createContext<PermissionContextType | undefined>(undefined);
+const PermissionContext = createContext<PermissionContextType | undefined>(
+  undefined,
+);
 
 interface PermissionProviderProps {
   children: ReactNode;
@@ -127,8 +129,8 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
       hasAnyPermission,
       getDenialMessage,
       isAtLeast,
-      isAdmin: role === 'admin',
-      isManagerOrAbove: isAtLeast('manager'),
+      isAdmin: role === "admin",
+      isManagerOrAbove: isAtLeast("manager"),
       isSuperAdmin,
       canUploadForAnyOrg: isSuperAdmin,
     };
@@ -163,7 +165,7 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
 export function usePermissions(): PermissionContextType {
   const context = useContext(PermissionContext);
   if (context === undefined) {
-    throw new Error('usePermissions must be used within a PermissionProvider');
+    throw new Error("usePermissions must be used within a PermissionProvider");
   }
   return context;
 }

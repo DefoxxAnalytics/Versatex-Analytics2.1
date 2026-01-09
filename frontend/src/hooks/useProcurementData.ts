@@ -1,9 +1,13 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
-import { applyFilters } from '@/lib/analytics';
-import type { Filters } from './useFilters';
-import { procurementAPI, getOrganizationParam, type Transaction } from '@/lib/api';
-import { queryKeys } from '@/lib/queryKeys';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { applyFilters } from "@/lib/analytics";
+import type { Filters } from "./useFilters";
+import {
+  procurementAPI,
+  getOrganizationParam,
+  type Transaction,
+} from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
 
 /**
  * ProcurementRecord interface for frontend analytics
@@ -40,10 +44,10 @@ function transformTransaction(tx: Transaction): ProcurementRecord {
   return {
     supplier: tx.supplier_name,
     category: tx.category_name,
-    subcategory: tx.subcategory || 'Unspecified',
+    subcategory: tx.subcategory || "Unspecified",
     amount: parseFloat(tx.amount),
     date: tx.date,
-    location: tx.location || 'Unknown',
+    location: tx.location || "Unknown",
     year,
     spendBand: tx.spend_band || undefined,
   };
@@ -70,7 +74,9 @@ export function useProcurementData() {
         // Fetch transactions from the backend API
         // Note: This fetches a subset for drill-down functionality.
         // Summary statistics should use backend analytics API hooks instead.
-        const response = await procurementAPI.getTransactions({ page_size: 10000 });
+        const response = await procurementAPI.getTransactions({
+          page_size: 10000,
+        });
         const transactions = response.data.results;
 
         // Transform backend format to frontend format
@@ -78,7 +84,7 @@ export function useProcurementData() {
       } catch (error) {
         // Only log in development
         if (import.meta.env.DEV) {
-          console.error('Failed to load data from API:', error);
+          console.error("Failed to load data from API:", error);
         }
         return [];
       }
@@ -113,7 +119,11 @@ export function useProcurementData() {
  */
 export function useFilteredProcurementData() {
   const queryClient = useQueryClient();
-  const { data: rawData = [] as ProcurementRecord[], isLoading: rawLoading, isError: rawError } = useProcurementData();
+  const {
+    data: rawData = [] as ProcurementRecord[],
+    isLoading: rawLoading,
+    isError: rawError,
+  } = useProcurementData();
 
   const orgId = getOrgKeyPart();
 
@@ -121,23 +131,29 @@ export function useFilteredProcurementData() {
   useEffect(() => {
     const handleFilterUpdate = () => {
       // Invalidate the filtered data query to trigger re-computation
-      queryClient.invalidateQueries({ queryKey: queryKeys.procurement.filtered(orgId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.procurement.filtered(orgId),
+      });
     };
 
-    window.addEventListener('filtersUpdated', handleFilterUpdate);
+    window.addEventListener("filtersUpdated", handleFilterUpdate);
 
     return () => {
-      window.removeEventListener('filtersUpdated', handleFilterUpdate);
+      window.removeEventListener("filtersUpdated", handleFilterUpdate);
     };
   }, [queryClient]);
 
   // Use TanStack Query to cache filtered data
-  const { data: filteredData = [] as ProcurementRecord[], isLoading: filterLoading, isError: filterError } = useQuery<ProcurementRecord[], Error>({
+  const {
+    data: filteredData = [] as ProcurementRecord[],
+    isLoading: filterLoading,
+    isError: filterError,
+  } = useQuery<ProcurementRecord[], Error>({
     queryKey: [...queryKeys.procurement.filtered(orgId), rawData.length],
     queryFn: (): ProcurementRecord[] => {
       // Read filters from localStorage
       try {
-        const stored = localStorage.getItem('procurement_filters');
+        const stored = localStorage.getItem("procurement_filters");
         if (!stored || !rawData || rawData.length === 0) {
           return rawData as ProcurementRecord[];
         }
@@ -147,7 +163,7 @@ export function useFilteredProcurementData() {
       } catch (error) {
         // Only log in development
         if (import.meta.env.DEV) {
-          console.error('Failed to apply filters:', error);
+          console.error("Failed to apply filters:", error);
         }
         return rawData as ProcurementRecord[];
       }
@@ -174,7 +190,9 @@ export function useRefreshData() {
   return useMutation<void, Error, void>({
     mutationFn: async () => {
       // Just invalidate the query - TanStack Query will refetch
-      await queryClient.invalidateQueries({ queryKey: queryKeys.procurement.all });
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.procurement.all,
+      });
     },
   });
 }
@@ -186,9 +204,16 @@ export function useProcurementStats() {
   const { data = [] as ProcurementRecord[] } = useProcurementData();
   const records = data as ProcurementRecord[];
 
-  const totalSpend = records.reduce((sum: number, record: ProcurementRecord) => sum + record.amount, 0);
-  const uniqueSuppliers = new Set(records.map((r: ProcurementRecord) => r.supplier)).size;
-  const uniqueCategories = new Set(records.map((r: ProcurementRecord) => r.category)).size;
+  const totalSpend = records.reduce(
+    (sum: number, record: ProcurementRecord) => sum + record.amount,
+    0,
+  );
+  const uniqueSuppliers = new Set(
+    records.map((r: ProcurementRecord) => r.supplier),
+  ).size;
+  const uniqueCategories = new Set(
+    records.map((r: ProcurementRecord) => r.category),
+  ).size;
   const recordCount = records.length;
 
   return {

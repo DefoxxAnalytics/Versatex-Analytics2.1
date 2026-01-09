@@ -1,30 +1,26 @@
 /**
  * Reusable Chart Component
  * Wrapper around Apache ECharts for consistent chart rendering
- * 
+ *
  * Security: Sanitizes all input data
  * Performance: Lazy loads ECharts, auto-resizes on window resize
  * Accessibility: Provides ARIA labels and keyboard navigation
  */
 
-import { useEffect, useRef, useMemo } from 'react';
-import * as echarts from 'echarts/core';
-import {
-  BarChart,
-  LineChart,
-  PieChart,
-} from 'echarts/charts';
+import { useEffect, useRef, useMemo } from "react";
+import * as echarts from "echarts/core";
+import { BarChart, LineChart, PieChart } from "echarts/charts";
 import {
   TitleComponent,
   TooltipComponent,
   GridComponent,
   LegendComponent,
-} from 'echarts/components';
-import { CanvasRenderer } from 'echarts/renderers';
-import type { EChartsOption } from 'echarts';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { useTheme } from '@/contexts/ThemeContext';
-import { cn } from '@/lib/utils';
+} from "echarts/components";
+import { CanvasRenderer } from "echarts/renderers";
+import type { EChartsOption } from "echarts";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { useTheme } from "@/contexts/ThemeContext";
+import { cn } from "@/lib/utils";
 
 // Register ECharts components
 echarts.use([
@@ -74,7 +70,12 @@ interface ChartProps {
   /**
    * Click handler for chart data points
    */
-  onChartClick?: (params: { name: string; value: number; seriesType?: string; dataType?: string }) => void;
+  onChartClick?: (params: {
+    name: string;
+    value: number;
+    seriesType?: string;
+    dataType?: string;
+  }) => void;
 }
 
 /**
@@ -82,12 +83,12 @@ interface ChartProps {
  */
 function getDarkModeColors(isDark: boolean) {
   return {
-    textColor: isDark ? '#e5e7eb' : '#374151',
-    subTextColor: isDark ? '#9ca3af' : '#6b7280',
-    axisLineColor: isDark ? '#374151' : '#e5e7eb',
-    splitLineColor: isDark ? '#374151' : '#f3f4f6',
-    tooltipBg: isDark ? '#1f2937' : '#ffffff',
-    tooltipBorder: isDark ? '#374151' : '#e5e7eb',
+    textColor: isDark ? "#e5e7eb" : "#374151",
+    subTextColor: isDark ? "#9ca3af" : "#6b7280",
+    axisLineColor: isDark ? "#374151" : "#e5e7eb",
+    splitLineColor: isDark ? "#374151" : "#f3f4f6",
+    tooltipBg: isDark ? "#1f2937" : "#ffffff",
+    tooltipBorder: isDark ? "#374151" : "#e5e7eb",
   };
 }
 
@@ -101,13 +102,13 @@ export function Chart({
   option,
   height = 300,
   loading = false,
-  className = '',
+  className = "",
   onChartClick,
 }: ChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<echarts.ECharts | null>(null);
   const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const isDark = theme === "dark";
 
   // Merge dark mode colors with chart option
   const themedOption = useMemo(() => {
@@ -151,22 +152,22 @@ export function Chart({
             },
           }))
         : (option as any).xAxis
-        ? {
-            ...(option as any).xAxis,
-            axisLine: {
-              lineStyle: { color: colors.axisLineColor },
-              ...(option as any).xAxis?.axisLine,
-            },
-            axisLabel: {
-              color: colors.subTextColor,
-              ...(option as any).xAxis?.axisLabel,
-            },
-            splitLine: {
-              lineStyle: { color: colors.splitLineColor },
-              ...(option as any).xAxis?.splitLine,
-            },
-          }
-        : undefined,
+          ? {
+              ...(option as any).xAxis,
+              axisLine: {
+                lineStyle: { color: colors.axisLineColor },
+                ...(option as any).xAxis?.axisLine,
+              },
+              axisLabel: {
+                color: colors.subTextColor,
+                ...(option as any).xAxis?.axisLabel,
+              },
+              splitLine: {
+                lineStyle: { color: colors.splitLineColor },
+                ...(option as any).xAxis?.splitLine,
+              },
+            }
+          : undefined,
       yAxis: Array.isArray((option as any).yAxis)
         ? (option as any).yAxis.map((axis: any) => ({
             ...axis,
@@ -184,22 +185,22 @@ export function Chart({
             },
           }))
         : (option as any).yAxis
-        ? {
-            ...(option as any).yAxis,
-            axisLine: {
-              lineStyle: { color: colors.axisLineColor },
-              ...(option as any).yAxis?.axisLine,
-            },
-            axisLabel: {
-              color: colors.subTextColor,
-              ...(option as any).yAxis?.axisLabel,
-            },
-            splitLine: {
-              lineStyle: { color: colors.splitLineColor },
-              ...(option as any).yAxis?.splitLine,
-            },
-          }
-        : undefined,
+          ? {
+              ...(option as any).yAxis,
+              axisLine: {
+                lineStyle: { color: colors.axisLineColor },
+                ...(option as any).yAxis?.axisLine,
+              },
+              axisLabel: {
+                color: colors.subTextColor,
+                ...(option as any).yAxis?.axisLabel,
+              },
+              splitLine: {
+                lineStyle: { color: colors.splitLineColor },
+                ...(option as any).yAxis?.splitLine,
+              },
+            }
+          : undefined,
     };
   }, [option, isDark]);
 
@@ -216,7 +217,7 @@ export function Chart({
 
     // Handle click events
     if (onChartClick) {
-      chartInstance.on('click', (params: any) => {
+      chartInstance.on("click", (params: any) => {
         onChartClick({
           name: params.name,
           value: params.value,
@@ -231,12 +232,12 @@ export function Chart({
       chartInstance.resize();
     };
 
-    window.addEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
 
     // Cleanup
     return () => {
-      window.removeEventListener('resize', handleResize);
-      chartInstance.off('click');
+      window.removeEventListener("resize", handleResize);
+      chartInstance.off("click");
       chartInstance.dispose();
       chartInstanceRef.current = null;
     };
@@ -255,10 +256,10 @@ export function Chart({
       const colors = getDarkModeColors(isDark);
       if (loading) {
         chartInstanceRef.current.showLoading({
-          text: 'Loading...',
-          color: isDark ? '#60a5fa' : '#3b82f6',
+          text: "Loading...",
+          color: isDark ? "#60a5fa" : "#3b82f6",
           textColor: colors.textColor,
-          maskColor: isDark ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.8)',
+          maskColor: isDark ? "rgba(0, 0, 0, 0.5)" : "rgba(255, 255, 255, 0.8)",
         });
       } else {
         chartInstanceRef.current.hideLoading();
@@ -271,10 +272,12 @@ export function Chart({
       <CardHeader>
         <CardTitle className="text-lg font-semibold">{title}</CardTitle>
         {description && (
-          <p className={cn(
-            "text-sm mt-2",
-            isDark ? "text-gray-400" : "text-gray-600"
-          )}>
+          <p
+            className={cn(
+              "text-sm mt-2",
+              isDark ? "text-gray-400" : "text-gray-600",
+            )}
+          >
             {description}
           </p>
         )}
@@ -282,7 +285,7 @@ export function Chart({
       <CardContent>
         <div
           ref={chartRef}
-          style={{ height: `${height}px`, width: '100%' }}
+          style={{ height: `${height}px`, width: "100%" }}
           role="img"
           aria-label={`${title} chart`}
         />

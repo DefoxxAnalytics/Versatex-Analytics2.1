@@ -1,5 +1,5 @@
-import { PlaceholderPage } from '@/components/PlaceholderPage';
-import { TrendingUp } from 'lucide-react';
+import { PlaceholderPage } from "@/components/PlaceholderPage";
+import { TrendingUp } from "lucide-react";
 
 export default function ParetoPage() {
   return (

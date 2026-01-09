@@ -1,24 +1,24 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef } from 'react';
-import { authAPI, type UserPreferences } from '@/lib/api';
-import { queryKeys } from '@/lib/queryKeys';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
+import { authAPI, type UserPreferences } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
 
 /**
  * Color scheme type for brand theming
  * - navy: New navy blue & white theme (default)
  * - classic: Original light theme with white header/sidebar
  */
-export type ColorScheme = 'navy' | 'classic';
+export type ColorScheme = "navy" | "classic";
 
 /**
  * AI Provider type
  */
-export type AIProvider = 'anthropic' | 'openai';
+export type AIProvider = "anthropic" | "openai";
 
 /**
  * Forecasting model type
  */
-export type ForecastingModel = 'simple' | 'standard';
+export type ForecastingModel = "simple" | "standard";
 
 /**
  * User settings interface
@@ -26,7 +26,7 @@ export type ForecastingModel = 'simple' | 'standard';
  */
 export interface UserSettings {
   // Theme preferences
-  theme: 'light' | 'dark';
+  theme: "light" | "dark";
 
   // Color scheme (brand theme)
   colorScheme: ColorScheme;
@@ -35,7 +35,7 @@ export interface UserSettings {
   notifications: boolean;
 
   // Export preferences
-  exportFormat: 'csv' | 'xlsx' | 'pdf';
+  exportFormat: "csv" | "xlsx" | "pdf";
 
   // User profile
   userName?: string;
@@ -61,17 +61,17 @@ export interface UserSettings {
  * Used when no saved settings exist
  */
 const DEFAULT_SETTINGS: UserSettings = {
-  theme: 'light',
-  colorScheme: 'navy',
+  theme: "light",
+  colorScheme: "navy",
   notifications: true,
-  exportFormat: 'csv',
-  currency: 'USD',
-  dateFormat: 'MM/DD/YYYY',
-  timezone: 'America/New_York',
+  exportFormat: "csv",
+  currency: "USD",
+  dateFormat: "MM/DD/YYYY",
+  timezone: "America/New_York",
   // AI & Predictive Analytics defaults
-  forecastingModel: 'standard',
+  forecastingModel: "standard",
   useExternalAI: false,
-  aiProvider: 'anthropic',
+  aiProvider: "anthropic",
   forecastHorizonMonths: 6,
   anomalySensitivity: 2,
 };
@@ -79,7 +79,7 @@ const DEFAULT_SETTINGS: UserSettings = {
 /**
  * LocalStorage key for settings persistence
  */
-const SETTINGS_STORAGE_KEY = 'user-settings';
+const SETTINGS_STORAGE_KEY = "user-settings";
 
 /**
  * Load settings from localStorage
@@ -104,7 +104,7 @@ function loadSettingsFromStorage(): UserSettings {
   } catch (error) {
     // Handle corrupted data - only log in development
     if (import.meta.env.DEV) {
-      console.warn('Failed to load settings, using defaults:', error);
+      console.warn("Failed to load settings, using defaults:", error);
     }
     return DEFAULT_SETTINGS;
   }
@@ -121,32 +121,50 @@ function saveSettingsToStorage(settings: Partial<UserSettings>): UserSettings {
     const updated = { ...current, ...settings };
 
     // Validate theme
-    if (settings.theme && !['light', 'dark'].includes(settings.theme)) {
+    if (settings.theme && !["light", "dark"].includes(settings.theme)) {
       updated.theme = DEFAULT_SETTINGS.theme;
     }
 
     // Validate color scheme
-    if (settings.colorScheme && !['navy', 'classic'].includes(settings.colorScheme)) {
+    if (
+      settings.colorScheme &&
+      !["navy", "classic"].includes(settings.colorScheme)
+    ) {
       updated.colorScheme = DEFAULT_SETTINGS.colorScheme;
     }
 
     // Validate export format
-    if (settings.exportFormat && !['csv', 'xlsx', 'pdf'].includes(settings.exportFormat)) {
+    if (
+      settings.exportFormat &&
+      !["csv", "xlsx", "pdf"].includes(settings.exportFormat)
+    ) {
       updated.exportFormat = DEFAULT_SETTINGS.exportFormat;
     }
 
     // Validate AI settings
-    if (settings.forecastingModel && !['simple', 'standard'].includes(settings.forecastingModel)) {
+    if (
+      settings.forecastingModel &&
+      !["simple", "standard"].includes(settings.forecastingModel)
+    ) {
       updated.forecastingModel = DEFAULT_SETTINGS.forecastingModel;
     }
-    if (settings.aiProvider && !['anthropic', 'openai'].includes(settings.aiProvider)) {
+    if (
+      settings.aiProvider &&
+      !["anthropic", "openai"].includes(settings.aiProvider)
+    ) {
       updated.aiProvider = DEFAULT_SETTINGS.aiProvider;
     }
     if (settings.forecastHorizonMonths !== undefined) {
-      updated.forecastHorizonMonths = Math.max(3, Math.min(24, settings.forecastHorizonMonths));
+      updated.forecastHorizonMonths = Math.max(
+        3,
+        Math.min(24, settings.forecastHorizonMonths),
+      );
     }
     if (settings.anomalySensitivity !== undefined) {
-      updated.anomalySensitivity = Math.max(1, Math.min(5, settings.anomalySensitivity));
+      updated.anomalySensitivity = Math.max(
+        1,
+        Math.min(5, settings.anomalySensitivity),
+      );
     }
 
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(updated));
@@ -154,7 +172,7 @@ function saveSettingsToStorage(settings: Partial<UserSettings>): UserSettings {
   } catch (error) {
     // Only log in development
     if (import.meta.env.DEV) {
-      console.error('Failed to save settings:', error);
+      console.error("Failed to save settings:", error);
     }
     throw error;
   }
@@ -163,21 +181,30 @@ function saveSettingsToStorage(settings: Partial<UserSettings>): UserSettings {
 /**
  * Convert UserSettings to UserPreferences (API format)
  */
-function toApiFormat(settings: Partial<UserSettings>): Partial<UserPreferences> {
+function toApiFormat(
+  settings: Partial<UserSettings>,
+): Partial<UserPreferences> {
   const prefs: Partial<UserPreferences> = {};
 
   if (settings.theme !== undefined) prefs.theme = settings.theme;
-  if (settings.colorScheme !== undefined) prefs.colorScheme = settings.colorScheme;
-  if (settings.notifications !== undefined) prefs.notifications = settings.notifications;
-  if (settings.exportFormat !== undefined) prefs.exportFormat = settings.exportFormat;
+  if (settings.colorScheme !== undefined)
+    prefs.colorScheme = settings.colorScheme;
+  if (settings.notifications !== undefined)
+    prefs.notifications = settings.notifications;
+  if (settings.exportFormat !== undefined)
+    prefs.exportFormat = settings.exportFormat;
   if (settings.currency !== undefined) prefs.currency = settings.currency;
   if (settings.dateFormat !== undefined) prefs.dateFormat = settings.dateFormat;
   // AI settings
-  if (settings.forecastingModel !== undefined) prefs.forecastingModel = settings.forecastingModel;
-  if (settings.useExternalAI !== undefined) prefs.useExternalAI = settings.useExternalAI;
+  if (settings.forecastingModel !== undefined)
+    prefs.forecastingModel = settings.forecastingModel;
+  if (settings.useExternalAI !== undefined)
+    prefs.useExternalAI = settings.useExternalAI;
   if (settings.aiProvider !== undefined) prefs.aiProvider = settings.aiProvider;
-  if (settings.forecastHorizonMonths !== undefined) prefs.forecastHorizonMonths = settings.forecastHorizonMonths;
-  if (settings.anomalySensitivity !== undefined) prefs.anomalySensitivity = settings.anomalySensitivity;
+  if (settings.forecastHorizonMonths !== undefined)
+    prefs.forecastHorizonMonths = settings.forecastHorizonMonths;
+  if (settings.anomalySensitivity !== undefined)
+    prefs.anomalySensitivity = settings.anomalySensitivity;
   // Note: aiApiKey is handled separately for security (encrypted on backend)
 
   return prefs;
@@ -189,20 +216,27 @@ function toApiFormat(settings: Partial<UserSettings>): Partial<UserPreferences> 
 function fromApiFormat(prefs: UserPreferences): Partial<UserSettings> {
   const settings: Partial<UserSettings> = {};
 
-  if (prefs.theme !== undefined && prefs.theme !== 'system') {
-    settings.theme = prefs.theme as 'light' | 'dark';
+  if (prefs.theme !== undefined && prefs.theme !== "system") {
+    settings.theme = prefs.theme as "light" | "dark";
   }
   if (prefs.colorScheme !== undefined) settings.colorScheme = prefs.colorScheme;
-  if (prefs.notifications !== undefined) settings.notifications = prefs.notifications;
-  if (prefs.exportFormat !== undefined) settings.exportFormat = prefs.exportFormat;
+  if (prefs.notifications !== undefined)
+    settings.notifications = prefs.notifications;
+  if (prefs.exportFormat !== undefined)
+    settings.exportFormat = prefs.exportFormat;
   if (prefs.currency !== undefined) settings.currency = prefs.currency;
   if (prefs.dateFormat !== undefined) settings.dateFormat = prefs.dateFormat;
   // AI settings
-  if (prefs.forecastingModel !== undefined) settings.forecastingModel = prefs.forecastingModel as 'simple' | 'standard';
-  if (prefs.useExternalAI !== undefined) settings.useExternalAI = prefs.useExternalAI;
-  if (prefs.aiProvider !== undefined) settings.aiProvider = prefs.aiProvider as 'anthropic' | 'openai';
-  if (prefs.forecastHorizonMonths !== undefined) settings.forecastHorizonMonths = prefs.forecastHorizonMonths;
-  if (prefs.anomalySensitivity !== undefined) settings.anomalySensitivity = prefs.anomalySensitivity;
+  if (prefs.forecastingModel !== undefined)
+    settings.forecastingModel = prefs.forecastingModel as "simple" | "standard";
+  if (prefs.useExternalAI !== undefined)
+    settings.useExternalAI = prefs.useExternalAI;
+  if (prefs.aiProvider !== undefined)
+    settings.aiProvider = prefs.aiProvider as "anthropic" | "openai";
+  if (prefs.forecastHorizonMonths !== undefined)
+    settings.forecastHorizonMonths = prefs.forecastHorizonMonths;
+  if (prefs.anomalySensitivity !== undefined)
+    settings.anomalySensitivity = prefs.anomalySensitivity;
 
   return settings;
 }
@@ -211,7 +245,7 @@ function fromApiFormat(prefs: UserPreferences): Partial<UserSettings> {
  * Check if user is authenticated
  */
 function isAuthenticated(): boolean {
-  return localStorage.getItem('user') !== null;
+  return localStorage.getItem("user") !== null;
 }
 
 /**
@@ -253,7 +287,8 @@ export function useSettings() {
     hasSyncedRef.current = true;
 
     // Fetch preferences from backend and merge with local
-    authAPI.getPreferences()
+    authAPI
+      .getPreferences()
       .then((response) => {
         const apiSettings = fromApiFormat(response.data);
         const localSettings = loadSettingsFromStorage();
@@ -267,7 +302,7 @@ export function useSettings() {
       })
       .catch((error) => {
         // Silently fail - use local settings
-        console.debug('Could not sync settings from backend:', error);
+        console.debug("Could not sync settings from backend:", error);
       });
   }, [queryClient]);
 
@@ -304,7 +339,7 @@ export function useUpdateSettings() {
           await authAPI.updatePreferences(toApiFormat(settings));
         } catch (error) {
           // Log but don't fail - localStorage is primary
-          console.debug('Could not sync settings to backend:', error);
+          console.debug("Could not sync settings to backend:", error);
         }
       }
 
@@ -339,7 +374,7 @@ export function useResetSettings() {
         try {
           await authAPI.replacePreferences({});
         } catch (error) {
-          console.debug('Could not reset settings on backend:', error);
+          console.debug("Could not reset settings on backend:", error);
         }
       }
 

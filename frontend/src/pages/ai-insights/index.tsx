@@ -8,7 +8,7 @@
  * - Consolidation recommendations
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo } from "react";
 import {
   Sparkles,
   DollarSign,
@@ -44,27 +44,33 @@ import {
   ChevronRight,
   Edit,
   Trash2,
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { StatCard } from '@/components/StatCard';
-import { SkeletonCard } from '@/components/SkeletonCard';
-import { useSettings } from '@/hooks/useSettings';
+} from "@/components/ui/select";
+import { StatCard } from "@/components/StatCard";
+import { SkeletonCard } from "@/components/SkeletonCard";
+import { useSettings } from "@/hooks/useSettings";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from "@/components/ui/tooltip";
 import {
   useAIInsights,
   useRefreshAIInsights,
@@ -89,19 +95,28 @@ import {
   getActionColor,
   getOutcomeLabel,
   getOutcomeColor,
-} from '@/hooks/useAIInsights';
-import { DeepAnalysisModal } from '@/components/DeepAnalysisModal';
-import type { AIInsight, AIInsightType, AIEnhancement, AIRecommendation, InsightActionTaken, InsightOutcome, PerInsightEnhancement, InsightFeedbackItem } from '@/lib/api';
+} from "@/hooks/useAIInsights";
+import { DeepAnalysisModal } from "@/components/DeepAnalysisModal";
+import type {
+  AIInsight,
+  AIInsightType,
+  AIEnhancement,
+  AIRecommendation,
+  InsightActionTaken,
+  InsightOutcome,
+  PerInsightEnhancement,
+  InsightFeedbackItem,
+} from "@/lib/api";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
+} from "@/components/ui/dropdown-menu";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -109,7 +124,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -119,7 +134,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
 import {
   PieChart,
   Pie,
@@ -127,22 +142,25 @@ import {
   ResponsiveContainer,
   Tooltip as RechartsTooltip,
   Legend,
-} from 'recharts';
+} from "recharts";
 
 // Sort options type
-type SortOption = 'savings' | 'severity' | 'confidence';
+type SortOption = "savings" | "severity" | "confidence";
 
 // Custom sort function based on selected option
-function sortInsightsByOption(insights: AIInsight[], sortBy: SortOption): AIInsight[] {
+function sortInsightsByOption(
+  insights: AIInsight[],
+  sortBy: SortOption,
+): AIInsight[] {
   return [...insights].sort((a, b) => {
     switch (sortBy) {
-      case 'savings':
+      case "savings":
         return b.potential_savings - a.potential_savings;
-      case 'severity': {
+      case "severity": {
         const severityOrder = { high: 0, medium: 1, low: 2 };
         return severityOrder[a.severity] - severityOrder[b.severity];
       }
-      case 'confidence':
+      case "confidence":
         return b.confidence - a.confidence;
       default:
         return 0;
@@ -158,24 +176,36 @@ interface ExtendedAIInsight extends AIInsight {
 // Insight card component
 interface InsightCardProps {
   insight: ExtendedAIInsight;
-  onRecordFeedback: (insight: AIInsight, action: InsightActionTaken, notes: string) => void;
+  onRecordFeedback: (
+    insight: AIInsight,
+    action: InsightActionTaken,
+    notes: string,
+  ) => void;
   onDeepAnalysis: (insight: AIInsight) => void;
   isRecording?: boolean;
   isAnalyzing?: boolean;
   isAIConfigured?: boolean;
 }
 
-function InsightCard({ insight, onRecordFeedback, onDeepAnalysis, isRecording, isAnalyzing, isAIConfigured }: InsightCardProps) {
+function InsightCard({
+  insight,
+  onRecordFeedback,
+  onDeepAnalysis,
+  isRecording,
+  isAnalyzing,
+  isAIConfigured,
+}: InsightCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [showAIAnalysis, setShowAIAnalysis] = useState(false);
   const [showNotesDialog, setShowNotesDialog] = useState(false);
-  const [selectedAction, setSelectedAction] = useState<InsightActionTaken | null>(null);
-  const [actionNotes, setActionNotes] = useState('');
+  const [selectedAction, setSelectedAction] =
+    useState<InsightActionTaken | null>(null);
+  const [actionNotes, setActionNotes] = useState("");
 
   const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -201,7 +231,7 @@ function InsightCard({ insight, onRecordFeedback, onDeepAnalysis, isRecording, i
       onRecordFeedback(insight, selectedAction, actionNotes);
       setShowNotesDialog(false);
       setSelectedAction(null);
-      setActionNotes('');
+      setActionNotes("");
     }
   };
 
@@ -214,7 +244,9 @@ function InsightCard({ insight, onRecordFeedback, onDeepAnalysis, isRecording, i
         <CardContent className="pt-6">
           <div className="flex items-start gap-4">
             {/* Type Icon */}
-            <div className={`p-3 rounded-lg ${getInsightTypeColor(insight.type)}`}>
+            <div
+              className={`p-3 rounded-lg ${getInsightTypeColor(insight.type)}`}
+            >
               <TypeIcon className="h-5 w-5" />
             </div>
 
@@ -231,7 +263,9 @@ function InsightCard({ insight, onRecordFeedback, onDeepAnalysis, isRecording, i
                       AI Analyzed
                     </Badge>
                   )}
-                  <Badge className={`${getSeverityColor(insight.severity)} border text-xs`}>
+                  <Badge
+                    className={`${getSeverityColor(insight.severity)} border text-xs`}
+                  >
                     {insight.severity.toUpperCase()}
                   </Badge>
                   {insight.potential_savings > 0 && (
@@ -242,7 +276,9 @@ function InsightCard({ insight, onRecordFeedback, onDeepAnalysis, isRecording, i
                 </div>
               </div>
 
-              <p className="text-gray-600 text-sm mb-3">{insight.description}</p>
+              <p className="text-gray-600 text-sm mb-3">
+                {insight.description}
+              </p>
 
               {/* Confidence */}
               <div className="flex items-center gap-2 mb-3">
@@ -289,7 +325,7 @@ function InsightCard({ insight, onRecordFeedback, onDeepAnalysis, isRecording, i
                     className="text-purple-600 hover:text-purple-700"
                   >
                     <Brain className="h-4 w-4 mr-1" />
-                    {showAIAnalysis ? 'Hide' : 'Show'} AI Analysis
+                    {showAIAnalysis ? "Hide" : "Show"} AI Analysis
                   </Button>
                 )}
 
@@ -336,24 +372,34 @@ function InsightCard({ insight, onRecordFeedback, onDeepAnalysis, isRecording, i
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={() => handleActionSelect('implemented')}>
+                    <DropdownMenuItem
+                      onClick={() => handleActionSelect("implemented")}
+                    >
                       <PlayCircle className="h-4 w-4 mr-2 text-green-600" />
                       Implement
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleActionSelect('investigating')}>
+                    <DropdownMenuItem
+                      onClick={() => handleActionSelect("investigating")}
+                    >
                       <Search className="h-4 w-4 mr-2 text-blue-600" />
                       Investigating
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleActionSelect('deferred')}>
+                    <DropdownMenuItem
+                      onClick={() => handleActionSelect("deferred")}
+                    >
                       <PauseCircle className="h-4 w-4 mr-2 text-yellow-600" />
                       Defer for Later
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleActionSelect('partial')}>
+                    <DropdownMenuItem
+                      onClick={() => handleActionSelect("partial")}
+                    >
                       <Layers className="h-4 w-4 mr-2 text-purple-600" />
                       Partially Implement
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => handleActionSelect('dismissed')}>
+                    <DropdownMenuItem
+                      onClick={() => handleActionSelect("dismissed")}
+                    >
                       <XCircle className="h-4 w-4 mr-2 text-gray-600" />
                       Dismiss
                     </DropdownMenuItem>
@@ -373,39 +419,64 @@ function InsightCard({ insight, onRecordFeedback, onDeepAnalysis, isRecording, i
                     {insight.per_insight_enhancement.analysis}
                   </p>
 
-                  {insight.per_insight_enhancement.implementation_steps.length > 0 && (
+                  {insight.per_insight_enhancement.implementation_steps.length >
+                    0 && (
                     <div className="mb-3">
-                      <p className="text-xs font-medium text-purple-800 mb-1">Implementation Steps:</p>
+                      <p className="text-xs font-medium text-purple-800 mb-1">
+                        Implementation Steps:
+                      </p>
                       <ol className="list-decimal list-inside space-y-1">
-                        {insight.per_insight_enhancement.implementation_steps.map((step, i) => (
-                          <li key={i} className="text-sm text-gray-600">{step}</li>
-                        ))}
+                        {insight.per_insight_enhancement.implementation_steps.map(
+                          (step, i) => (
+                            <li key={i} className="text-sm text-gray-600">
+                              {step}
+                            </li>
+                          ),
+                        )}
                       </ol>
                     </div>
                   )}
 
                   {insight.per_insight_enhancement.risk_factors.length > 0 && (
                     <div className="mb-3">
-                      <p className="text-xs font-medium text-purple-800 mb-1">Risk Factors:</p>
+                      <p className="text-xs font-medium text-purple-800 mb-1">
+                        Risk Factors:
+                      </p>
                       <ul className="space-y-1">
-                        {insight.per_insight_enhancement.risk_factors.map((risk, i) => (
-                          <li key={i} className="text-sm text-gray-600 flex items-start gap-2">
-                            <AlertTriangle className="h-3 w-3 text-amber-500 mt-0.5 flex-shrink-0" />
-                            {risk}
-                          </li>
-                        ))}
+                        {insight.per_insight_enhancement.risk_factors.map(
+                          (risk, i) => (
+                            <li
+                              key={i}
+                              className="text-sm text-gray-600 flex items-start gap-2"
+                            >
+                              <AlertTriangle className="h-3 w-3 text-amber-500 mt-0.5 flex-shrink-0" />
+                              {risk}
+                            </li>
+                          ),
+                        )}
                       </ul>
                     </div>
                   )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                     <div className="bg-white p-2 rounded border border-purple-100">
-                      <span className="text-xs text-purple-600 font-medium">Confidence:</span>
-                      <p className="text-gray-700">{insight.per_insight_enhancement.confidence_rationale}</p>
+                      <span className="text-xs text-purple-600 font-medium">
+                        Confidence:
+                      </span>
+                      <p className="text-gray-700">
+                        {insight.per_insight_enhancement.confidence_rationale}
+                      </p>
                     </div>
                     <div className="bg-white p-2 rounded border border-purple-100">
-                      <span className="text-xs text-purple-600 font-medium">Timeline:</span>
-                      <p className="text-gray-700">{insight.per_insight_enhancement.timeline_recommendation}</p>
+                      <span className="text-xs text-purple-600 font-medium">
+                        Timeline:
+                      </span>
+                      <p className="text-gray-700">
+                        {
+                          insight.per_insight_enhancement
+                            .timeline_recommendation
+                        }
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -479,11 +550,21 @@ function InsightCard({ insight, onRecordFeedback, onDeepAnalysis, isRecording, i
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {selectedAction === 'implemented' && <PlayCircle className="h-5 w-5 text-green-600" />}
-              {selectedAction === 'investigating' && <Search className="h-5 w-5 text-blue-600" />}
-              {selectedAction === 'deferred' && <PauseCircle className="h-5 w-5 text-yellow-600" />}
-              {selectedAction === 'partial' && <Layers className="h-5 w-5 text-purple-600" />}
-              {selectedAction === 'dismissed' && <XCircle className="h-5 w-5 text-gray-600" />}
+              {selectedAction === "implemented" && (
+                <PlayCircle className="h-5 w-5 text-green-600" />
+              )}
+              {selectedAction === "investigating" && (
+                <Search className="h-5 w-5 text-blue-600" />
+              )}
+              {selectedAction === "deferred" && (
+                <PauseCircle className="h-5 w-5 text-yellow-600" />
+              )}
+              {selectedAction === "partial" && (
+                <Layers className="h-5 w-5 text-purple-600" />
+              )}
+              {selectedAction === "dismissed" && (
+                <XCircle className="h-5 w-5 text-gray-600" />
+              )}
               {selectedAction && getActionLabel(selectedAction)}
             </DialogTitle>
             <DialogDescription>
@@ -503,7 +584,7 @@ function InsightCard({ insight, onRecordFeedback, onDeepAnalysis, isRecording, i
               Cancel
             </Button>
             <Button onClick={handleConfirmAction} disabled={isRecording}>
-              {isRecording ? 'Recording...' : 'Confirm'}
+              {isRecording ? "Recording..." : "Confirm"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -514,18 +595,24 @@ function InsightCard({ insight, onRecordFeedback, onDeepAnalysis, isRecording, i
 
 // Donut chart colors matching insight type colors
 const CHART_COLORS = {
-  cost_optimization: '#22c55e', // green
-  risk: '#ef4444', // red
-  anomaly: '#eab308', // yellow
-  consolidation: '#3b82f6', // blue
+  cost_optimization: "#22c55e", // green
+  risk: "#ef4444", // red
+  anomaly: "#eab308", // yellow
+  consolidation: "#3b82f6", // blue
 };
 
 // AI Recommendation Card Component
-function RecommendationCard({ recommendation, index }: { recommendation: AIRecommendation; index: number }) {
+function RecommendationCard({
+  recommendation,
+  index,
+}: {
+  recommendation: AIRecommendation;
+  index: number;
+}) {
   const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -538,19 +625,31 @@ function RecommendationCard({ recommendation, index }: { recommendation: AIRecom
           <span className="text-sm font-bold text-indigo-600">{index + 1}</span>
         </div>
         <div className="flex-1 space-y-2">
-          <p className="text-sm font-medium text-gray-900">{recommendation.action}</p>
+          <p className="text-sm font-medium text-gray-900">
+            {recommendation.action}
+          </p>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline" className={getImpactColor(recommendation.impact)}>
+            <Badge
+              variant="outline"
+              className={getImpactColor(recommendation.impact)}
+            >
               {recommendation.impact} impact
             </Badge>
-            <Badge variant="outline" className={getEffortColor(recommendation.effort)}>
+            <Badge
+              variant="outline"
+              className={getEffortColor(recommendation.effort)}
+            >
               {recommendation.effort} effort
             </Badge>
-            {recommendation.savings_estimate && recommendation.savings_estimate > 0 && (
-              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                {formatCurrency(recommendation.savings_estimate)} est. savings
-              </Badge>
-            )}
+            {recommendation.savings_estimate &&
+              recommendation.savings_estimate > 0 && (
+                <Badge
+                  variant="outline"
+                  className="bg-green-50 text-green-700 border-green-200"
+                >
+                  {formatCurrency(recommendation.savings_estimate)} est. savings
+                </Badge>
+              )}
             {recommendation.timeframe && (
               <span className="flex items-center gap-1 text-xs text-gray-500">
                 <Clock className="h-3 w-3" />
@@ -565,13 +664,21 @@ function RecommendationCard({ recommendation, index }: { recommendation: AIRecom
 }
 
 // AI Enhancement Section Component
-function AIEnhancementSection({ enhancement, cacheHit }: { enhancement: AIEnhancement; cacheHit?: boolean }) {
+function AIEnhancementSection({
+  enhancement,
+  cacheHit,
+}: {
+  enhancement: AIEnhancement;
+  cacheHit?: boolean;
+}) {
   const [showAllActions, setShowAllActions] = useState(false);
   const sortedActions = useMemo(
     () => sortRecommendationsByValue(enhancement.priority_actions),
-    [enhancement.priority_actions]
+    [enhancement.priority_actions],
   );
-  const displayedActions = showAllActions ? sortedActions : sortedActions.slice(0, 3);
+  const displayedActions = showAllActions
+    ? sortedActions
+    : sortedActions.slice(0, 3);
 
   return (
     <Card className="border-0 shadow-lg bg-gradient-to-br from-indigo-50 to-purple-50">
@@ -579,7 +686,9 @@ function AIEnhancementSection({ enhancement, cacheHit }: { enhancement: AIEnhanc
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Brain className="h-6 w-6 text-indigo-600" />
-            <CardTitle className="text-indigo-900">AI Strategic Recommendations</CardTitle>
+            <CardTitle className="text-indigo-900">
+              AI Strategic Recommendations
+            </CardTitle>
           </div>
           <div className="flex items-center gap-2">
             {cacheHit && (
@@ -588,7 +697,8 @@ function AIEnhancementSection({ enhancement, cacheHit }: { enhancement: AIEnhanc
               </Badge>
             )}
             <Badge variant="outline" className="text-xs bg-white">
-              Powered by {enhancement.provider === 'anthropic' ? 'Claude' : 'GPT-4'}
+              Powered by{" "}
+              {enhancement.provider === "anthropic" ? "Claude" : "GPT-4"}
             </Badge>
           </div>
         </div>
@@ -606,12 +716,19 @@ function AIEnhancementSection({ enhancement, cacheHit }: { enhancement: AIEnhanc
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {enhancement.quick_wins.map((win, i) => (
-                <div key={i} className="p-3 bg-white border border-orange-100 rounded-lg">
+                <div
+                  key={i}
+                  className="p-3 bg-white border border-orange-100 rounded-lg"
+                >
                   <div className="flex items-start gap-2">
                     <CheckCircle className="h-4 w-4 text-orange-500 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{win.action}</p>
-                      <p className="text-xs text-gray-500 mt-1">{win.expected_benefit}</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {win.action}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {win.expected_benefit}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -638,8 +755,14 @@ function AIEnhancementSection({ enhancement, cacheHit }: { enhancement: AIEnhanc
               onClick={() => setShowAllActions(!showAllActions)}
               className="w-full text-indigo-600 hover:text-indigo-700"
             >
-              {showAllActions ? 'Show Less' : `Show ${sortedActions.length - 3} More`}
-              {showAllActions ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
+              {showAllActions
+                ? "Show Less"
+                : `Show ${sortedActions.length - 3} More`}
+              {showAllActions ? (
+                <ChevronUp className="h-4 w-4 ml-1" />
+              ) : (
+                <ChevronDown className="h-4 w-4 ml-1" />
+              )}
             </Button>
           )}
         </div>
@@ -653,37 +776,57 @@ function AIEnhancementSection({ enhancement, cacheHit }: { enhancement: AIEnhanc
             </h4>
             <div className="p-4 bg-white border border-red-100 rounded-lg space-y-3">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">Overall Risk Level:</span>
-                <Badge className={getRiskLevelColor(enhancement.risk_assessment.overall_risk_level)}>
+                <span className="text-sm text-gray-600">
+                  Overall Risk Level:
+                </span>
+                <Badge
+                  className={getRiskLevelColor(
+                    enhancement.risk_assessment.overall_risk_level,
+                  )}
+                >
                   {enhancement.risk_assessment.overall_risk_level}
                 </Badge>
               </div>
-              {enhancement.risk_assessment.key_risks && enhancement.risk_assessment.key_risks.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-gray-500 mb-2">Key Risks:</p>
-                  <ul className="space-y-1">
-                    {enhancement.risk_assessment.key_risks.map((risk, i) => (
-                      <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
-                        <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                        {risk}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {enhancement.risk_assessment.mitigation_steps && enhancement.risk_assessment.mitigation_steps.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-gray-500 mb-2">Mitigation Steps:</p>
-                  <ul className="space-y-1">
-                    {enhancement.risk_assessment.mitigation_steps.map((step, i) => (
-                      <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
-                        <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                        {step}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {enhancement.risk_assessment.key_risks &&
+                enhancement.risk_assessment.key_risks.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 mb-2">
+                      Key Risks:
+                    </p>
+                    <ul className="space-y-1">
+                      {enhancement.risk_assessment.key_risks.map((risk, i) => (
+                        <li
+                          key={i}
+                          className="text-sm text-gray-700 flex items-start gap-2"
+                        >
+                          <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                          {risk}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              {enhancement.risk_assessment.mitigation_steps &&
+                enhancement.risk_assessment.mitigation_steps.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 mb-2">
+                      Mitigation Steps:
+                    </p>
+                    <ul className="space-y-1">
+                      {enhancement.risk_assessment.mitigation_steps.map(
+                        (step, i) => (
+                          <li
+                            key={i}
+                            className="text-sm text-gray-700 flex items-start gap-2"
+                          >
+                            <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                            {step}
+                          </li>
+                        ),
+                      )}
+                    </ul>
+                  </div>
+                )}
             </div>
           </div>
         )}
@@ -694,7 +837,8 @@ function AIEnhancementSection({ enhancement, cacheHit }: { enhancement: AIEnhanc
 
 // ROI Tracking Section Component
 function ROITrackingSection() {
-  const { data: effectiveness, isLoading: effectivenessLoading } = useInsightEffectiveness();
+  const { data: effectiveness, isLoading: effectivenessLoading } =
+    useInsightEffectiveness();
   const [feedbackFilters, setFeedbackFilters] = useState<{
     insight_type?: AIInsightType;
     action_taken?: InsightActionTaken;
@@ -703,7 +847,11 @@ function ROITrackingSection() {
   const [feedbackPage, setFeedbackPage] = useState(0);
   const pageSize = 10;
 
-  const { data: feedbackData, isLoading: feedbackLoading, refetch: refetchFeedback } = useInsightFeedbackList({
+  const {
+    data: feedbackData,
+    isLoading: feedbackLoading,
+    refetch: refetchFeedback,
+  } = useInsightFeedbackList({
     ...feedbackFilters,
     limit: pageSize,
     offset: feedbackPage * pageSize,
@@ -714,35 +862,37 @@ function ROITrackingSection() {
 
   // Delete confirmation dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [feedbackToDelete, setFeedbackToDelete] = useState<InsightFeedbackItem | null>(null);
+  const [feedbackToDelete, setFeedbackToDelete] =
+    useState<InsightFeedbackItem | null>(null);
 
   // Outcome update dialog state
   const [outcomeDialogOpen, setOutcomeDialogOpen] = useState(false);
-  const [selectedFeedback, setSelectedFeedback] = useState<InsightFeedbackItem | null>(null);
+  const [selectedFeedback, setSelectedFeedback] =
+    useState<InsightFeedbackItem | null>(null);
   const [outcomeForm, setOutcomeForm] = useState<{
     outcome: InsightOutcome;
     actual_savings: string;
     outcome_notes: string;
   }>({
-    outcome: 'pending',
-    actual_savings: '',
-    outcome_notes: '',
+    outcome: "pending",
+    actual_savings: "",
+    outcome_notes: "",
   });
 
   const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
   };
 
   const formatDate = (dateStr: string): string => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+    return new Date(dateStr).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
@@ -750,8 +900,8 @@ function ROITrackingSection() {
     setSelectedFeedback(feedback);
     setOutcomeForm({
       outcome: feedback.outcome,
-      actual_savings: feedback.actual_savings?.toString() || '',
-      outcome_notes: feedback.outcome_notes || '',
+      actual_savings: feedback.actual_savings?.toString() || "",
+      outcome_notes: feedback.outcome_notes || "",
     });
     setOutcomeDialogOpen(true);
   };
@@ -764,7 +914,9 @@ function ROITrackingSection() {
         feedbackId: selectedFeedback.id,
         data: {
           outcome: outcomeForm.outcome,
-          actual_savings: outcomeForm.actual_savings ? parseFloat(outcomeForm.actual_savings) : undefined,
+          actual_savings: outcomeForm.actual_savings
+            ? parseFloat(outcomeForm.actual_savings)
+            : undefined,
           outcome_notes: outcomeForm.outcome_notes || undefined,
         },
       },
@@ -774,7 +926,7 @@ function ROITrackingSection() {
           setSelectedFeedback(null);
           refetchFeedback();
         },
-      }
+      },
     );
   };
 
@@ -790,7 +942,9 @@ function ROITrackingSection() {
     });
   };
 
-  const totalPages = feedbackData ? Math.ceil(feedbackData.total / pageSize) : 0;
+  const totalPages = feedbackData
+    ? Math.ceil(feedbackData.total / pageSize)
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -799,7 +953,9 @@ function ROITrackingSection() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <BarChart3 className="h-6 w-6 text-emerald-600" />
-            <CardTitle className="text-emerald-900">ROI & Effectiveness Metrics</CardTitle>
+            <CardTitle className="text-emerald-900">
+              ROI & Effectiveness Metrics
+            </CardTitle>
           </div>
           <CardDescription className="text-emerald-700">
             Track the impact and accuracy of AI-generated insights
@@ -819,7 +975,9 @@ function ROITrackingSection() {
             <div className="text-center py-8 text-gray-500">
               <History className="h-12 w-12 mx-auto mb-4 text-gray-300" />
               <p>No feedback recorded yet</p>
-              <p className="text-sm mt-1">Use "Take Action" on insights to start tracking ROI</p>
+              <p className="text-sm mt-1">
+                Use "Take Action" on insights to start tracking ROI
+              </p>
             </div>
           ) : (
             <div className="space-y-6">
@@ -830,12 +988,16 @@ function ROITrackingSection() {
                     <div className="p-2 bg-emerald-100 rounded-lg">
                       <Target className="h-4 w-4 text-emerald-600" />
                     </div>
-                    <span className="text-sm font-medium text-gray-700">Total Actions</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      Total Actions
+                    </span>
                   </div>
                   <div className="text-2xl font-bold text-gray-900">
                     {effectiveness?.total_feedback || 0}
                   </div>
-                  <div className="text-xs text-gray-500">insights acted upon</div>
+                  <div className="text-xs text-gray-500">
+                    insights acted upon
+                  </div>
                 </div>
 
                 <div className="bg-white rounded-lg p-4 shadow-sm border border-emerald-100">
@@ -843,13 +1005,18 @@ function ROITrackingSection() {
                     <div className="p-2 bg-green-100 rounded-lg">
                       <CheckCircle className="h-4 w-4 text-green-600" />
                     </div>
-                    <span className="text-sm font-medium text-gray-700">Success Rate</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      Success Rate
+                    </span>
                   </div>
                   <div className="text-2xl font-bold text-gray-900">
-                    {effectiveness?.implementation_success_rate?.toFixed(1) || 0}%
+                    {effectiveness?.implementation_success_rate?.toFixed(1) ||
+                      0}
+                    %
                   </div>
                   <div className="text-xs text-gray-500">
-                    {effectiveness?.successful_implementations || 0} of {effectiveness?.total_implemented || 0} successful
+                    {effectiveness?.successful_implementations || 0} of{" "}
+                    {effectiveness?.total_implemented || 0} successful
                   </div>
                 </div>
 
@@ -858,12 +1025,18 @@ function ROITrackingSection() {
                     <div className="p-2 bg-blue-100 rounded-lg">
                       <DollarSign className="h-4 w-4 text-blue-600" />
                     </div>
-                    <span className="text-sm font-medium text-gray-700">Actual Savings</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      Actual Savings
+                    </span>
                   </div>
                   <div className="text-2xl font-bold text-gray-900">
-                    {formatCurrency(effectiveness?.savings_metrics?.total_actual_savings || 0)}
+                    {formatCurrency(
+                      effectiveness?.savings_metrics?.total_actual_savings || 0,
+                    )}
                   </div>
-                  <div className="text-xs text-gray-500">realized from implementations</div>
+                  <div className="text-xs text-gray-500">
+                    realized from implementations
+                  </div>
                 </div>
 
                 <div className="bg-white rounded-lg p-4 shadow-sm border border-emerald-100">
@@ -871,52 +1044,92 @@ function ROITrackingSection() {
                     <div className="p-2 bg-purple-100 rounded-lg">
                       <Percent className="h-4 w-4 text-purple-600" />
                     </div>
-                    <span className="text-sm font-medium text-gray-700">Prediction Accuracy</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      Prediction Accuracy
+                    </span>
                   </div>
                   <div className="text-2xl font-bold text-gray-900">
-                    {effectiveness?.savings_metrics?.roi_accuracy_percent?.toFixed(1) || 'N/A'}
-                    {effectiveness?.savings_metrics?.roi_accuracy_percent ? '%' : ''}
+                    {effectiveness?.savings_metrics?.roi_accuracy_percent?.toFixed(
+                      1,
+                    ) || "N/A"}
+                    {effectiveness?.savings_metrics?.roi_accuracy_percent
+                      ? "%"
+                      : ""}
                   </div>
-                  <div className="text-xs text-gray-500">actual vs predicted savings</div>
+                  <div className="text-xs text-gray-500">
+                    actual vs predicted savings
+                  </div>
                 </div>
               </div>
 
               {/* Savings Comparison */}
-              {(effectiveness?.savings_metrics?.total_predicted_savings || 0) > 0 && (
+              {(effectiveness?.savings_metrics?.total_predicted_savings || 0) >
+                0 && (
                 <div className="bg-white rounded-lg p-4 shadow-sm border border-emerald-100">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Savings Comparison</h4>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                    Savings Comparison
+                  </h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="text-center p-3 bg-blue-50 rounded-lg">
-                      <div className="text-xs text-blue-600 font-medium mb-1">Predicted</div>
+                      <div className="text-xs text-blue-600 font-medium mb-1">
+                        Predicted
+                      </div>
                       <div className="text-xl font-bold text-blue-800">
-                        {formatCurrency(effectiveness?.savings_metrics?.total_predicted_savings || 0)}
+                        {formatCurrency(
+                          effectiveness?.savings_metrics
+                            ?.total_predicted_savings || 0,
+                        )}
                       </div>
                     </div>
                     <div className="text-center p-3 bg-green-50 rounded-lg">
-                      <div className="text-xs text-green-600 font-medium mb-1">Actual</div>
+                      <div className="text-xs text-green-600 font-medium mb-1">
+                        Actual
+                      </div>
                       <div className="text-xl font-bold text-green-800">
-                        {formatCurrency(effectiveness?.savings_metrics?.total_actual_savings || 0)}
+                        {formatCurrency(
+                          effectiveness?.savings_metrics
+                            ?.total_actual_savings || 0,
+                        )}
                       </div>
                     </div>
-                    <div className={`text-center p-3 rounded-lg ${
-                      (effectiveness?.savings_metrics?.savings_variance || 0) >= 0
-                        ? 'bg-green-50'
-                        : 'bg-red-50'
-                    }`}>
-                      <div className={`text-xs font-medium mb-1 ${
-                        (effectiveness?.savings_metrics?.savings_variance || 0) >= 0
-                          ? 'text-green-600'
-                          : 'text-red-600'
-                      }`}>Variance</div>
-                      <div className={`text-xl font-bold flex items-center justify-center gap-1 ${
-                        (effectiveness?.savings_metrics?.savings_variance || 0) >= 0
-                          ? 'text-green-800'
-                          : 'text-red-800'
-                      }`}>
-                        {(effectiveness?.savings_metrics?.savings_variance || 0) >= 0
-                          ? <TrendingUp className="h-5 w-5" />
-                          : <TrendingDown className="h-5 w-5" />}
-                        {formatCurrency(Math.abs(effectiveness?.savings_metrics?.savings_variance || 0))}
+                    <div
+                      className={`text-center p-3 rounded-lg ${
+                        (effectiveness?.savings_metrics?.savings_variance ||
+                          0) >= 0
+                          ? "bg-green-50"
+                          : "bg-red-50"
+                      }`}
+                    >
+                      <div
+                        className={`text-xs font-medium mb-1 ${
+                          (effectiveness?.savings_metrics?.savings_variance ||
+                            0) >= 0
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      >
+                        Variance
+                      </div>
+                      <div
+                        className={`text-xl font-bold flex items-center justify-center gap-1 ${
+                          (effectiveness?.savings_metrics?.savings_variance ||
+                            0) >= 0
+                            ? "text-green-800"
+                            : "text-red-800"
+                        }`}
+                      >
+                        {(effectiveness?.savings_metrics?.savings_variance ||
+                          0) >= 0 ? (
+                          <TrendingUp className="h-5 w-5" />
+                        ) : (
+                          <TrendingDown className="h-5 w-5" />
+                        )}
+                        {formatCurrency(
+                          Math.abs(
+                            effectiveness?.savings_metrics?.savings_variance ||
+                              0,
+                          ),
+                        )}
                       </div>
                     </div>
                   </div>
@@ -927,14 +1140,23 @@ function ROITrackingSection() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Action Breakdown */}
                 <div className="bg-white rounded-lg p-4 shadow-sm border border-emerald-100">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Actions Taken</h4>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                    Actions Taken
+                  </h4>
                   <div className="space-y-2">
                     {effectiveness?.action_breakdown?.map((item) => (
-                      <div key={item.action_taken} className="flex items-center justify-between">
-                        <Badge className={`${getActionColor(item.action_taken)} border text-xs`}>
+                      <div
+                        key={item.action_taken}
+                        className="flex items-center justify-between"
+                      >
+                        <Badge
+                          className={`${getActionColor(item.action_taken)} border text-xs`}
+                        >
                           {getActionLabel(item.action_taken)}
                         </Badge>
-                        <span className="text-sm font-medium text-gray-700">{item.count}</span>
+                        <span className="text-sm font-medium text-gray-700">
+                          {item.count}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -942,19 +1164,30 @@ function ROITrackingSection() {
 
                 {/* Outcome Breakdown */}
                 <div className="bg-white rounded-lg p-4 shadow-sm border border-emerald-100">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Outcomes</h4>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                    Outcomes
+                  </h4>
                   <div className="space-y-2">
                     {effectiveness?.outcome_breakdown?.length ? (
                       effectiveness.outcome_breakdown.map((item) => (
-                        <div key={item.outcome} className="flex items-center justify-between">
-                          <Badge className={`${getOutcomeColor(item.outcome)} border text-xs`}>
+                        <div
+                          key={item.outcome}
+                          className="flex items-center justify-between"
+                        >
+                          <Badge
+                            className={`${getOutcomeColor(item.outcome)} border text-xs`}
+                          >
                             {getOutcomeLabel(item.outcome)}
                           </Badge>
-                          <span className="text-sm font-medium text-gray-700">{item.count}</span>
+                          <span className="text-sm font-medium text-gray-700">
+                            {item.count}
+                          </span>
                         </div>
                       ))
                     ) : (
-                      <p className="text-sm text-gray-500">No outcomes recorded yet</p>
+                      <p className="text-sm text-gray-500">
+                        No outcomes recorded yet
+                      </p>
                     )}
                   </div>
                 </div>
@@ -978,7 +1211,9 @@ function ROITrackingSection() {
               onClick={() => refetchFeedback()}
               disabled={feedbackLoading}
             >
-              <RefreshCw className={`h-4 w-4 mr-2 ${feedbackLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${feedbackLoading ? "animate-spin" : ""}`}
+              />
               Refresh
             </Button>
           </div>
@@ -994,9 +1229,12 @@ function ROITrackingSection() {
               <span className="text-sm text-gray-600">Filters:</span>
             </div>
             <Select
-              value={feedbackFilters.insight_type || 'all'}
+              value={feedbackFilters.insight_type || "all"}
               onValueChange={(v) => {
-                setFeedbackFilters((f) => ({ ...f, insight_type: v === 'all' ? undefined : v as AIInsightType }));
+                setFeedbackFilters((f) => ({
+                  ...f,
+                  insight_type: v === "all" ? undefined : (v as AIInsightType),
+                }));
                 setFeedbackPage(0);
               }}
             >
@@ -1012,9 +1250,13 @@ function ROITrackingSection() {
               </SelectContent>
             </Select>
             <Select
-              value={feedbackFilters.action_taken || 'all'}
+              value={feedbackFilters.action_taken || "all"}
               onValueChange={(v) => {
-                setFeedbackFilters((f) => ({ ...f, action_taken: v === 'all' ? undefined : v as InsightActionTaken }));
+                setFeedbackFilters((f) => ({
+                  ...f,
+                  action_taken:
+                    v === "all" ? undefined : (v as InsightActionTaken),
+                }));
                 setFeedbackPage(0);
               }}
             >
@@ -1031,9 +1273,12 @@ function ROITrackingSection() {
               </SelectContent>
             </Select>
             <Select
-              value={feedbackFilters.outcome || 'all'}
+              value={feedbackFilters.outcome || "all"}
               onValueChange={(v) => {
-                setFeedbackFilters((f) => ({ ...f, outcome: v === 'all' ? undefined : v as InsightOutcome }));
+                setFeedbackFilters((f) => ({
+                  ...f,
+                  outcome: v === "all" ? undefined : (v as InsightOutcome),
+                }));
                 setFeedbackPage(0);
               }}
             >
@@ -1049,7 +1294,9 @@ function ROITrackingSection() {
                 <SelectItem value="failed">Failed</SelectItem>
               </SelectContent>
             </Select>
-            {(feedbackFilters.insight_type || feedbackFilters.action_taken || feedbackFilters.outcome) && (
+            {(feedbackFilters.insight_type ||
+              feedbackFilters.action_taken ||
+              feedbackFilters.outcome) && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -1082,7 +1329,9 @@ function ROITrackingSection() {
             <div className="text-center py-12 text-gray-500">
               <History className="h-12 w-12 mx-auto mb-4 text-gray-300" />
               <p>No feedback history found</p>
-              {(feedbackFilters.insight_type || feedbackFilters.action_taken || feedbackFilters.outcome) && (
+              {(feedbackFilters.insight_type ||
+                feedbackFilters.action_taken ||
+                feedbackFilters.outcome) && (
                 <p className="text-sm mt-1">Try adjusting your filters</p>
               )}
             </div>
@@ -1096,18 +1345,28 @@ function ROITrackingSection() {
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-gray-900 truncate">{item.insight_title}</h4>
+                        <h4 className="font-medium text-gray-900 truncate">
+                          {item.insight_title}
+                        </h4>
                         <div className="flex flex-wrap items-center gap-2 mt-2">
-                          <Badge className={`${getInsightTypeColor(item.insight_type)} text-xs`}>
+                          <Badge
+                            className={`${getInsightTypeColor(item.insight_type)} text-xs`}
+                          >
                             {getInsightTypeLabel(item.insight_type)}
                           </Badge>
-                          <Badge className={`${getSeverityColor(item.insight_severity)} border text-xs`}>
+                          <Badge
+                            className={`${getSeverityColor(item.insight_severity)} border text-xs`}
+                          >
                             {item.insight_severity}
                           </Badge>
-                          <Badge className={`${getActionColor(item.action_taken)} border text-xs`}>
+                          <Badge
+                            className={`${getActionColor(item.action_taken)} border text-xs`}
+                          >
                             {getActionLabel(item.action_taken)}
                           </Badge>
-                          <Badge className={`${getOutcomeColor(item.outcome)} border text-xs`}>
+                          <Badge
+                            className={`${getOutcomeColor(item.outcome)} border text-xs`}
+                          >
                             {getOutcomeLabel(item.outcome)}
                           </Badge>
                         </div>
@@ -1116,24 +1375,27 @@ function ROITrackingSection() {
                             <Clock className="h-3 w-3" />
                             {formatDate(item.action_date)}
                           </span>
-                          {item.predicted_savings && item.predicted_savings > 0 && (
-                            <span className="flex items-center gap-1">
-                              <DollarSign className="h-3 w-3" />
-                              Predicted: {formatCurrency(item.predicted_savings)}
-                            </span>
-                          )}
-                          {item.actual_savings !== null && item.actual_savings !== undefined && (
-                            <span className="flex items-center gap-1 text-green-600">
-                              <CheckCircle className="h-3 w-3" />
-                              Actual: {formatCurrency(item.actual_savings)}
-                            </span>
-                          )}
-                          {item.action_by && (
-                            <span>by {item.action_by}</span>
-                          )}
+                          {item.predicted_savings &&
+                            item.predicted_savings > 0 && (
+                              <span className="flex items-center gap-1">
+                                <DollarSign className="h-3 w-3" />
+                                Predicted:{" "}
+                                {formatCurrency(item.predicted_savings)}
+                              </span>
+                            )}
+                          {item.actual_savings !== null &&
+                            item.actual_savings !== undefined && (
+                              <span className="flex items-center gap-1 text-green-600">
+                                <CheckCircle className="h-3 w-3" />
+                                Actual: {formatCurrency(item.actual_savings)}
+                              </span>
+                            )}
+                          {item.action_by && <span>by {item.action_by}</span>}
                         </div>
                         {item.action_notes && (
-                          <p className="text-sm text-gray-600 mt-2 italic">"{item.action_notes}"</p>
+                          <p className="text-sm text-gray-600 mt-2 italic">
+                            "{item.action_notes}"
+                          </p>
                         )}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
@@ -1166,7 +1428,12 @@ function ROITrackingSection() {
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-4 pt-4 border-t">
                   <span className="text-sm text-gray-500">
-                    Showing {feedbackPage * pageSize + 1}-{Math.min((feedbackPage + 1) * pageSize, feedbackData.total)} of {feedbackData.total}
+                    Showing {feedbackPage * pageSize + 1}-
+                    {Math.min(
+                      (feedbackPage + 1) * pageSize,
+                      feedbackData.total,
+                    )}{" "}
+                    of {feedbackData.total}
                   </span>
                   <div className="flex items-center gap-2">
                     <Button
@@ -1183,7 +1450,9 @@ function ROITrackingSection() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setFeedbackPage((p) => Math.min(totalPages - 1, p + 1))}
+                      onClick={() =>
+                        setFeedbackPage((p) => Math.min(totalPages - 1, p + 1))
+                      }
                       disabled={feedbackPage >= totalPages - 1}
                     >
                       <ChevronRight className="h-4 w-4" />
@@ -1211,16 +1480,22 @@ function ROITrackingSection() {
           {selectedFeedback && (
             <div className="space-y-4 py-4">
               <div className="p-3 bg-gray-50 rounded-lg">
-                <h4 className="font-medium text-gray-900 text-sm">{selectedFeedback.insight_title}</h4>
+                <h4 className="font-medium text-gray-900 text-sm">
+                  {selectedFeedback.insight_title}
+                </h4>
                 <div className="flex items-center gap-2 mt-2">
-                  <Badge className={`${getActionColor(selectedFeedback.action_taken)} border text-xs`}>
+                  <Badge
+                    className={`${getActionColor(selectedFeedback.action_taken)} border text-xs`}
+                  >
                     {getActionLabel(selectedFeedback.action_taken)}
                   </Badge>
-                  {selectedFeedback.predicted_savings && selectedFeedback.predicted_savings > 0 && (
-                    <span className="text-xs text-gray-500">
-                      Predicted: {formatCurrency(selectedFeedback.predicted_savings)}
-                    </span>
-                  )}
+                  {selectedFeedback.predicted_savings &&
+                    selectedFeedback.predicted_savings > 0 && (
+                      <span className="text-xs text-gray-500">
+                        Predicted:{" "}
+                        {formatCurrency(selectedFeedback.predicted_savings)}
+                      </span>
+                    )}
                 </div>
               </div>
 
@@ -1228,7 +1503,12 @@ function ROITrackingSection() {
                 <Label htmlFor="outcome">Outcome</Label>
                 <Select
                   value={outcomeForm.outcome}
-                  onValueChange={(v) => setOutcomeForm((f) => ({ ...f, outcome: v as InsightOutcome }))}
+                  onValueChange={(v) =>
+                    setOutcomeForm((f) => ({
+                      ...f,
+                      outcome: v as InsightOutcome,
+                    }))
+                  }
                 >
                   <SelectTrigger id="outcome">
                     <SelectValue />
@@ -1236,7 +1516,9 @@ function ROITrackingSection() {
                   <SelectContent>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="success">Success</SelectItem>
-                    <SelectItem value="partial_success">Partial Success</SelectItem>
+                    <SelectItem value="partial_success">
+                      Partial Success
+                    </SelectItem>
                     <SelectItem value="no_change">No Change</SelectItem>
                     <SelectItem value="failed">Failed</SelectItem>
                   </SelectContent>
@@ -1250,7 +1532,12 @@ function ROITrackingSection() {
                   type="number"
                   placeholder="0.00"
                   value={outcomeForm.actual_savings}
-                  onChange={(e) => setOutcomeForm((f) => ({ ...f, actual_savings: e.target.value }))}
+                  onChange={(e) =>
+                    setOutcomeForm((f) => ({
+                      ...f,
+                      actual_savings: e.target.value,
+                    }))
+                  }
                 />
               </div>
 
@@ -1260,18 +1547,29 @@ function ROITrackingSection() {
                   id="outcome_notes"
                   placeholder="Add notes about the outcome..."
                   value={outcomeForm.outcome_notes}
-                  onChange={(e) => setOutcomeForm((f) => ({ ...f, outcome_notes: e.target.value }))}
+                  onChange={(e) =>
+                    setOutcomeForm((f) => ({
+                      ...f,
+                      outcome_notes: e.target.value,
+                    }))
+                  }
                   rows={3}
                 />
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOutcomeDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setOutcomeDialogOpen(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={handleUpdateOutcome} disabled={updateOutcomeMutation.isPending}>
-              {updateOutcomeMutation.isPending ? 'Saving...' : 'Save Outcome'}
+            <Button
+              onClick={handleUpdateOutcome}
+              disabled={updateOutcomeMutation.isPending}
+            >
+              {updateOutcomeMutation.isPending ? "Saving..." : "Save Outcome"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1286,12 +1584,17 @@ function ROITrackingSection() {
               Delete Feedback Entry
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this feedback entry? This action cannot be undone.
+              Are you sure you want to delete this feedback entry? This action
+              cannot be undone.
               {feedbackToDelete && (
                 <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                  <p className="font-medium text-gray-900 text-sm">{feedbackToDelete.insight_title}</p>
+                  <p className="font-medium text-gray-900 text-sm">
+                    {feedbackToDelete.insight_title}
+                  </p>
                   <div className="flex items-center gap-2 mt-2">
-                    <Badge className={`${getActionColor(feedbackToDelete.action_taken)} border text-xs`}>
+                    <Badge
+                      className={`${getActionColor(feedbackToDelete.action_taken)} border text-xs`}
+                    >
                       {getActionLabel(feedbackToDelete.action_taken)}
                     </Badge>
                     <span className="text-xs text-gray-500">
@@ -1303,13 +1606,15 @@ function ROITrackingSection() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setFeedbackToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setFeedbackToDelete(null)}>
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteFeedback}
               className="bg-red-600 hover:bg-red-700 text-white"
               disabled={deleteFeedbackMutation.isPending}
             >
-              {deleteFeedbackMutation.isPending ? 'Deleting...' : 'Delete'}
+              {deleteFeedbackMutation.isPending ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1323,28 +1628,30 @@ export default function AIInsightsPage() {
   const refreshMutation = useRefreshAIInsights();
   const feedbackMutation = useRecordInsightFeedback();
   const { data: settings } = useSettings();
-  const [mainView, setMainView] = useState<'insights' | 'roi'>('insights');
-  const [activeTab, setActiveTab] = useState<AIInsightType | 'all'>('all');
-  const [sortBy, setSortBy] = useState<SortOption>('severity');
+  const [mainView, setMainView] = useState<"insights" | "roi">("insights");
+  const [activeTab, setActiveTab] = useState<AIInsightType | "all">("all");
+  const [sortBy, setSortBy] = useState<SortOption>("severity");
 
   // Check if external AI is properly configured (enabled + API key)
   const isAIConfigured = settings?.useExternalAI && !!settings?.aiApiKey;
 
   // Deep Analysis state
-  const [selectedInsightForAnalysis, setSelectedInsightForAnalysis] = useState<AIInsight | null>(null);
+  const [selectedInsightForAnalysis, setSelectedInsightForAnalysis] =
+    useState<AIInsight | null>(null);
   const [deepAnalysisModalOpen, setDeepAnalysisModalOpen] = useState(false);
   const deepAnalysisMutation = useRequestDeepAnalysis();
   const { data: deepAnalysisStatus } = useDeepAnalysisStatus(
     selectedInsightForAnalysis?.id || null,
-    deepAnalysisModalOpen
+    deepAnalysisModalOpen,
   );
 
   // Async Enhancement state
   const asyncEnhancementMutation = useRequestAsyncEnhancement();
   const { data: asyncStatus } = useAsyncEnhancementStatus(
-    asyncEnhancementMutation.isSuccess
+    asyncEnhancementMutation.isSuccess,
   );
-  const isAsyncProcessing = asyncStatus?.status === 'processing' || asyncStatus?.status === 'queued';
+  const isAsyncProcessing =
+    asyncStatus?.status === "processing" || asyncStatus?.status === "queued";
 
   const handleRefresh = () => {
     refreshMutation.mutate();
@@ -1367,13 +1674,18 @@ export default function AIInsightsPage() {
     setSelectedInsightForAnalysis(null);
   };
 
-  const handleRecordFeedback = (insight: AIInsight, action: InsightActionTaken, notes: string) => {
+  const handleRecordFeedback = (
+    insight: AIInsight,
+    action: InsightActionTaken,
+    notes: string,
+  ) => {
     feedbackMutation.mutate({
       insight_id: insight.id,
       insight_type: insight.type,
       insight_title: insight.title,
       insight_severity: insight.severity,
-      predicted_savings: insight.potential_savings > 0 ? insight.potential_savings : undefined,
+      predicted_savings:
+        insight.potential_savings > 0 ? insight.potential_savings : undefined,
       action_taken: action,
       action_notes: notes || undefined,
     });
@@ -1395,7 +1707,8 @@ export default function AIInsightsPage() {
 
     data.insights.forEach((insight) => {
       if (insight.potential_savings > 0) {
-        savingsMap[insight.type] = (savingsMap[insight.type] || 0) + insight.potential_savings;
+        savingsMap[insight.type] =
+          (savingsMap[insight.type] || 0) + insight.potential_savings;
       }
     });
 
@@ -1408,9 +1721,9 @@ export default function AIInsightsPage() {
 
   // Format currency
   const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -1467,7 +1780,8 @@ export default function AIInsightsPage() {
             Unable to Load Insights
           </h2>
           <p className="text-gray-600 mb-6">
-            There was an error loading AI insights. This may be due to insufficient data or a server issue.
+            There was an error loading AI insights. This may be due to
+            insufficient data or a server issue.
           </p>
           <Button onClick={() => refetch()} variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -1499,8 +1813,9 @@ export default function AIInsightsPage() {
               No Insights Available
             </h2>
             <p className="text-gray-600">
-              Upload more procurement data to generate AI-powered insights and recommendations.
-              The system needs sufficient transaction history to identify patterns and opportunities.
+              Upload more procurement data to generate AI-powered insights and
+              recommendations. The system needs sufficient transaction history
+              to identify patterns and opportunities.
             </p>
           </div>
         </div>
@@ -1524,7 +1839,7 @@ export default function AIInsightsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {mainView === 'insights' && (
+          {mainView === "insights" && (
             <>
               {/* Async Enhancement Button */}
               <TooltipProvider>
@@ -1534,13 +1849,21 @@ export default function AIInsightsPage() {
                       <Button
                         onClick={handleAsyncEnhance}
                         variant="outline"
-                        disabled={isAsyncProcessing || asyncEnhancementMutation.isPending || !data?.insights?.length || !isAIConfigured}
+                        disabled={
+                          isAsyncProcessing ||
+                          asyncEnhancementMutation.isPending ||
+                          !data?.insights?.length ||
+                          !isAIConfigured
+                        }
                         className="border-purple-200 text-purple-700 hover:bg-purple-50 disabled:opacity-50"
                       >
-                        {isAsyncProcessing || asyncEnhancementMutation.isPending ? (
+                        {isAsyncProcessing ||
+                        asyncEnhancementMutation.isPending ? (
                           <>
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            {asyncStatus?.progress !== undefined ? `${asyncStatus.progress}%` : 'Processing...'}
+                            {asyncStatus?.progress !== undefined
+                              ? `${asyncStatus.progress}%`
+                              : "Processing..."}
                           </>
                         ) : (
                           <>
@@ -1564,8 +1887,10 @@ export default function AIInsightsPage() {
                 variant="outline"
                 disabled={isRefreshing}
               >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                <RefreshCw
+                  className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
+                />
+                {isRefreshing ? "Refreshing..." : "Refresh"}
               </Button>
             </>
           )}
@@ -1575,19 +1900,19 @@ export default function AIInsightsPage() {
       {/* Main View Tabs */}
       <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg w-fit">
         <Button
-          variant={mainView === 'insights' ? 'default' : 'ghost'}
+          variant={mainView === "insights" ? "default" : "ghost"}
           size="sm"
-          onClick={() => setMainView('insights')}
-          className={mainView === 'insights' ? '' : 'text-gray-600'}
+          onClick={() => setMainView("insights")}
+          className={mainView === "insights" ? "" : "text-gray-600"}
         >
           <Lightbulb className="h-4 w-4 mr-2" />
           Insights
         </Button>
         <Button
-          variant={mainView === 'roi' ? 'default' : 'ghost'}
+          variant={mainView === "roi" ? "default" : "ghost"}
           size="sm"
-          onClick={() => setMainView('roi')}
-          className={mainView === 'roi' ? '' : 'text-gray-600'}
+          onClick={() => setMainView("roi")}
+          className={mainView === "roi" ? "" : "text-gray-600"}
         >
           <BarChart3 className="h-4 w-4 mr-2" />
           ROI Tracking
@@ -1595,246 +1920,289 @@ export default function AIInsightsPage() {
       </div>
 
       {/* ROI Tracking View */}
-      {mainView === 'roi' ? (
+      {mainView === "roi" ? (
         <ROITrackingSection />
       ) : (
         <>
           {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <StatCard
-          title="Total Insights"
-          value={summary.total_insights}
-          description="Recommendations found"
-          icon={Lightbulb}
-        />
-        <StatCard
-          title="High Priority"
-          value={summary.high_priority}
-          description="Require attention"
-          icon={AlertTriangle}
-          className={summary.high_priority > 0 ? 'border-red-200 bg-red-50' : ''}
-        />
-        <StatCard
-          title="Potential Savings"
-          value={formatCurrency(summary.total_potential_savings)}
-          description="Identified opportunities"
-          icon={DollarSign}
-          className="border-green-200 bg-green-50"
-        />
-        <StatCard
-          title="Categories"
-          value={Object.keys(summary.by_type).length}
-          description="Insight types"
-          icon={Target}
-        />
-      </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            <StatCard
+              title="Total Insights"
+              value={summary.total_insights}
+              description="Recommendations found"
+              icon={Lightbulb}
+            />
+            <StatCard
+              title="High Priority"
+              value={summary.high_priority}
+              description="Require attention"
+              icon={AlertTriangle}
+              className={
+                summary.high_priority > 0 ? "border-red-200 bg-red-50" : ""
+              }
+            />
+            <StatCard
+              title="Potential Savings"
+              value={formatCurrency(summary.total_potential_savings)}
+              description="Identified opportunities"
+              icon={DollarSign}
+              className="border-green-200 bg-green-50"
+            />
+            <StatCard
+              title="Categories"
+              value={Object.keys(summary.by_type).length}
+              description="Insight types"
+              icon={Target}
+            />
+          </div>
 
-      {/* Savings Visualization and Insights Overview Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Savings by Type Donut Chart */}
-        {savingsByType.length > 0 && (
+          {/* Savings Visualization and Insights Overview Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Savings by Type Donut Chart */}
+            {savingsByType.length > 0 && (
+              <Card className="border-0 shadow-lg">
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-6 w-6 text-green-600" />
+                    <CardTitle>Savings by Type</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Potential savings breakdown by insight category
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <PieChart>
+                      <Pie
+                        data={savingsByType}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={90}
+                        paddingAngle={2}
+                        dataKey="value"
+                      >
+                        {savingsByType.map((entry) => (
+                          <Cell
+                            key={entry.type}
+                            fill={
+                              CHART_COLORS[
+                                entry.type as keyof typeof CHART_COLORS
+                              ] || "#94a3b8"
+                            }
+                          />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip
+                        formatter={(value: number) => formatCurrency(value)}
+                        contentStyle={{
+                          backgroundColor: "white",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "8px",
+                          boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                        }}
+                      />
+                      <Legend
+                        verticalAlign="bottom"
+                        height={36}
+                        formatter={(value) => (
+                          <span className="text-sm text-gray-600">{value}</span>
+                        )}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="text-center mt-2">
+                    <div className="text-2xl font-bold text-green-600">
+                      {formatCurrency(summary.total_potential_savings)}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      Total Potential Savings
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Insights by Type Summary - spans 2 columns on lg screens */}
+            <Card
+              className={`border-0 shadow-lg bg-gradient-to-br from-yellow-50 to-amber-50 ${savingsByType.length > 0 ? "lg:col-span-2" : "lg:col-span-3"}`}
+            >
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-6 w-6 text-amber-600" />
+                  <CardTitle className="text-amber-900">
+                    Insights Overview
+                  </CardTitle>
+                </div>
+                <CardDescription className="text-amber-700">
+                  AI-powered analysis of your procurement data
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-white rounded-lg p-4 shadow-sm border border-amber-100">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <DollarSign className="h-4 w-4 text-green-600" />
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">
+                        Cost
+                      </span>
+                    </div>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {summary.by_type.cost_optimization || 0}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      optimization opportunities
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-lg p-4 shadow-sm border border-amber-100">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="p-2 bg-red-100 rounded-lg">
+                        <Shield className="h-4 w-4 text-red-600" />
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">
+                        Risk
+                      </span>
+                    </div>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {summary.by_type.risk || 0}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      supplier risks identified
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-lg p-4 shadow-sm border border-amber-100">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="p-2 bg-yellow-100 rounded-lg">
+                        <Zap className="h-4 w-4 text-yellow-600" />
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">
+                        Anomalies
+                      </span>
+                    </div>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {summary.by_type.anomaly || 0}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      unusual patterns detected
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-lg p-4 shadow-sm border border-amber-100">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <Users className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">
+                        Consolidation
+                      </span>
+                    </div>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {summary.by_type.consolidation || 0}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      consolidation opportunities
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* AI Strategic Recommendations */}
+          {data.ai_enhancement && (
+            <AIEnhancementSection
+              enhancement={data.ai_enhancement}
+              cacheHit={data.cache_hit}
+            />
+          )}
+
+          {/* Insights List with Tabs */}
           <Card className="border-0 shadow-lg">
             <CardHeader>
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-6 w-6 text-green-600" />
-                <CardTitle>Savings by Type</CardTitle>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <CardTitle>Detailed Insights</CardTitle>
+                  <CardDescription>
+                    Click on each insight to see recommended actions and
+                    affected entities
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <ArrowUpDown className="h-4 w-4 text-gray-500" />
+                  <Select
+                    value={sortBy}
+                    onValueChange={(v) => setSortBy(v as SortOption)}
+                  >
+                    <SelectTrigger className="w-[160px]">
+                      <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="severity">Severity</SelectItem>
+                      <SelectItem value="savings">Savings Potential</SelectItem>
+                      <SelectItem value="confidence">Confidence</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <CardDescription>
-                Potential savings breakdown by insight category
-              </CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={savingsByType}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={90}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {savingsByType.map((entry) => (
-                      <Cell
-                        key={entry.type}
-                        fill={CHART_COLORS[entry.type as keyof typeof CHART_COLORS] || '#94a3b8'}
-                      />
-                    ))}
-                  </Pie>
-                  <RechartsTooltip
-                    formatter={(value: number) => formatCurrency(value)}
-                    contentStyle={{
-                      backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                    }}
-                  />
-                  <Legend
-                    verticalAlign="bottom"
-                    height={36}
-                    formatter={(value) => <span className="text-sm text-gray-600">{value}</span>}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="text-center mt-2">
-                <div className="text-2xl font-bold text-green-600">
-                  {formatCurrency(summary.total_potential_savings)}
-                </div>
-                <div className="text-sm text-gray-500">Total Potential Savings</div>
-              </div>
+              <Tabs
+                value={activeTab}
+                onValueChange={(v) => setActiveTab(v as AIInsightType | "all")}
+              >
+                <TabsList className="mb-6">
+                  <TabsTrigger value="all">
+                    All ({data.insights.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="cost_optimization">
+                    Cost ({summary.by_type.cost_optimization || 0})
+                  </TabsTrigger>
+                  <TabsTrigger value="risk">
+                    Risk ({summary.by_type.risk || 0})
+                  </TabsTrigger>
+                  <TabsTrigger value="anomaly">
+                    Anomalies ({summary.by_type.anomaly || 0})
+                  </TabsTrigger>
+                  <TabsTrigger value="consolidation">
+                    Consolidation ({summary.by_type.consolidation || 0})
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value={activeTab} className="mt-0">
+                  {filteredInsights.length > 0 ? (
+                    <div className="space-y-4">
+                      {filteredInsights.map((insight) => (
+                        <InsightCard
+                          key={insight.id}
+                          insight={insight as ExtendedAIInsight}
+                          onRecordFeedback={handleRecordFeedback}
+                          onDeepAnalysis={handleDeepAnalysis}
+                          isRecording={feedbackMutation.isPending}
+                          isAnalyzing={
+                            deepAnalysisMutation.isPending &&
+                            selectedInsightForAnalysis?.id === insight.id
+                          }
+                          isAIConfigured={isAIConfigured}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 text-gray-500">
+                      <Lightbulb className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                      <p>
+                        No {getInsightTypeLabel(activeTab as AIInsightType)}{" "}
+                        insights found
+                      </p>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
-        )}
-
-        {/* Insights by Type Summary - spans 2 columns on lg screens */}
-        <Card className={`border-0 shadow-lg bg-gradient-to-br from-yellow-50 to-amber-50 ${savingsByType.length > 0 ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-6 w-6 text-amber-600" />
-              <CardTitle className="text-amber-900">Insights Overview</CardTitle>
-            </div>
-            <CardDescription className="text-amber-700">
-              AI-powered analysis of your procurement data
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-white rounded-lg p-4 shadow-sm border border-amber-100">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <DollarSign className="h-4 w-4 text-green-600" />
-                  </div>
-                  <span className="text-sm font-medium text-gray-700">Cost</span>
-                </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  {summary.by_type.cost_optimization || 0}
-                </div>
-                <div className="text-xs text-gray-500">optimization opportunities</div>
-              </div>
-
-              <div className="bg-white rounded-lg p-4 shadow-sm border border-amber-100">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-2 bg-red-100 rounded-lg">
-                    <Shield className="h-4 w-4 text-red-600" />
-                  </div>
-                  <span className="text-sm font-medium text-gray-700">Risk</span>
-                </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  {summary.by_type.risk || 0}
-                </div>
-                <div className="text-xs text-gray-500">supplier risks identified</div>
-              </div>
-
-              <div className="bg-white rounded-lg p-4 shadow-sm border border-amber-100">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-2 bg-yellow-100 rounded-lg">
-                    <Zap className="h-4 w-4 text-yellow-600" />
-                  </div>
-                  <span className="text-sm font-medium text-gray-700">Anomalies</span>
-                </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  {summary.by_type.anomaly || 0}
-                </div>
-                <div className="text-xs text-gray-500">unusual patterns detected</div>
-              </div>
-
-              <div className="bg-white rounded-lg p-4 shadow-sm border border-amber-100">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Users className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <span className="text-sm font-medium text-gray-700">Consolidation</span>
-                </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  {summary.by_type.consolidation || 0}
-                </div>
-                <div className="text-xs text-gray-500">consolidation opportunities</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* AI Strategic Recommendations */}
-      {data.ai_enhancement && (
-        <AIEnhancementSection enhancement={data.ai_enhancement} cacheHit={data.cache_hit} />
-      )}
-
-      {/* Insights List with Tabs */}
-      <Card className="border-0 shadow-lg">
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <CardTitle>Detailed Insights</CardTitle>
-              <CardDescription>
-                Click on each insight to see recommended actions and affected entities
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <ArrowUpDown className="h-4 w-4 text-gray-500" />
-              <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-                <SelectTrigger className="w-[160px]">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="severity">Severity</SelectItem>
-                  <SelectItem value="savings">Savings Potential</SelectItem>
-                  <SelectItem value="confidence">Confidence</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as AIInsightType | 'all')}>
-            <TabsList className="mb-6">
-              <TabsTrigger value="all">
-                All ({data.insights.length})
-              </TabsTrigger>
-              <TabsTrigger value="cost_optimization">
-                Cost ({summary.by_type.cost_optimization || 0})
-              </TabsTrigger>
-              <TabsTrigger value="risk">
-                Risk ({summary.by_type.risk || 0})
-              </TabsTrigger>
-              <TabsTrigger value="anomaly">
-                Anomalies ({summary.by_type.anomaly || 0})
-              </TabsTrigger>
-              <TabsTrigger value="consolidation">
-                Consolidation ({summary.by_type.consolidation || 0})
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value={activeTab} className="mt-0">
-              {filteredInsights.length > 0 ? (
-                <div className="space-y-4">
-                  {filteredInsights.map((insight) => (
-                    <InsightCard
-                      key={insight.id}
-                      insight={insight as ExtendedAIInsight}
-                      onRecordFeedback={handleRecordFeedback}
-                      onDeepAnalysis={handleDeepAnalysis}
-                      isRecording={feedbackMutation.isPending}
-                      isAnalyzing={
-                        deepAnalysisMutation.isPending &&
-                        selectedInsightForAnalysis?.id === insight.id
-                      }
-                      isAIConfigured={isAIConfigured}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 text-gray-500">
-                  <Lightbulb className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>No {getInsightTypeLabel(activeTab as AIInsightType)} insights found</p>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
 
           {/* Deep Analysis Modal */}
           <DeepAnalysisModal

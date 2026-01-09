@@ -19,56 +19,69 @@
  * - Lazy-loaded ECharts
  */
 
-import { useState, useMemo } from 'react';
-import { DollarSign, Users, Package, TrendingUp, ExternalLink } from 'lucide-react';
-import { useFilteredProcurementData, type ProcurementRecord } from '@/hooks/useProcurementData';
+import { useState, useMemo } from "react";
+import {
+  DollarSign,
+  Users,
+  Package,
+  TrendingUp,
+  ExternalLink,
+} from "lucide-react";
+import {
+  useFilteredProcurementData,
+  type ProcurementRecord,
+} from "@/hooks/useProcurementData";
 import {
   useOverviewStats,
   useSpendByCategory,
   useSpendBySupplier,
   useMonthlyTrend,
-} from '@/hooks/useAnalytics';
-import { usePermissions } from '@/contexts/PermissionContext';
-import { StatCard } from '@/components/StatCard';
-import { Chart } from '@/components/Chart';
-import { SkeletonCard } from '@/components/SkeletonCard';
-import { SkeletonChart } from '@/components/SkeletonChart';
-import { DrillDownModal } from '@/components/DrillDownModal';
+} from "@/hooks/useAnalytics";
+import { usePermissions } from "@/contexts/PermissionContext";
+import { StatCard } from "@/components/StatCard";
+import { Chart } from "@/components/Chart";
+import { SkeletonCard } from "@/components/SkeletonCard";
+import { SkeletonChart } from "@/components/SkeletonChart";
+import { DrillDownModal } from "@/components/DrillDownModal";
 import {
   getCategoryChartFromAPI,
   getTrendChartFromAPI,
   getSupplierChartFromAPI,
   getSpendDistributionConfig,
-} from '@/lib/chartConfigs';
+} from "@/lib/chartConfigs";
 
 // Drill-down state type
 interface DrillDownState {
   open: boolean;
-  entityType: 'category' | 'supplier' | 'location' | 'year';
+  entityType: "category" | "supplier" | "location" | "year";
   entityName: string;
 }
 
 export default function Overview() {
   // Use backend analytics APIs for accurate aggregations (no data truncation)
   const { data: overviewStats, isLoading: statsLoading } = useOverviewStats();
-  const { data: categoryData = [], isLoading: categoryLoading } = useSpendByCategory();
-  const { data: supplierData = [], isLoading: supplierLoading } = useSpendBySupplier();
+  const { data: categoryData = [], isLoading: categoryLoading } =
+    useSpendByCategory();
+  const { data: supplierData = [], isLoading: supplierLoading } =
+    useSpendBySupplier();
   const { data: trendData = [], isLoading: trendLoading } = useMonthlyTrend(12);
 
   // Still use procurement data for drill-down modal functionality
-  const { data: filteredData = [], isLoading: dataLoading } = useFilteredProcurementData();
+  const { data: filteredData = [], isLoading: dataLoading } =
+    useFilteredProcurementData();
 
   const { hasPermission } = usePermissions();
-  const canAccessAdmin = hasPermission('admin_panel');
+  const canAccessAdmin = hasPermission("admin_panel");
 
   // Combined loading state
-  const isLoading = statsLoading || categoryLoading || supplierLoading || trendLoading;
+  const isLoading =
+    statsLoading || categoryLoading || supplierLoading || trendLoading;
 
   // Drill-down modal state
   const [drillDown, setDrillDown] = useState<DrillDownState>({
     open: false,
-    entityType: 'category',
-    entityName: '',
+    entityType: "category",
+    entityName: "",
   });
 
   // Admin panel URL for data upload
@@ -86,11 +99,11 @@ export default function Overview() {
 
     return filteredData.filter((record) => {
       switch (drillDown.entityType) {
-        case 'category':
+        case "category":
           return record.category === drillDown.entityName;
-        case 'supplier':
+        case "supplier":
           return record.supplier === drillDown.entityName;
-        case 'location':
+        case "location":
           return record.location === drillDown.entityName;
         default:
           return false;
@@ -102,7 +115,7 @@ export default function Overview() {
   const handleCategoryClick = (params: { name: string; value: number }) => {
     setDrillDown({
       open: true,
-      entityType: 'category',
+      entityType: "category",
       entityName: params.name,
     });
   };
@@ -110,7 +123,7 @@ export default function Overview() {
   const handleSupplierClick = (params: { name: string; value: number }) => {
     setDrillDown({
       open: true,
-      entityType: 'supplier',
+      entityType: "supplier",
       entityName: params.name,
     });
   };
@@ -121,9 +134,9 @@ export default function Overview() {
 
   // Format currency
   const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -162,7 +175,8 @@ export default function Overview() {
 
   // Empty state - no data available (check backend stats, not truncated frontend data)
   // Only show "No Data" when we have successfully fetched stats AND transaction_count is explicitly 0
-  const hasNoData = overviewStats !== undefined && overviewStats.transaction_count === 0;
+  const hasNoData =
+    overviewStats !== undefined && overviewStats.transaction_count === 0;
   if (hasNoData) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -173,8 +187,8 @@ export default function Overview() {
           </h2>
           <p className="text-gray-600 mb-6">
             {canAccessAdmin
-              ? 'Upload your procurement data via the Admin Panel to see analytics and insights.'
-              : 'Contact an administrator to upload procurement data to see analytics and insights.'}
+              ? "Upload your procurement data via the Admin Panel to see analytics and insights."
+              : "Contact an administrator to upload procurement data to see analytics and insights."}
           </p>
           {canAccessAdmin && (
             <a
@@ -202,9 +216,7 @@ export default function Overview() {
     <div className="space-y-8">
       {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">
-          Overview
-        </h1>
+        <h1 className="text-3xl font-bold text-gray-900">Overview</h1>
         <p className="text-gray-600 mt-2">
           Key metrics and insights from your procurement data
         </p>
@@ -218,21 +230,21 @@ export default function Overview() {
           description="Across all categories"
           icon={DollarSign}
         />
-        
+
         <StatCard
           title="Suppliers"
           value={supplierCount}
           description="Unique vendors"
           icon={Users}
         />
-        
+
         <StatCard
           title="Categories"
           value={categoryCount}
           description="Spend categories"
           icon={Package}
         />
-        
+
         <StatCard
           title="Avg Transaction"
           value={formatCurrency(avgTransaction)}
@@ -286,7 +298,7 @@ export default function Overview() {
       <DrillDownModal
         open={drillDown.open}
         onClose={closeDrillDown}
-        title={drillDown.entityType === 'category' ? 'Category' : 'Supplier'}
+        title={drillDown.entityType === "category" ? "Category" : "Supplier"}
         entityType={drillDown.entityType}
         entityName={drillDown.entityName}
         data={drillDownData}

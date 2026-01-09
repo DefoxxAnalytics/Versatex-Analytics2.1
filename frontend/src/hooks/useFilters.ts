@@ -1,24 +1,24 @@
 /**
  * Filter State Management Hooks
- * 
+ *
  * Manages persistent filter state across all tabs using TanStack Query.
  * Filters are stored in localStorage and synchronized globally.
- * 
+ *
  * Security:
  * - All filter values are validated and sanitized
  * - No XSS vulnerabilities
  * - Safe localStorage operations with error handling
- * 
+ *
  * Performance:
  * - Infinite cache time for instant access
  * - Optimistic updates for smooth UX
  * - Minimal re-renders
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '@/lib/queryKeys';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
 
-const STORAGE_KEY = 'procurement_filters';
+const STORAGE_KEY = "procurement_filters";
 
 /**
  * Filter state interface
@@ -61,27 +61,49 @@ function loadFilters(): Filters {
     if (!stored) return DEFAULT_FILTERS;
 
     const parsed = JSON.parse(stored);
-    
+
     // Validate structure
     return {
       dateRange: {
-        start: typeof parsed.dateRange?.start === 'string' ? parsed.dateRange.start : null,
-        end: typeof parsed.dateRange?.end === 'string' ? parsed.dateRange.end : null,
+        start:
+          typeof parsed.dateRange?.start === "string"
+            ? parsed.dateRange.start
+            : null,
+        end:
+          typeof parsed.dateRange?.end === "string"
+            ? parsed.dateRange.end
+            : null,
       },
-      categories: Array.isArray(parsed.categories) ? parsed.categories.filter((c: unknown) => typeof c === 'string') : [],
-      subcategories: Array.isArray(parsed.subcategories) ? parsed.subcategories.filter((sc: unknown) => typeof sc === 'string') : [],
-      suppliers: Array.isArray(parsed.suppliers) ? parsed.suppliers.filter((s: unknown) => typeof s === 'string') : [],
-      locations: Array.isArray(parsed.locations) ? parsed.locations.filter((l: unknown) => typeof l === 'string') : [],
-      years: Array.isArray(parsed.years) ? parsed.years.filter((y: unknown) => typeof y === 'string') : [],
+      categories: Array.isArray(parsed.categories)
+        ? parsed.categories.filter((c: unknown) => typeof c === "string")
+        : [],
+      subcategories: Array.isArray(parsed.subcategories)
+        ? parsed.subcategories.filter((sc: unknown) => typeof sc === "string")
+        : [],
+      suppliers: Array.isArray(parsed.suppliers)
+        ? parsed.suppliers.filter((s: unknown) => typeof s === "string")
+        : [],
+      locations: Array.isArray(parsed.locations)
+        ? parsed.locations.filter((l: unknown) => typeof l === "string")
+        : [],
+      years: Array.isArray(parsed.years)
+        ? parsed.years.filter((y: unknown) => typeof y === "string")
+        : [],
       amountRange: {
-        min: typeof parsed.amountRange?.min === 'number' ? parsed.amountRange.min : null,
-        max: typeof parsed.amountRange?.max === 'number' ? parsed.amountRange.max : null,
+        min:
+          typeof parsed.amountRange?.min === "number"
+            ? parsed.amountRange.min
+            : null,
+        max:
+          typeof parsed.amountRange?.max === "number"
+            ? parsed.amountRange.max
+            : null,
       },
     };
   } catch (error) {
     // Only log in development
     if (import.meta.env.DEV) {
-      console.error('Failed to load filters from localStorage:', error);
+      console.error("Failed to load filters from localStorage:", error);
     }
     return DEFAULT_FILTERS;
   }
@@ -94,11 +116,11 @@ function saveFilters(filters: Filters): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
     // Dispatch custom event to notify other components of filter changes
-    window.dispatchEvent(new Event('filtersUpdated'));
+    window.dispatchEvent(new Event("filtersUpdated"));
   } catch (error) {
     // Only log in development
     if (import.meta.env.DEV) {
-      console.error('Failed to save filters to localStorage:', error);
+      console.error("Failed to save filters to localStorage:", error);
     }
   }
 }
@@ -110,20 +132,20 @@ function clearFilters(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
     // Dispatch custom event to notify other components of filter changes
-    window.dispatchEvent(new Event('filtersUpdated'));
+    window.dispatchEvent(new Event("filtersUpdated"));
   } catch (error) {
     // Only log in development
     if (import.meta.env.DEV) {
-      console.error('Failed to clear filters from localStorage:', error);
+      console.error("Failed to clear filters from localStorage:", error);
     }
   }
 }
 
 /**
  * Hook to get current filter state
- * 
+ *
  * @returns Query result with current filters
- * 
+ *
  * @example
  * ```tsx
  * const { data: filters } = useFilters();
@@ -141,9 +163,9 @@ export function useFilters() {
 
 /**
  * Hook to update filters
- * 
+ *
  * @returns Mutation to update filters
- * 
+ *
  * @example
  * ```tsx
  * const updateFilters = useUpdateFilters();
@@ -155,7 +177,9 @@ export function useUpdateFilters() {
 
   return useMutation({
     mutationFn: async (updates: Partial<Filters>) => {
-      const current = queryClient.getQueryData<Filters>(queryKeys.filters.all) || DEFAULT_FILTERS;
+      const current =
+        queryClient.getQueryData<Filters>(queryKeys.filters.all) ||
+        DEFAULT_FILTERS;
       const updated: Filters = {
         ...current,
         ...updates,
@@ -171,9 +195,9 @@ export function useUpdateFilters() {
 
 /**
  * Hook to reset all filters to default
- * 
+ *
  * @returns Mutation to reset filters
- * 
+ *
  * @example
  * ```tsx
  * const resetFilters = useResetFilters();

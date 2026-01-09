@@ -9,8 +9,8 @@
  * - Redis caching with cache_hit indicator
  * - Manual refresh support to bypass cache
  */
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { analyticsAPI, getOrganizationParam } from '@/lib/api';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { analyticsAPI, getOrganizationParam } from "@/lib/api";
 import type {
   AIInsight,
   AIInsightType,
@@ -24,7 +24,7 @@ import type {
   InsightOutcome,
   InsightFeedbackItem,
   InsightEffectivenessMetrics,
-} from '@/lib/api';
+} from "@/lib/api";
 
 /**
  * Get the current organization ID for query key inclusion.
@@ -41,7 +41,7 @@ function getOrgKeyPart(): number | undefined {
 export function useAIInsights() {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['ai-insights', { orgId }],
+    queryKey: ["ai-insights", { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getAIInsights(false);
       return response.data;
@@ -64,7 +64,7 @@ export function useRefreshAIInsights() {
       return response.data;
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(['ai-insights', { orgId }], data);
+      queryClient.setQueryData(["ai-insights", { orgId }], data);
     },
   });
 }
@@ -75,7 +75,7 @@ export function useRefreshAIInsights() {
 export function useAIInsightsCost() {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['ai-insights-cost', { orgId }],
+    queryKey: ["ai-insights-cost", { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getAIInsightsCost();
       return response.data;
@@ -90,7 +90,7 @@ export function useAIInsightsCost() {
 export function useAIInsightsRisk() {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['ai-insights-risk', { orgId }],
+    queryKey: ["ai-insights-risk", { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getAIInsightsRisk();
       return response.data;
@@ -105,7 +105,7 @@ export function useAIInsightsRisk() {
 export function useAIInsightsAnomalies(sensitivity: number = 2.0) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['ai-insights-anomalies', sensitivity, { orgId }],
+    queryKey: ["ai-insights-anomalies", sensitivity, { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getAIInsightsAnomalies(sensitivity);
       return response.data;
@@ -117,9 +117,12 @@ export function useAIInsightsAnomalies(sensitivity: number = 2.0) {
 /**
  * Filter insights by type
  */
-export function filterInsightsByType(insights: AIInsight[], type: AIInsightType | 'all'): AIInsight[] {
-  if (type === 'all') return insights;
-  return insights.filter(insight => insight.type === type);
+export function filterInsightsByType(
+  insights: AIInsight[],
+  type: AIInsightType | "all",
+): AIInsight[] {
+  if (type === "all") return insights;
+  return insights.filter((insight) => insight.type === type);
 }
 
 /**
@@ -141,10 +144,10 @@ export function sortInsights(insights: AIInsight[]): AIInsight[] {
  */
 export function getInsightTypeLabel(type: AIInsightType): string {
   const labels: Record<AIInsightType, string> = {
-    cost_optimization: 'Cost Optimization',
-    risk: 'Supplier Risk',
-    anomaly: 'Anomaly',
-    consolidation: 'Consolidation',
+    cost_optimization: "Cost Optimization",
+    risk: "Supplier Risk",
+    anomaly: "Anomaly",
+    consolidation: "Consolidation",
   };
   return labels[type] || type;
 }
@@ -154,22 +157,22 @@ export function getInsightTypeLabel(type: AIInsightType): string {
  */
 export function getInsightTypeColor(type: AIInsightType): string {
   const colors: Record<AIInsightType, string> = {
-    cost_optimization: 'text-green-600 bg-green-100',
-    risk: 'text-red-600 bg-red-100',
-    anomaly: 'text-yellow-600 bg-yellow-100',
-    consolidation: 'text-blue-600 bg-blue-100',
+    cost_optimization: "text-green-600 bg-green-100",
+    risk: "text-red-600 bg-red-100",
+    anomaly: "text-yellow-600 bg-yellow-100",
+    consolidation: "text-blue-600 bg-blue-100",
   };
-  return colors[type] || 'text-gray-600 bg-gray-100';
+  return colors[type] || "text-gray-600 bg-gray-100";
 }
 
 /**
  * Get severity badge color
  */
-export function getSeverityColor(severity: 'high' | 'medium' | 'low'): string {
+export function getSeverityColor(severity: "high" | "medium" | "low"): string {
   const colors = {
-    high: 'bg-red-100 text-red-800 border-red-200',
-    medium: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    low: 'bg-green-100 text-green-800 border-green-200',
+    high: "bg-red-100 text-red-800 border-red-200",
+    medium: "bg-yellow-100 text-yellow-800 border-yellow-200",
+    low: "bg-green-100 text-green-800 border-green-200",
   };
   return colors[severity];
 }
@@ -179,9 +182,9 @@ export function getSeverityColor(severity: 'high' | 'medium' | 'low'): string {
  */
 export function getImpactColor(impact: AIImpactLevel): string {
   const colors: Record<AIImpactLevel, string> = {
-    high: 'bg-green-100 text-green-800 border-green-200',
-    medium: 'bg-blue-100 text-blue-800 border-blue-200',
-    low: 'bg-gray-100 text-gray-800 border-gray-200',
+    high: "bg-green-100 text-green-800 border-green-200",
+    medium: "bg-blue-100 text-blue-800 border-blue-200",
+    low: "bg-gray-100 text-gray-800 border-gray-200",
   };
   return colors[impact];
 }
@@ -191,9 +194,9 @@ export function getImpactColor(impact: AIImpactLevel): string {
  */
 export function getEffortColor(effort: AIEffortLevel): string {
   const colors: Record<AIEffortLevel, string> = {
-    low: 'bg-green-100 text-green-700',
-    medium: 'bg-yellow-100 text-yellow-700',
-    high: 'bg-red-100 text-red-700',
+    low: "bg-green-100 text-green-700",
+    medium: "bg-yellow-100 text-yellow-700",
+    high: "bg-red-100 text-red-700",
   };
   return colors[effort];
 }
@@ -201,12 +204,14 @@ export function getEffortColor(effort: AIEffortLevel): string {
 /**
  * Get risk level color for AI risk assessment
  */
-export function getRiskLevelColor(level: 'critical' | 'high' | 'moderate' | 'low'): string {
+export function getRiskLevelColor(
+  level: "critical" | "high" | "moderate" | "low",
+): string {
   const colors = {
-    critical: 'bg-red-600 text-white',
-    high: 'bg-red-100 text-red-800',
-    moderate: 'bg-yellow-100 text-yellow-800',
-    low: 'bg-green-100 text-green-800',
+    critical: "bg-red-600 text-white",
+    high: "bg-red-100 text-red-800",
+    moderate: "bg-yellow-100 text-yellow-800",
+    low: "bg-green-100 text-green-800",
   };
   return colors[level];
 }
@@ -214,9 +219,19 @@ export function getRiskLevelColor(level: 'critical' | 'high' | 'moderate' | 'low
 /**
  * Sort recommendations by impact/effort ratio (high impact, low effort first)
  */
-export function sortRecommendationsByValue(recommendations: AIRecommendation[]): AIRecommendation[] {
-  const impactScore: Record<AIImpactLevel, number> = { high: 3, medium: 2, low: 1 };
-  const effortScore: Record<AIEffortLevel, number> = { low: 3, medium: 2, high: 1 };
+export function sortRecommendationsByValue(
+  recommendations: AIRecommendation[],
+): AIRecommendation[] {
+  const impactScore: Record<AIImpactLevel, number> = {
+    high: 3,
+    medium: 2,
+    low: 1,
+  };
+  const effortScore: Record<AIEffortLevel, number> = {
+    low: 3,
+    medium: 2,
+    high: 1,
+  };
 
   return [...recommendations].sort((a, b) => {
     const aValue = impactScore[a.impact] * effortScore[a.effort];
@@ -242,8 +257,12 @@ export function useRecordInsightFeedback() {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['insight-feedback', { orgId }] });
-      queryClient.invalidateQueries({ queryKey: ['insight-effectiveness', { orgId }] });
+      queryClient.invalidateQueries({
+        queryKey: ["insight-feedback", { orgId }],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["insight-effectiveness", { orgId }],
+      });
     },
   });
 }
@@ -256,13 +275,26 @@ export function useUpdateInsightOutcome() {
   const orgId = getOrgKeyPart();
 
   return useMutation({
-    mutationFn: async ({ feedbackId, data }: { feedbackId: string; data: InsightOutcomeUpdateRequest }) => {
-      const response = await analyticsAPI.updateInsightOutcome(feedbackId, data);
+    mutationFn: async ({
+      feedbackId,
+      data,
+    }: {
+      feedbackId: string;
+      data: InsightOutcomeUpdateRequest;
+    }) => {
+      const response = await analyticsAPI.updateInsightOutcome(
+        feedbackId,
+        data,
+      );
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['insight-feedback', { orgId }] });
-      queryClient.invalidateQueries({ queryKey: ['insight-effectiveness', { orgId }] });
+      queryClient.invalidateQueries({
+        queryKey: ["insight-feedback", { orgId }],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["insight-effectiveness", { orgId }],
+      });
     },
   });
 }
@@ -281,8 +313,12 @@ export function useDeleteInsightFeedback() {
       return response;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['insight-feedback', { orgId }] });
-      queryClient.invalidateQueries({ queryKey: ['insight-effectiveness', { orgId }] });
+      queryClient.invalidateQueries({
+        queryKey: ["insight-feedback", { orgId }],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["insight-effectiveness", { orgId }],
+      });
     },
   });
 }
@@ -293,7 +329,7 @@ export function useDeleteInsightFeedback() {
 export function useInsightEffectiveness() {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['insight-effectiveness', { orgId }],
+    queryKey: ["insight-effectiveness", { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getInsightEffectiveness();
       return response.data;
@@ -314,7 +350,7 @@ export function useInsightFeedbackList(params?: {
 }) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['insight-feedback', params, { orgId }],
+    queryKey: ["insight-feedback", params, { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.listInsightFeedback(params);
       return response.data;
@@ -328,11 +364,11 @@ export function useInsightFeedbackList(params?: {
  */
 export function getActionLabel(action: InsightActionTaken): string {
   const labels: Record<InsightActionTaken, string> = {
-    implemented: 'Implemented',
-    dismissed: 'Dismissed',
-    deferred: 'Deferred',
-    investigating: 'Investigating',
-    partial: 'Partially Implemented',
+    implemented: "Implemented",
+    dismissed: "Dismissed",
+    deferred: "Deferred",
+    investigating: "Investigating",
+    partial: "Partially Implemented",
   };
   return labels[action] || action;
 }
@@ -342,13 +378,13 @@ export function getActionLabel(action: InsightActionTaken): string {
  */
 export function getActionColor(action: InsightActionTaken): string {
   const colors: Record<InsightActionTaken, string> = {
-    implemented: 'bg-green-100 text-green-800 border-green-200',
-    dismissed: 'bg-gray-100 text-gray-800 border-gray-200',
-    deferred: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    investigating: 'bg-blue-100 text-blue-800 border-blue-200',
-    partial: 'bg-purple-100 text-purple-800 border-purple-200',
+    implemented: "bg-green-100 text-green-800 border-green-200",
+    dismissed: "bg-gray-100 text-gray-800 border-gray-200",
+    deferred: "bg-yellow-100 text-yellow-800 border-yellow-200",
+    investigating: "bg-blue-100 text-blue-800 border-blue-200",
+    partial: "bg-purple-100 text-purple-800 border-purple-200",
   };
-  return colors[action] || 'bg-gray-100 text-gray-800 border-gray-200';
+  return colors[action] || "bg-gray-100 text-gray-800 border-gray-200";
 }
 
 /**
@@ -356,11 +392,11 @@ export function getActionColor(action: InsightActionTaken): string {
  */
 export function getOutcomeLabel(outcome: InsightOutcome): string {
   const labels: Record<InsightOutcome, string> = {
-    pending: 'Pending',
-    success: 'Success',
-    partial_success: 'Partial Success',
-    no_change: 'No Change',
-    failed: 'Failed',
+    pending: "Pending",
+    success: "Success",
+    partial_success: "Partial Success",
+    no_change: "No Change",
+    failed: "Failed",
   };
   return labels[outcome] || outcome;
 }
@@ -370,13 +406,13 @@ export function getOutcomeLabel(outcome: InsightOutcome): string {
  */
 export function getOutcomeColor(outcome: InsightOutcome): string {
   const colors: Record<InsightOutcome, string> = {
-    pending: 'bg-gray-100 text-gray-600',
-    success: 'bg-green-100 text-green-800',
-    partial_success: 'bg-yellow-100 text-yellow-800',
-    no_change: 'bg-orange-100 text-orange-800',
-    failed: 'bg-red-100 text-red-800',
+    pending: "bg-gray-100 text-gray-600",
+    success: "bg-green-100 text-green-800",
+    partial_success: "bg-yellow-100 text-yellow-800",
+    no_change: "bg-orange-100 text-orange-800",
+    failed: "bg-red-100 text-red-800",
   };
-  return colors[outcome] || 'bg-gray-100 text-gray-600';
+  return colors[outcome] || "bg-gray-100 text-gray-600";
 }
 
 // ============================================================================
@@ -396,7 +432,9 @@ export function useRequestAsyncEnhancement() {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['async-enhancement-status', { orgId }] });
+      queryClient.invalidateQueries({
+        queryKey: ["async-enhancement-status", { orgId }],
+      });
     },
   });
 }
@@ -407,11 +445,14 @@ export function useRequestAsyncEnhancement() {
  * @param enabled - Whether to enable polling
  * @param pollInterval - Polling interval in ms (default: 2000)
  */
-export function useAsyncEnhancementStatus(enabled: boolean = true, pollInterval: number = 2000) {
+export function useAsyncEnhancementStatus(
+  enabled: boolean = true,
+  pollInterval: number = 2000,
+) {
   const orgId = getOrgKeyPart();
 
   return useQuery({
-    queryKey: ['async-enhancement-status', { orgId }],
+    queryKey: ["async-enhancement-status", { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getAsyncEnhancementStatus();
       return response.data;
@@ -419,7 +460,7 @@ export function useAsyncEnhancementStatus(enabled: boolean = true, pollInterval:
     enabled,
     refetchInterval: (query) => {
       const data = query.state.data;
-      if (data?.status === 'processing' || data?.status === 'queued') {
+      if (data?.status === "processing" || data?.status === "queued") {
         return pollInterval;
       }
       return false;
@@ -445,7 +486,9 @@ export function useRequestDeepAnalysis() {
       return response.data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['deep-analysis-status', data.insight_id] });
+      queryClient.invalidateQueries({
+        queryKey: ["deep-analysis-status", data.insight_id],
+      });
     },
   });
 }
@@ -460,21 +503,21 @@ export function useRequestDeepAnalysis() {
 export function useDeepAnalysisStatus(
   insightId: string | null,
   enabled: boolean = true,
-  pollInterval: number = 2000
+  pollInterval: number = 2000,
 ) {
   const orgId = getOrgKeyPart();
 
   return useQuery({
-    queryKey: ['deep-analysis-status', insightId, { orgId }],
+    queryKey: ["deep-analysis-status", insightId, { orgId }],
     queryFn: async () => {
-      if (!insightId) throw new Error('Insight ID required');
+      if (!insightId) throw new Error("Insight ID required");
       const response = await analyticsAPI.getDeepAnalysisStatus(insightId);
       return response.data;
     },
     enabled: enabled && !!insightId,
     refetchInterval: (query) => {
       const data = query.state.data;
-      if (data?.status === 'processing') {
+      if (data?.status === "processing") {
         return pollInterval;
       }
       return false;
@@ -487,13 +530,17 @@ export function useDeepAnalysisStatus(
 /**
  * Get risk level color for deep analysis risk factors
  */
-export function getDeepAnalysisRiskColor(likelihood: 'high' | 'medium' | 'low', impact: 'high' | 'medium' | 'low'): string {
-  const score = (likelihood === 'high' ? 3 : likelihood === 'medium' ? 2 : 1) *
-                (impact === 'high' ? 3 : impact === 'medium' ? 2 : 1);
+export function getDeepAnalysisRiskColor(
+  likelihood: "high" | "medium" | "low",
+  impact: "high" | "medium" | "low",
+): string {
+  const score =
+    (likelihood === "high" ? 3 : likelihood === "medium" ? 2 : 1) *
+    (impact === "high" ? 3 : impact === "medium" ? 2 : 1);
 
-  if (score >= 6) return 'bg-red-100 text-red-800 border-red-200';
-  if (score >= 4) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-  return 'bg-green-100 text-green-800 border-green-200';
+  if (score >= 6) return "bg-red-100 text-red-800 border-red-200";
+  if (score >= 4) return "bg-yellow-100 text-yellow-800 border-yellow-200";
+  return "bg-green-100 text-green-800 border-green-200";
 }
 
 /**
@@ -501,10 +548,10 @@ export function getDeepAnalysisRiskColor(likelihood: 'high' | 'medium' | 'low', 
  */
 export function getPhaseColor(phaseIndex: number, totalPhases: number): string {
   const colors = [
-    'bg-blue-100 text-blue-800 border-blue-200',
-    'bg-indigo-100 text-indigo-800 border-indigo-200',
-    'bg-purple-100 text-purple-800 border-purple-200',
-    'bg-violet-100 text-violet-800 border-violet-200',
+    "bg-blue-100 text-blue-800 border-blue-200",
+    "bg-indigo-100 text-indigo-800 border-indigo-200",
+    "bg-purple-100 text-purple-800 border-purple-200",
+    "bg-violet-100 text-violet-800 border-violet-200",
   ];
   return colors[phaseIndex % colors.length];
 }
@@ -531,4 +578,4 @@ export type {
   DeepAnalysisFinancialImpact,
   DeepAnalysisRiskFactor,
   DeepAnalysisSuccessMetric,
-} from '@/lib/api';
+} from "@/lib/api";

@@ -1,34 +1,40 @@
-import { useState } from 'react';
-import { useLocation } from 'wouter';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Lock, User, AlertCircle } from 'lucide-react';
-import { authAPI } from '@/lib/api';
-import { setUserData } from '@/lib/auth';
-import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
-import { useTheme } from '@/contexts/ThemeContext';
-import { cn } from '@/lib/utils';
+import { useState } from "react";
+import { useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Lock, User, AlertCircle } from "lucide-react";
+import { authAPI } from "@/lib/api";
+import { setUserData } from "@/lib/auth";
+import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
+import { cn } from "@/lib/utils";
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const { checkAuth } = useAuth();
   const { colorScheme } = useTheme();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   // Color scheme-aware styles
-  const isNavy = colorScheme === 'navy';
+  const isNavy = colorScheme === "navy";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (!username || !password) {
-      setError('Please enter both username and password');
+      setError("Please enter both username and password");
       return;
     }
 
@@ -46,47 +52,49 @@ export default function Login() {
         setUserData(response.data.user);
       }
 
-      toast.success('Login successful');
+      toast.success("Login successful");
 
       // Update auth context and redirect after a brief delay to ensure state updates
       checkAuth();
 
       // Use setTimeout to ensure state update completes before navigation
       setTimeout(() => {
-        setLocation('/');
+        setLocation("/");
       }, 100);
     } catch (error: any) {
       // Only log in development to prevent information leakage
       if (import.meta.env.DEV) {
-        console.error('Login error:', error);
+        console.error("Login error:", error);
       }
 
       // Sanitize error messages - map all errors to user-friendly messages
       // to prevent backend system information leakage
       if (error.response?.status === 401) {
-        setError('Invalid username or password');
+        setError("Invalid username or password");
       } else if (error.response?.status === 429) {
-        setError('Too many login attempts. Please try again later.');
+        setError("Too many login attempts. Please try again later.");
       } else if (error.response?.status >= 500) {
-        setError('Server error. Please try again later.');
+        setError("Server error. Please try again later.");
       } else {
         // Generic message for all other errors - don't expose backend details
-        setError('Login failed. Please check your credentials and try again.');
+        setError("Login failed. Please check your credentials and try again.");
       }
 
-      toast.error('Login failed');
+      toast.error("Login failed");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className={cn(
-      "min-h-screen flex items-center justify-center p-4 transition-colors duration-300",
-      isNavy
-        ? "bg-[#1e3a8a]"
-        : "bg-gradient-to-br from-indigo-50 via-white to-cyan-50"
-    )}>
+    <div
+      className={cn(
+        "min-h-screen flex items-center justify-center p-4 transition-colors duration-300",
+        isNavy
+          ? "bg-[#1e3a8a]"
+          : "bg-gradient-to-br from-indigo-50 via-white to-cyan-50",
+      )}
+    >
       <div className="w-full max-w-md">
         {/* Login Card */}
         <Card className="border-0 shadow-2xl">
@@ -120,7 +128,10 @@ export default function Login() {
 
               {/* Username Field */}
               <div className="space-y-2">
-                <label htmlFor="username" className="text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="username"
+                  className="text-sm font-medium text-gray-700"
+                >
                   Username
                 </label>
                 <div className="relative">
@@ -140,7 +151,10 @@ export default function Login() {
 
               {/* Password Field */}
               <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="password"
+                  className="text-sm font-medium text-gray-700"
+                >
                   Password
                 </label>
                 <div className="relative">
@@ -164,7 +178,7 @@ export default function Login() {
                   "w-full h-12 text-base transition-all duration-300",
                   isNavy
                     ? "bg-[#1e3a8a] hover:bg-[#1e40af] shadow-[0_4px_12px_rgba(30,58,138,0.4)]"
-                    : "bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-lg"
+                    : "bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-lg",
                 )}
                 disabled={isLoading}
               >
@@ -192,10 +206,12 @@ export default function Login() {
         </Card>
 
         {/* Footer */}
-        <p className={cn(
-          "text-center text-sm mt-6 transition-colors duration-300",
-          isNavy ? "text-white/70" : "text-gray-600"
-        )}>
+        <p
+          className={cn(
+            "text-center text-sm mt-6 transition-colors duration-300",
+            isNavy ? "text-white/70" : "text-gray-600",
+          )}
+        >
           Protected by JWT authentication
         </p>
       </div>

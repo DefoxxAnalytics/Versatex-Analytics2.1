@@ -1,5 +1,5 @@
-import type { ProcurementRecord } from '../hooks/useProcurementData';
-import type { Filters } from '../hooks/useFilters';
+import type { ProcurementRecord } from "../hooks/useProcurementData";
+import type { Filters } from "../hooks/useFilters";
 
 /**
  * Analytics utilities for procurement data
@@ -24,9 +24,9 @@ import type { Filters } from '../hooks/useFilters';
  * ```
  */
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
@@ -46,7 +46,7 @@ export function formatCurrency(amount: number): string {
  * ```
  */
 export function formatPercent(value: number, decimals: number = 1): string {
-  return `${(value * 100).toFixed(decimals)}%`
+  return `${(value * 100).toFixed(decimals)}%`;
 }
 
 /**
@@ -62,9 +62,9 @@ export function formatPercent(value: number, decimals: number = 1): string {
  * ```
  */
 export function formatCompact(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    notation: 'compact',
-    compactDisplay: 'short',
+  return new Intl.NumberFormat("en-US", {
+    notation: "compact",
+    compactDisplay: "short",
     maximumFractionDigits: 1,
   }).format(value);
 }
@@ -102,22 +102,32 @@ export function formatCompact(value: number): string {
  */
 export function applyFilters(
   data: ProcurementRecord[],
-  filters: Filters
+  filters: Filters,
 ): ProcurementRecord[] {
   // Validate inputs
   if (!data || data.length === 0) return [];
   if (!filters) return data;
 
   // Return all data if no filters are active
-  const hasDateFilter = filters.dateRange.start !== null || filters.dateRange.end !== null;
+  const hasDateFilter =
+    filters.dateRange.start !== null || filters.dateRange.end !== null;
   const hasCategoryFilter = filters.categories.length > 0;
   const hasSubcategoryFilter = filters.subcategories.length > 0;
   const hasSupplierFilter = filters.suppliers.length > 0;
   const hasLocationFilter = filters.locations.length > 0;
   const hasYearFilter = filters.years.length > 0;
-  const hasAmountFilter = filters.amountRange.min !== null || filters.amountRange.max !== null;
+  const hasAmountFilter =
+    filters.amountRange.min !== null || filters.amountRange.max !== null;
 
-  if (!hasDateFilter && !hasCategoryFilter && !hasSubcategoryFilter && !hasSupplierFilter && !hasLocationFilter && !hasYearFilter && !hasAmountFilter) {
+  if (
+    !hasDateFilter &&
+    !hasCategoryFilter &&
+    !hasSubcategoryFilter &&
+    !hasSupplierFilter &&
+    !hasLocationFilter &&
+    !hasYearFilter &&
+    !hasAmountFilter
+  ) {
     return data;
   }
 
@@ -129,7 +139,7 @@ export function applyFilters(
   const yearSet = new Set(filters.years);
 
   // Filter data with a single pass
-  return data.filter(record => {
+  return data.filter((record) => {
     // Date range filter
     if (hasDateFilter) {
       const recordDate = record.date;
@@ -165,7 +175,9 @@ export function applyFilters(
 
     // Year filter - use year field if available, otherwise extract from date
     if (hasYearFilter) {
-      const recordYear = record.year?.toString() || new Date(record.date).getFullYear().toString();
+      const recordYear =
+        record.year?.toString() ||
+        new Date(record.date).getFullYear().toString();
       if (!yearSet.has(recordYear)) {
         return false;
       }
@@ -175,11 +187,17 @@ export function applyFilters(
     if (hasAmountFilter) {
       const amount = record.amount;
 
-      if (filters.amountRange.min !== null && amount < filters.amountRange.min) {
+      if (
+        filters.amountRange.min !== null &&
+        amount < filters.amountRange.min
+      ) {
         return false;
       }
 
-      if (filters.amountRange.max !== null && amount > filters.amountRange.max) {
+      if (
+        filters.amountRange.max !== null &&
+        amount > filters.amountRange.max
+      ) {
         return false;
       }
     }

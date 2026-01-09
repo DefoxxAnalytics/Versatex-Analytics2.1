@@ -5,19 +5,26 @@
  * Displays transaction list, sub-breakdown, and key metrics for the selected entity.
  */
 
-import { useMemo } from 'react';
-import { X, TrendingUp, TrendingDown, DollarSign, ShoppingCart, Building2 } from 'lucide-react';
+import { useMemo } from "react";
+import {
+  X,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  ShoppingCart,
+  Building2,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Chart } from './Chart';
-import type { ProcurementRecord } from '@/hooks/useProcurementData';
+} from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Chart } from "./Chart";
+import type { ProcurementRecord } from "@/hooks/useProcurementData";
 
 interface DrillDownModalProps {
   /** Whether the modal is open */
@@ -27,7 +34,7 @@ interface DrillDownModalProps {
   /** Title for the modal */
   title: string;
   /** Type of entity being drilled down */
-  entityType: 'category' | 'supplier' | 'location' | 'year';
+  entityType: "category" | "supplier" | "location" | "year";
   /** Name of the entity (e.g., category name, supplier name) */
   entityName: string;
   /** Filtered data for this entity */
@@ -40,9 +47,9 @@ interface DrillDownModalProps {
  * Format currency value
  */
 function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
@@ -53,10 +60,10 @@ function formatCurrency(amount: number): string {
  */
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
   });
 }
 
@@ -104,12 +111,12 @@ export function DrillDownModal({
 
     // If looking at a category, break down by supplier
     // If looking at a supplier, break down by category
-    const breakdownField = entityType === 'supplier' ? 'category' : 'supplier';
+    const breakdownField = entityType === "supplier" ? "category" : "supplier";
 
     const breakdown = new Map<string, { spend: number; count: number }>();
 
     data.forEach((record) => {
-      const key = record[breakdownField] || 'Unknown';
+      const key = record[breakdownField] || "Unknown";
       const current = breakdown.get(key) || { spend: 0, count: 0 };
       breakdown.set(key, {
         spend: current.spend + record.amount,
@@ -122,7 +129,8 @@ export function DrillDownModal({
         name,
         spend,
         count,
-        percentage: metrics.totalSpend > 0 ? (spend / metrics.totalSpend) * 100 : 0,
+        percentage:
+          metrics.totalSpend > 0 ? (spend / metrics.totalSpend) * 100 : 0,
       }))
       .sort((a, b) => b.spend - a.spend)
       .slice(0, 10); // Top 10
@@ -132,13 +140,13 @@ export function DrillDownModal({
   const pieChartConfig = useMemo(() => {
     return {
       tooltip: {
-        trigger: 'item' as const,
-        formatter: '{b}: {c} ({d}%)',
+        trigger: "item" as const,
+        formatter: "{b}: {c} ({d}%)",
       },
       series: [
         {
-          type: 'pie' as const,
-          radius: ['40%', '70%'],
+          type: "pie" as const,
+          radius: ["40%", "70%"],
           data: subBreakdown.map((item) => ({
             name: item.name,
             value: Math.round(item.spend),
@@ -147,7 +155,7 @@ export function DrillDownModal({
             itemStyle: {
               shadowBlur: 10,
               shadowOffsetX: 0,
-              shadowColor: 'rgba(0, 0, 0, 0.5)',
+              shadowColor: "rgba(0, 0, 0, 0.5)",
             },
           },
           label: {
@@ -168,9 +176,9 @@ export function DrillDownModal({
 
   const getEntityIcon = () => {
     switch (entityType) {
-      case 'category':
+      case "category":
         return <ShoppingCart className="h-5 w-5" />;
-      case 'supplier':
+      case "supplier":
         return <Building2 className="h-5 w-5" />;
       default:
         return <DollarSign className="h-5 w-5" />;
@@ -193,7 +201,9 @@ export function DrillDownModal({
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="pt-4">
-                  <div className="text-sm text-muted-foreground">Total Spend</div>
+                  <div className="text-sm text-muted-foreground">
+                    Total Spend
+                  </div>
                   <div className="text-2xl font-bold">
                     {formatCurrency(metrics.totalSpend)}
                   </div>
@@ -205,7 +215,9 @@ export function DrillDownModal({
 
               <Card>
                 <CardContent className="pt-4">
-                  <div className="text-sm text-muted-foreground">Transactions</div>
+                  <div className="text-sm text-muted-foreground">
+                    Transactions
+                  </div>
                   <div className="text-2xl font-bold">
                     {metrics.transactionCount.toLocaleString()}
                   </div>
@@ -214,7 +226,9 @@ export function DrillDownModal({
 
               <Card>
                 <CardContent className="pt-4">
-                  <div className="text-sm text-muted-foreground">Avg Transaction</div>
+                  <div className="text-sm text-muted-foreground">
+                    Avg Transaction
+                  </div>
                   <div className="text-2xl font-bold">
                     {formatCurrency(metrics.avgTransaction)}
                   </div>
@@ -224,10 +238,10 @@ export function DrillDownModal({
               <Card>
                 <CardContent className="pt-4">
                   <div className="text-sm text-muted-foreground">
-                    {entityType === 'supplier' ? 'Categories' : 'Suppliers'}
+                    {entityType === "supplier" ? "Categories" : "Suppliers"}
                   </div>
                   <div className="text-2xl font-bold">
-                    {entityType === 'supplier'
+                    {entityType === "supplier"
                       ? metrics.uniqueCategories
                       : metrics.uniqueSuppliers}
                   </div>
@@ -242,7 +256,8 @@ export function DrillDownModal({
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base">
-                      Breakdown by {entityType === 'supplier' ? 'Category' : 'Supplier'}
+                      Breakdown by{" "}
+                      {entityType === "supplier" ? "Category" : "Supplier"}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -259,7 +274,8 @@ export function DrillDownModal({
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base">
-                      Top {entityType === 'supplier' ? 'Categories' : 'Suppliers'}
+                      Top{" "}
+                      {entityType === "supplier" ? "Categories" : "Suppliers"}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -270,10 +286,16 @@ export function DrillDownModal({
                           className="flex items-center justify-between py-2 border-b last:border-0"
                         >
                           <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="w-6 h-6 justify-center p-0">
+                            <Badge
+                              variant="outline"
+                              className="w-6 h-6 justify-center p-0"
+                            >
                               {index + 1}
                             </Badge>
-                            <span className="text-sm truncate max-w-[150px]" title={item.name}>
+                            <span
+                              className="text-sm truncate max-w-[150px]"
+                              title={item.name}
+                            >
                               {item.name}
                             </span>
                           </div>
@@ -307,10 +329,13 @@ export function DrillDownModal({
                     >
                       <div>
                         <div className="text-sm font-medium">
-                          {entityType === 'supplier' ? tx.category : tx.supplier}
+                          {entityType === "supplier"
+                            ? tx.category
+                            : tx.supplier}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {formatDate(tx.date)} • {tx.subcategory || 'No subcategory'}
+                          {formatDate(tx.date)} •{" "}
+                          {tx.subcategory || "No subcategory"}
                         </div>
                       </div>
                       <div className="text-sm font-medium">

@@ -28,12 +28,12 @@
  * ```
  */
 
-import { type ReactNode, useEffect, useRef } from 'react';
-import { Redirect, useLocation } from 'wouter';
-import { toast } from 'sonner';
-import { usePermissions } from '@/contexts/PermissionContext';
-import type { Permission } from '@/types/permissions';
-import type { UserRole } from '@/lib/api';
+import { type ReactNode, useEffect, useRef } from "react";
+import { Redirect, useLocation } from "wouter";
+import { toast } from "sonner";
+import { usePermissions } from "@/contexts/PermissionContext";
+import type { Permission } from "@/types/permissions";
+import type { UserRole } from "@/lib/api";
 
 interface RoleGuardProps {
   /** Content to render if user has permission */
@@ -68,23 +68,26 @@ export function RoleGuard({
   children,
   requires,
   minRole,
-  redirectTo = '/',
+  redirectTo = "/",
   fallback,
   showToast = true,
   denialMessage,
 }: RoleGuardProps) {
-  const { hasPermission, hasAllPermissions, isAtLeast, getDenialMessage } = usePermissions();
+  const { hasPermission, hasAllPermissions, isAtLeast, getDenialMessage } =
+    usePermissions();
   const [location] = useLocation();
   const hasShownToast = useRef(false);
 
   // Determine if user has access
   let hasAccess = true;
-  let denialReason = denialMessage || 'You do not have permission to access this page';
+  let denialReason =
+    denialMessage || "You do not have permission to access this page";
 
   // Check minimum role requirement
   if (minRole && !isAtLeast(minRole)) {
     hasAccess = false;
-    denialReason = denialMessage || `This page requires ${minRole} role or higher`;
+    denialReason =
+      denialMessage || `This page requires ${minRole} role or higher`;
   }
 
   // Check specific permission requirement
@@ -98,8 +101,13 @@ export function RoleGuard({
 
   // Show toast notification on first denial (avoid duplicates on re-renders)
   useEffect(() => {
-    if (!hasAccess && showToast && !hasShownToast.current && location !== redirectTo) {
-      toast.error(denialReason, { id: 'role-guard-denial' });
+    if (
+      !hasAccess &&
+      showToast &&
+      !hasShownToast.current &&
+      location !== redirectTo
+    ) {
+      toast.error(denialReason, { id: "role-guard-denial" });
       hasShownToast.current = true;
     }
   }, [hasAccess, showToast, denialReason, location, redirectTo]);
@@ -131,10 +139,10 @@ export function RoleGuard({
  */
 export function AdminRoute({
   children,
-  redirectTo = '/',
+  redirectTo = "/",
   showToast = true,
   fallback,
-}: Omit<RoleGuardProps, 'requires' | 'minRole'>) {
+}: Omit<RoleGuardProps, "requires" | "minRole">) {
   return (
     <RoleGuard
       requires="admin_panel"
@@ -152,10 +160,10 @@ export function AdminRoute({
  */
 export function ManagerRoute({
   children,
-  redirectTo = '/',
+  redirectTo = "/",
   showToast = true,
   fallback,
-}: Omit<RoleGuardProps, 'requires' | 'minRole'>) {
+}: Omit<RoleGuardProps, "requires" | "minRole">) {
   return (
     <RoleGuard
       minRole="manager"

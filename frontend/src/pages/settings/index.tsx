@@ -1,5 +1,5 @@
-import { PlaceholderPage } from '@/components/PlaceholderPage';
-import { Settings as SettingsIcon } from 'lucide-react';
+import { PlaceholderPage } from "@/components/PlaceholderPage";
+import { Settings as SettingsIcon } from "lucide-react";
 
 export default function SettingsPage() {
   return (

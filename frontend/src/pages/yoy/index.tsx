@@ -1,5 +1,5 @@
-import { PlaceholderPage } from '@/components/PlaceholderPage';
-import { BarChart3 } from 'lucide-react';
+import { PlaceholderPage } from "@/components/PlaceholderPage";
+import { BarChart3 } from "lucide-react";
 
 export default function YoYPage() {
   return (

@@ -4,7 +4,7 @@
  * Provides TanStack Query hooks for report generation, listing,
  * downloading, and scheduling.
  */
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   reportsAPI,
   getOrganizationParam,
@@ -15,7 +15,7 @@ import {
   ReportScheduleRequest,
   ReportShareRequest,
   ReportPreviewData,
-} from '@/lib/api';
+} from "@/lib/api";
 
 /**
  * Get the current organization ID for query key inclusion.
@@ -35,7 +35,7 @@ function getOrgKeyPart(): number | undefined {
 export function useReportTemplates() {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['report-templates', { orgId }],
+    queryKey: ["report-templates", { orgId }],
     queryFn: async () => {
       const response = await reportsAPI.getTemplates();
       return response.data;
@@ -50,9 +50,9 @@ export function useReportTemplates() {
 export function useReportTemplate(templateId: string | null) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['report-template', templateId, { orgId }],
+    queryKey: ["report-template", templateId, { orgId }],
     queryFn: async () => {
-      if (!templateId) throw new Error('Template ID required');
+      if (!templateId) throw new Error("Template ID required");
       const response = await reportsAPI.getTemplate(templateId);
       return response.data;
     },
@@ -71,7 +71,7 @@ export function useReportHistory(params?: {
 }) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['reports', params, { orgId }],
+    queryKey: ["reports", params, { orgId }],
     queryFn: async () => {
       const response = await reportsAPI.getReports(params);
       return response.data;
@@ -85,9 +85,9 @@ export function useReportHistory(params?: {
 export function useReportDetail(reportId: string | null) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['report', reportId, { orgId }],
+    queryKey: ["report", reportId, { orgId }],
     queryFn: async () => {
-      if (!reportId) throw new Error('Report ID required');
+      if (!reportId) throw new Error("Report ID required");
       const response = await reportsAPI.getReport(reportId);
       return response.data;
     },
@@ -99,12 +99,15 @@ export function useReportDetail(reportId: string | null) {
  * Poll for report generation status.
  * Automatically refetches every 2 seconds while status is 'generating'.
  */
-export function useReportStatus(reportId: string | null, enabled: boolean = true) {
+export function useReportStatus(
+  reportId: string | null,
+  enabled: boolean = true,
+) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['report-status', reportId, { orgId }],
+    queryKey: ["report-status", reportId, { orgId }],
     queryFn: async () => {
-      if (!reportId) throw new Error('Report ID required');
+      if (!reportId) throw new Error("Report ID required");
       const response = await reportsAPI.getStatus(reportId);
       return response.data;
     },
@@ -112,7 +115,7 @@ export function useReportStatus(reportId: string | null, enabled: boolean = true
     refetchInterval: (query) => {
       // Poll every 2 seconds while generating
       const status = query.state.data?.status;
-      return status === 'generating' ? 2000 : false;
+      return status === "generating" ? 2000 : false;
     },
   });
 }
@@ -123,7 +126,7 @@ export function useReportStatus(reportId: string | null, enabled: boolean = true
 export function useReportSchedules() {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['report-schedules', { orgId }],
+    queryKey: ["report-schedules", { orgId }],
     queryFn: async () => {
       const response = await reportsAPI.getSchedules();
       return response.data;
@@ -137,9 +140,9 @@ export function useReportSchedules() {
 export function useScheduleDetail(scheduleId: string | null) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['report-schedule', scheduleId, { orgId }],
+    queryKey: ["report-schedule", scheduleId, { orgId }],
     queryFn: async () => {
-      if (!scheduleId) throw new Error('Schedule ID required');
+      if (!scheduleId) throw new Error("Schedule ID required");
       const response = await reportsAPI.getSchedule(scheduleId);
       return response.data;
     },
@@ -165,7 +168,7 @@ export function useGenerateReport() {
     },
     onSuccess: () => {
       // Invalidate report list to show new report
-      queryClient.invalidateQueries({ queryKey: ['reports'] });
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
     },
   });
 }
@@ -183,9 +186,9 @@ export function useDeleteReport() {
     },
     onSuccess: (reportId) => {
       // Invalidate report list
-      queryClient.invalidateQueries({ queryKey: ['reports'] });
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
       // Remove specific report from cache
-      queryClient.removeQueries({ queryKey: ['report', reportId] });
+      queryClient.removeQueries({ queryKey: ["report", reportId] });
     },
   });
 }
@@ -195,7 +198,11 @@ export function useDeleteReport() {
  */
 export function useDownloadReport() {
   return useMutation({
-    mutationFn: async ({ reportId, format, filename }: {
+    mutationFn: async ({
+      reportId,
+      format,
+      filename,
+    }: {
       reportId: string;
       format?: ReportFormat;
       filename?: string;
@@ -204,9 +211,9 @@ export function useDownloadReport() {
 
       // Create download link
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.download = filename || `report-${reportId}.${format || 'pdf'}`;
+      link.download = filename || `report-${reportId}.${format || "pdf"}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -224,7 +231,10 @@ export function useShareReport() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ reportId, data }: {
+    mutationFn: async ({
+      reportId,
+      data,
+    }: {
       reportId: string;
       data: ReportShareRequest;
     }) => {
@@ -233,7 +243,7 @@ export function useShareReport() {
     },
     onSuccess: (data, { reportId }) => {
       // Update specific report in cache
-      queryClient.setQueryData(['report', reportId], data);
+      queryClient.setQueryData(["report", reportId], data);
     },
   });
 }
@@ -250,7 +260,7 @@ export function useCreateSchedule() {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['report-schedules'] });
+      queryClient.invalidateQueries({ queryKey: ["report-schedules"] });
     },
   });
 }
@@ -262,7 +272,10 @@ export function useUpdateSchedule() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ scheduleId, data }: {
+    mutationFn: async ({
+      scheduleId,
+      data,
+    }: {
       scheduleId: string;
       data: Partial<ReportScheduleRequest>;
     }) => {
@@ -270,8 +283,8 @@ export function useUpdateSchedule() {
       return response.data;
     },
     onSuccess: (data, { scheduleId }) => {
-      queryClient.invalidateQueries({ queryKey: ['report-schedules'] });
-      queryClient.setQueryData(['report-schedule', scheduleId], data);
+      queryClient.invalidateQueries({ queryKey: ["report-schedules"] });
+      queryClient.setQueryData(["report-schedule", scheduleId], data);
     },
   });
 }
@@ -288,8 +301,8 @@ export function useDeleteSchedule() {
       return scheduleId;
     },
     onSuccess: (scheduleId) => {
-      queryClient.invalidateQueries({ queryKey: ['report-schedules'] });
-      queryClient.removeQueries({ queryKey: ['report-schedule', scheduleId] });
+      queryClient.invalidateQueries({ queryKey: ["report-schedules"] });
+      queryClient.removeQueries({ queryKey: ["report-schedule", scheduleId] });
     },
   });
 }
@@ -307,8 +320,8 @@ export function useRunScheduleNow() {
     },
     onSuccess: () => {
       // Refresh reports list to show generating report
-      queryClient.invalidateQueries({ queryKey: ['reports'] });
-      queryClient.invalidateQueries({ queryKey: ['report-schedules'] });
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
+      queryClient.invalidateQueries({ queryKey: ["report-schedules"] });
     },
   });
 }
@@ -319,7 +332,9 @@ export function useRunScheduleNow() {
  */
 export function useReportPreview() {
   return useMutation({
-    mutationFn: async (data: ReportGenerateRequest): Promise<ReportPreviewData> => {
+    mutationFn: async (
+      data: ReportGenerateRequest,
+    ): Promise<ReportPreviewData> => {
       const response = await reportsAPI.preview(data);
       return response.data;
     },

@@ -4,9 +4,9 @@
  * All hooks include organization_id in query keys to properly
  * invalidate cache when switching organizations (superuser feature).
  */
-import { useQuery } from '@tanstack/react-query';
-import { analyticsAPI, getOrganizationParam } from '@/lib/api';
-import type { TrendDirection } from '@/lib/api';
+import { useQuery } from "@tanstack/react-query";
+import { analyticsAPI, getOrganizationParam } from "@/lib/api";
+import type { TrendDirection } from "@/lib/api";
 
 /**
  * Get the current organization ID for query key inclusion.
@@ -23,7 +23,7 @@ function getOrgKeyPart(): number | undefined {
 export function useSpendingForecast(months: number = 6) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['spending-forecast', months, { orgId }],
+    queryKey: ["spending-forecast", months, { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getSpendingForecast(months);
       return response.data;
@@ -39,9 +39,12 @@ export function useSpendingForecast(months: number = 6) {
 export function useCategoryForecast(categoryId: number, months: number = 6) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['category-forecast', categoryId, months, { orgId }],
+    queryKey: ["category-forecast", categoryId, months, { orgId }],
     queryFn: async () => {
-      const response = await analyticsAPI.getCategoryForecast(categoryId, months);
+      const response = await analyticsAPI.getCategoryForecast(
+        categoryId,
+        months,
+      );
       return response.data;
     },
     staleTime: 5 * 60 * 1000,
@@ -55,9 +58,12 @@ export function useCategoryForecast(categoryId: number, months: number = 6) {
 export function useSupplierForecast(supplierId: number, months: number = 6) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['supplier-forecast', supplierId, months, { orgId }],
+    queryKey: ["supplier-forecast", supplierId, months, { orgId }],
     queryFn: async () => {
-      const response = await analyticsAPI.getSupplierForecast(supplierId, months);
+      const response = await analyticsAPI.getSupplierForecast(
+        supplierId,
+        months,
+      );
       return response.data;
     },
     staleTime: 5 * 60 * 1000,
@@ -71,7 +77,7 @@ export function useSupplierForecast(supplierId: number, months: number = 6) {
 export function useTrendAnalysis() {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['trend-analysis', { orgId }],
+    queryKey: ["trend-analysis", { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getTrendAnalysis();
       return response.data;
@@ -86,7 +92,7 @@ export function useTrendAnalysis() {
 export function useBudgetProjection(annualBudget: number) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ['budget-projection', annualBudget, { orgId }],
+    queryKey: ["budget-projection", annualBudget, { orgId }],
     queryFn: async () => {
       const response = await analyticsAPI.getBudgetProjection(annualBudget);
       return response.data;
@@ -103,26 +109,26 @@ export function getTrendDisplay(direction: TrendDirection): {
   label: string;
   color: string;
   bgColor: string;
-  icon: 'up' | 'down' | 'stable';
+  icon: "up" | "down" | "stable";
 } {
   const displays = {
     increasing: {
-      label: 'Increasing',
-      color: 'text-red-600',
-      bgColor: 'bg-red-100',
-      icon: 'up' as const,
+      label: "Increasing",
+      color: "text-red-600",
+      bgColor: "bg-red-100",
+      icon: "up" as const,
     },
     decreasing: {
-      label: 'Decreasing',
-      color: 'text-green-600',
-      bgColor: 'bg-green-100',
-      icon: 'down' as const,
+      label: "Decreasing",
+      color: "text-green-600",
+      bgColor: "bg-green-100",
+      icon: "down" as const,
     },
     stable: {
-      label: 'Stable',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100',
-      icon: 'stable' as const,
+      label: "Stable",
+      color: "text-blue-600",
+      bgColor: "bg-blue-100",
+      icon: "stable" as const,
     },
   };
   return displays[direction] || displays.stable;
@@ -133,7 +139,7 @@ export function getTrendDisplay(direction: TrendDirection): {
  */
 export function formatChangeRate(rate: number): string {
   const percentage = rate * 100;
-  const sign = percentage >= 0 ? '+' : '';
+  const sign = percentage >= 0 ? "+" : "";
   return `${sign}${percentage.toFixed(1)}%`;
 }
 
@@ -145,26 +151,29 @@ export function getBudgetStatusDisplay(status: string): {
   color: string;
   bgColor: string;
 } {
-  const displays: Record<string, { label: string; color: string; bgColor: string }> = {
+  const displays: Record<
+    string,
+    { label: string; color: string; bgColor: string }
+  > = {
     under_budget: {
-      label: 'Under Budget',
-      color: 'text-green-600',
-      bgColor: 'bg-green-100',
+      label: "Under Budget",
+      color: "text-green-600",
+      bgColor: "bg-green-100",
     },
     over_budget: {
-      label: 'Over Budget',
-      color: 'text-red-600',
-      bgColor: 'bg-red-100',
+      label: "Over Budget",
+      color: "text-red-600",
+      bgColor: "bg-red-100",
     },
     on_track: {
-      label: 'On Track',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100',
+      label: "On Track",
+      color: "text-blue-600",
+      bgColor: "bg-blue-100",
     },
     no_data: {
-      label: 'No Data',
-      color: 'text-gray-600',
-      bgColor: 'bg-gray-100',
+      label: "No Data",
+      color: "text-gray-600",
+      bgColor: "bg-gray-100",
     },
   };
   return displays[status] || displays.no_data;

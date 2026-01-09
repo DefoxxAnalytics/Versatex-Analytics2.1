@@ -73,9 +73,23 @@
       "Bash(node -c:*)",
       "Bash(xargs cat:*)",
       "Bash(xargs ls:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(pnpm build:*)",
+      "Bash(docker inspect:*)",
+      "Bash(if exist \"%USERPROFILE%\\\\.claude\\\\settings.json\" type \"%USERPROFILE%\\\\.claude\\\\settings.json\")",
+      "Skill(playwright-skill)",
+      "Bash(npm run setup:*)",
+      "Bash(node -e:*)",
+      "Bash(npm run check:*)",
+      "Bash(pnpm format:*)",
+      "Bash(docker run:*)",
+      "Bash(docker stop:*)",
+      "Bash(docker rm:*)",
+      "Bash(docker rmi:*)"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": []
 }

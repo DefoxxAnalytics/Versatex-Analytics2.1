@@ -5,7 +5,7 @@
  * Shows root cause analysis, implementation roadmap, financial impact, risks, and more.
  */
 
-import { useState } from 'react';
+import { useState } from "react";
 import {
   X,
   ChevronRight,
@@ -19,25 +19,25 @@ import {
   TrendingUp,
   Shield,
   Lightbulb,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { AIInsight } from '@/lib/api';
+} from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { AIInsight } from "@/lib/api";
 import type {
   DeepAnalysis,
   DeepAnalysisStatus,
   DeepAnalysisRiskFactor,
-} from '@/hooks/useAIInsights';
-import { getDeepAnalysisRiskColor, getPhaseColor } from '@/hooks/useAIInsights';
+} from "@/hooks/useAIInsights";
+import { getDeepAnalysisRiskColor, getPhaseColor } from "@/hooks/useAIInsights";
 
 interface DeepAnalysisModalProps {
   open: boolean;
@@ -52,19 +52,30 @@ interface DeepAnalysisModalProps {
 }
 
 function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
 }
 
-function RiskBadge({ likelihood, impact }: { likelihood: 'high' | 'medium' | 'low'; impact: 'high' | 'medium' | 'low' }) {
+function RiskBadge({
+  likelihood,
+  impact,
+}: {
+  likelihood: "high" | "medium" | "low";
+  impact: "high" | "medium" | "low";
+}) {
   const colorClass = getDeepAnalysisRiskColor(likelihood, impact);
-  const riskLevel = likelihood === 'high' && impact === 'high' ? 'Critical' :
-                    likelihood === 'high' || impact === 'high' ? 'High' :
-                    likelihood === 'medium' || impact === 'medium' ? 'Medium' : 'Low';
+  const riskLevel =
+    likelihood === "high" && impact === "high"
+      ? "Critical"
+      : likelihood === "high" || impact === "high"
+        ? "High"
+        : likelihood === "medium" || impact === "medium"
+          ? "Medium"
+          : "Low";
   return (
     <Badge variant="outline" className={colorClass}>
       {riskLevel}
@@ -83,7 +94,7 @@ export function DeepAnalysisModal({
   onRequestAnalysis,
   isRequesting,
 }: DeepAnalysisModalProps) {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState("overview");
 
   if (!insight) return null;
 
@@ -93,7 +104,9 @@ export function DeepAnalysisModal({
       <div className="text-center">
         <p className="text-lg font-medium">Analyzing Insight...</p>
         <p className="text-sm text-muted-foreground mt-1">
-          {status === 'processing' ? `Processing... ${progress}%` : 'Queued for analysis'}
+          {status === "processing"
+            ? `Processing... ${progress}%`
+            : "Queued for analysis"}
         </p>
       </div>
       <Progress value={progress} className="w-64" />
@@ -105,7 +118,9 @@ export function DeepAnalysisModal({
       <AlertTriangle className="h-12 w-12 text-red-500" />
       <div className="text-center">
         <p className="text-lg font-medium text-red-600">Analysis Failed</p>
-        <p className="text-sm text-muted-foreground mt-1">{error || 'An error occurred during analysis'}</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          {error || "An error occurred during analysis"}
+        </p>
       </div>
       <button
         onClick={onRequestAnalysis}
@@ -123,7 +138,8 @@ export function DeepAnalysisModal({
       <div className="text-center max-w-md">
         <p className="text-lg font-medium">Deep Analysis Available</p>
         <p className="text-sm text-muted-foreground mt-2">
-          Get comprehensive analysis including root cause investigation, implementation roadmap, financial impact assessment, and risk factors.
+          Get comprehensive analysis including root cause investigation,
+          implementation roadmap, financial impact assessment, and risk factors.
         </p>
       </div>
       <button
@@ -183,29 +199,44 @@ export function DeepAnalysisModal({
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase">Primary Cause</p>
-                <p className="text-sm mt-1">{analysis.root_cause_analysis.primary_cause}</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase">
+                  Primary Cause
+                </p>
+                <p className="text-sm mt-1">
+                  {analysis.root_cause_analysis.primary_cause}
+                </p>
               </div>
-              {analysis.root_cause_analysis.contributing_factors && analysis.root_cause_analysis.contributing_factors.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase">Contributing Factors</p>
-                  <ul className="list-disc list-inside text-sm mt-1 space-y-1">
-                    {analysis.root_cause_analysis.contributing_factors.map((factor, i) => (
-                      <li key={i}>{factor}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {analysis.root_cause_analysis.systemic_issues && analysis.root_cause_analysis.systemic_issues.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase">Systemic Issues</p>
-                  <ul className="list-disc list-inside text-sm mt-1 space-y-1">
-                    {analysis.root_cause_analysis.systemic_issues.map((issue, i) => (
-                      <li key={i}>{issue}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {analysis.root_cause_analysis.contributing_factors &&
+                analysis.root_cause_analysis.contributing_factors.length >
+                  0 && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase">
+                      Contributing Factors
+                    </p>
+                    <ul className="list-disc list-inside text-sm mt-1 space-y-1">
+                      {analysis.root_cause_analysis.contributing_factors.map(
+                        (factor, i) => (
+                          <li key={i}>{factor}</li>
+                        ),
+                      )}
+                    </ul>
+                  </div>
+                )}
+              {analysis.root_cause_analysis.systemic_issues &&
+                analysis.root_cause_analysis.systemic_issues.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase">
+                      Systemic Issues
+                    </p>
+                    <ul className="list-disc list-inside text-sm mt-1 space-y-1">
+                      {analysis.root_cause_analysis.systemic_issues.map(
+                        (issue, i) => (
+                          <li key={i}>{issue}</li>
+                        ),
+                      )}
+                    </ul>
+                  </div>
+                )}
             </CardContent>
           </Card>
 
@@ -238,20 +269,29 @@ export function DeepAnalysisModal({
               <CardContent className="space-y-2">
                 {analysis.industry_context.benchmark && (
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase">Benchmark</p>
-                    <p className="text-sm mt-1">{analysis.industry_context.benchmark}</p>
+                    <p className="text-xs font-medium text-muted-foreground uppercase">
+                      Benchmark
+                    </p>
+                    <p className="text-sm mt-1">
+                      {analysis.industry_context.benchmark}
+                    </p>
                   </div>
                 )}
-                {analysis.industry_context.best_practices && analysis.industry_context.best_practices.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase">Best Practices</p>
-                    <ul className="list-disc list-inside text-sm mt-1 space-y-1">
-                      {analysis.industry_context.best_practices.map((practice, i) => (
-                        <li key={i}>{practice}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                {analysis.industry_context.best_practices &&
+                  analysis.industry_context.best_practices.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase">
+                        Best Practices
+                      </p>
+                      <ul className="list-disc list-inside text-sm mt-1 space-y-1">
+                        {analysis.industry_context.best_practices.map(
+                          (practice, i) => (
+                            <li key={i}>{practice}</li>
+                          ),
+                        )}
+                      </ul>
+                    </div>
+                  )}
               </CardContent>
             </Card>
           )}
@@ -261,11 +301,19 @@ export function DeepAnalysisModal({
           <div className="space-y-4">
             {analysis.implementation_roadmap.map((phase, index) => (
               <Card key={index} className="relative overflow-hidden">
-                <div className={`absolute left-0 top-0 bottom-0 w-1 ${getPhaseColor(index, analysis.implementation_roadmap.length).split(' ')[0]}`} />
+                <div
+                  className={`absolute left-0 top-0 bottom-0 w-1 ${getPhaseColor(index, analysis.implementation_roadmap.length).split(" ")[0]}`}
+                />
                 <CardHeader className="pb-2 pl-5">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <Badge variant="outline" className={getPhaseColor(index, analysis.implementation_roadmap.length)}>
+                      <Badge
+                        variant="outline"
+                        className={getPhaseColor(
+                          index,
+                          analysis.implementation_roadmap.length,
+                        )}
+                      >
                         Phase {phase.phase}
                       </Badge>
                       {phase.title}
@@ -280,7 +328,9 @@ export function DeepAnalysisModal({
                 </CardHeader>
                 <CardContent className="pl-5 space-y-3">
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase">Tasks</p>
+                    <p className="text-xs font-medium text-muted-foreground uppercase">
+                      Tasks
+                    </p>
                     <ul className="text-sm mt-1 space-y-1">
                       {phase.tasks.map((task, i) => (
                         <li key={i} className="flex items-start gap-2">
@@ -292,7 +342,9 @@ export function DeepAnalysisModal({
                   </div>
                   {phase.deliverables && phase.deliverables.length > 0 && (
                     <div>
-                      <p className="text-xs font-medium text-muted-foreground uppercase">Deliverables</p>
+                      <p className="text-xs font-medium text-muted-foreground uppercase">
+                        Deliverables
+                      </p>
                       <ul className="text-sm mt-1 space-y-1">
                         {phase.deliverables.map((deliverable, i) => (
                           <li key={i} className="flex items-center gap-2">
@@ -305,10 +357,16 @@ export function DeepAnalysisModal({
                   )}
                   {phase.dependencies && phase.dependencies.length > 0 && (
                     <div>
-                      <p className="text-xs font-medium text-muted-foreground uppercase">Dependencies</p>
+                      <p className="text-xs font-medium text-muted-foreground uppercase">
+                        Dependencies
+                      </p>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {phase.dependencies.map((dep, i) => (
-                          <Badge key={i} variant="secondary" className="text-xs">
+                          <Badge
+                            key={i}
+                            variant="secondary"
+                            className="text-xs"
+                          >
                             {dep}
                           </Badge>
                         ))}
@@ -329,10 +387,14 @@ export function DeepAnalysisModal({
                 <CardContent className="pt-4">
                   <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
                     <DollarSign className="h-4 w-4" />
-                    <span className="text-xs font-medium uppercase">Estimated Savings</span>
+                    <span className="text-xs font-medium uppercase">
+                      Estimated Savings
+                    </span>
                   </div>
                   <p className="text-2xl font-bold mt-1">
-                    {formatCurrency(analysis.financial_impact.estimated_savings)}
+                    {formatCurrency(
+                      analysis.financial_impact.estimated_savings,
+                    )}
                   </p>
                 </CardContent>
               </Card>
@@ -342,10 +404,14 @@ export function DeepAnalysisModal({
                 <CardContent className="pt-4">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <DollarSign className="h-4 w-4" />
-                    <span className="text-xs font-medium uppercase">Implementation Cost</span>
+                    <span className="text-xs font-medium uppercase">
+                      Implementation Cost
+                    </span>
                   </div>
                   <p className="text-2xl font-bold mt-1">
-                    {formatCurrency(analysis.financial_impact.implementation_cost)}
+                    {formatCurrency(
+                      analysis.financial_impact.implementation_cost,
+                    )}
                   </p>
                 </CardContent>
               </Card>
@@ -355,7 +421,9 @@ export function DeepAnalysisModal({
                 <CardContent className="pt-4">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Clock className="h-4 w-4" />
-                    <span className="text-xs font-medium uppercase">Payback Period</span>
+                    <span className="text-xs font-medium uppercase">
+                      Payback Period
+                    </span>
                   </div>
                   <p className="text-2xl font-bold mt-1">
                     {analysis.financial_impact.payback_period}
@@ -368,7 +436,9 @@ export function DeepAnalysisModal({
                 <CardContent className="pt-4">
                   <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
                     <TrendingUp className="h-4 w-4" />
-                    <span className="text-xs font-medium uppercase">Expected ROI</span>
+                    <span className="text-xs font-medium uppercase">
+                      Expected ROI
+                    </span>
                   </div>
                   <p className="text-2xl font-bold mt-1">
                     {analysis.financial_impact.roi_percentage}%
@@ -379,30 +449,42 @@ export function DeepAnalysisModal({
           </div>
 
           {/* Savings Breakdown */}
-          {analysis.financial_impact.savings_breakdown && analysis.financial_impact.savings_breakdown.length > 0 && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Savings Breakdown</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {analysis.financial_impact.savings_breakdown.map((item, i) => (
-                    <div key={i} className="flex items-center justify-between border-b pb-2 last:border-0">
-                      <div>
-                        <p className="text-sm font-medium">{item.category}</p>
-                        {item.description && (
-                          <p className="text-xs text-muted-foreground">{item.description}</p>
-                        )}
-                      </div>
-                      <span className="font-semibold text-green-600">
-                        {formatCurrency(item.amount)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {analysis.financial_impact.savings_breakdown &&
+            analysis.financial_impact.savings_breakdown.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Savings Breakdown
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {analysis.financial_impact.savings_breakdown.map(
+                      (item, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center justify-between border-b pb-2 last:border-0"
+                        >
+                          <div>
+                            <p className="text-sm font-medium">
+                              {item.category}
+                            </p>
+                            {item.description && (
+                              <p className="text-xs text-muted-foreground">
+                                {item.description}
+                              </p>
+                            )}
+                          </div>
+                          <span className="font-semibold text-green-600">
+                            {formatCurrency(item.amount)}
+                          </span>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
         </TabsContent>
 
         <TabsContent value="risks" className="space-y-4 mt-4">
@@ -417,16 +499,29 @@ export function DeepAnalysisModal({
                         <div>
                           <p className="text-sm font-medium">{risk.risk}</p>
                           <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                            <span>Likelihood: <span className="capitalize">{risk.likelihood}</span></span>
+                            <span>
+                              Likelihood:{" "}
+                              <span className="capitalize">
+                                {risk.likelihood}
+                              </span>
+                            </span>
                             <span>|</span>
-                            <span>Impact: <span className="capitalize">{risk.impact}</span></span>
+                            <span>
+                              Impact:{" "}
+                              <span className="capitalize">{risk.impact}</span>
+                            </span>
                           </div>
                         </div>
                       </div>
-                      <RiskBadge likelihood={risk.likelihood} impact={risk.impact} />
+                      <RiskBadge
+                        likelihood={risk.likelihood}
+                        impact={risk.impact}
+                      />
                     </div>
                     <div className="mt-3 pl-8">
-                      <p className="text-xs font-medium text-muted-foreground uppercase">Mitigation</p>
+                      <p className="text-xs font-medium text-muted-foreground uppercase">
+                        Mitigation
+                      </p>
                       <p className="text-sm mt-1">{risk.mitigation}</p>
                     </div>
                   </CardContent>
@@ -454,10 +549,18 @@ export function DeepAnalysisModal({
               <CardContent>
                 <div className="space-y-4">
                   {analysis.success_metrics.map((metric, i) => (
-                    <div key={i} className="border-b pb-3 last:border-0 last:pb-0">
+                    <div
+                      key={i}
+                      className="border-b pb-3 last:border-0 last:pb-0"
+                    >
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{metric.metric}</span>
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        <span className="text-sm font-medium">
+                          {metric.metric}
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className="bg-green-50 text-green-700 border-green-200"
+                        >
                           Target: {metric.target}
                         </Badge>
                       </div>
@@ -490,8 +593,12 @@ export function DeepAnalysisModal({
                         <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium">{stakeholder.role}</p>
-                        <p className="text-xs text-muted-foreground">{stakeholder.responsibility}</p>
+                        <p className="text-sm font-medium">
+                          {stakeholder.role}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {stakeholder.responsibility}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -512,17 +619,21 @@ export function DeepAnalysisModal({
             <span>Deep Analysis: {insight.title}</span>
             {analysis && (
               <Badge variant="outline" className="ml-2 text-xs">
-                {analysis.provider === 'anthropic' ? 'Claude' : 'GPT-4'}
+                {analysis.provider === "anthropic" ? "Claude" : "GPT-4"}
               </Badge>
             )}
           </DialogTitle>
         </DialogHeader>
         <ScrollArea className="flex-1 -mx-6 px-6">
-          {status === 'not_found' || !status ? renderNotStartedState() :
-           status === 'processing' ? renderLoadingState() :
-           status === 'failed' ? renderErrorState() :
-           status === 'completed' && analysis ? renderAnalysis() :
-           renderNotStartedState()}
+          {status === "not_found" || !status
+            ? renderNotStartedState()
+            : status === "processing"
+              ? renderLoadingState()
+              : status === "failed"
+                ? renderErrorState()
+                : status === "completed" && analysis
+                  ? renderAnalysis()
+                  : renderNotStartedState()}
         </ScrollArea>
       </DialogContent>
     </Dialog>

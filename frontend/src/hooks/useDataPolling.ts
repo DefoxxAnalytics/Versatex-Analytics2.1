@@ -5,9 +5,9 @@
  * Shows notification when data count changes, prompting user to refresh.
  */
 
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { procurementAPI } from '@/lib/api';
-import { toast } from 'sonner';
+import { useEffect, useRef, useState, useCallback } from "react";
+import { procurementAPI } from "@/lib/api";
+import { toast } from "sonner";
 
 const POLLING_INTERVAL = 60000; // 60 seconds
 
@@ -35,11 +35,7 @@ interface UseDataPollingOptions {
  * Hook for polling backend for new data
  */
 export function useDataPolling(options: UseDataPollingOptions = {}) {
-  const {
-    interval = POLLING_INTERVAL,
-    enabled = true,
-    onNewData,
-  } = options;
+  const { interval = POLLING_INTERVAL, enabled = true, onNewData } = options;
 
   const [state, setState] = useState<PollingState>({
     isPolling: false,
@@ -80,22 +76,25 @@ export function useDataPolling(options: UseDataPollingOptions = {}) {
           // Show toast notification
           const diff = currentCount - prev.lastCount;
           if (diff > 0) {
-            toast.info(`${diff} new record${diff > 1 ? 's' : ''} available. Click refresh to update.`, {
-              duration: 10000,
-              action: {
-                label: 'Refresh Now',
-                onClick: () => {
-                  window.dispatchEvent(new CustomEvent('refreshData'));
+            toast.info(
+              `${diff} new record${diff > 1 ? "s" : ""} available. Click refresh to update.`,
+              {
+                duration: 10000,
+                action: {
+                  label: "Refresh Now",
+                  onClick: () => {
+                    window.dispatchEvent(new CustomEvent("refreshData"));
+                  },
                 },
               },
-            });
+            );
           } else if (diff < 0) {
             toast.info(`Data has been updated. Click refresh to see changes.`, {
               duration: 10000,
               action: {
-                label: 'Refresh Now',
+                label: "Refresh Now",
                 onClick: () => {
-                  window.dispatchEvent(new CustomEvent('refreshData'));
+                  window.dispatchEvent(new CustomEvent("refreshData"));
                 },
               },
             });
@@ -117,7 +116,7 @@ export function useDataPolling(options: UseDataPollingOptions = {}) {
     } catch (error) {
       // Only log in development
       if (import.meta.env.DEV) {
-        console.error('Polling error:', error);
+        console.error("Polling error:", error);
       }
       // Don't update state on error, just skip this check
     }
@@ -179,9 +178,9 @@ export function useDataPolling(options: UseDataPollingOptions = {}) {
       checkForNewData();
     };
 
-    window.addEventListener('refreshData', handleRefresh);
+    window.addEventListener("refreshData", handleRefresh);
     return () => {
-      window.removeEventListener('refreshData', handleRefresh);
+      window.removeEventListener("refreshData", handleRefresh);
     };
   }, [clearNewDataFlag, checkForNewData]);
 

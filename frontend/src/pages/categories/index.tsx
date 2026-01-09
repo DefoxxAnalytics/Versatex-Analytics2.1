@@ -1,5 +1,5 @@
-import { PlaceholderPage } from '@/components/PlaceholderPage';
-import { FolderTree } from 'lucide-react';
+import { PlaceholderPage } from "@/components/PlaceholderPage";
+import { FolderTree } from "lucide-react";
 
 export default function CategoriesPage() {
   return (
