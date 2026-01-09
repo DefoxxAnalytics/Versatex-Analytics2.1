@@ -69,7 +69,7 @@ Ensure these files are committed:
 1. **Go to Railway Dashboard**: https://railway.app/dashboard
 2. **Click "New Project"**
 3. **Select "Deploy from GitHub repo"**
-4. **Choose your repository**: `DefoxxAnalytics/Refactoring_vstx-analytics-dashboard-v2`
+4. **Choose your repository**: `DefoxxAnalytics/Versatex_Analytics2.0`
 5. **Railway will detect your services** from docker-compose.yml
 
 #### Option B: Using Railway CLI
@@ -265,8 +265,8 @@ Click "Redeploy" after updating.
 1. **Test Frontend**: Visit your frontend URL
    - Should see login page with Versatex logo
 
-2. **Test Backend API**: Visit `https://your-backend.railway.app/api/docs`
-   - Should see API documentation
+2. **Test Backend API**: Visit `https://your-backend.railway.app/admin/`
+   - Should see Django admin login (API docs are disabled in production for security)
 
 3. **Test Django Admin**: Visit `https://your-backend.railway.app/admin/`
    - Should see custom branded admin panel

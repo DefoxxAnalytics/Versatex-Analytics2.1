@@ -35,14 +35,14 @@
 
 Ensure your code is pushed to GitHub at:
 ```
-https://github.com/DefoxxAnalytics/Refactoring_vstx-analytics-dashboard-v2
+https://github.com/DefoxxAnalytics/Versatex_Analytics2.0
 ```
 
 All necessary files are already committed:
 - ✅ railway.toml
 - ✅ .env.production.example
-- ✅ backend/Dockerfile.railway
-- ✅ frontend/Dockerfile.railway
+- ✅ backend/Dockerfile
+- ✅ frontend/Dockerfile
 - ✅ docker-compose.yml
 
 ---
@@ -167,12 +167,12 @@ This will open a browser window to authenticate.
    - Select your GitHub organization/account
    - Choose repository access:
      - Select "Only select repositories"
-     - Choose: `Refactoring_vstx-analytics-dashboard-v2`
+     - Choose: `Versatex_Analytics2.0`
    - Click "Install & Authorize"
 
 4. **Select Your Repository**:
    - You should now see your repo in the list
-   - Click on: `DefoxxAnalytics/Refactoring_vstx-analytics-dashboard-v2`
+   - Click on: `DefoxxAnalytics/Versatex_Analytics2.0`
 
 5. **Railway will start deploying** - STOP IT:
    - Click the X or Cancel on the deployment
@@ -188,7 +188,7 @@ This will open a browser window to authenticate.
    - Click "Settings" tab
    - Scroll to "Build"
    - Root Directory: leave blank (Railway will auto-detect)
-   - Check Custom Dockerfile Path: `backend/Dockerfile.railway`
+   - Check Custom Dockerfile Path: `backend/Dockerfile`
 
 3. **Configure Environment Variables**:
    - Click "Variables" tab
@@ -311,7 +311,7 @@ The Celery worker handles background tasks (CSV uploads, analytics calculations)
 1. **Click "+ New"**
 2. **Select "GitHub Repo"**
 3. **Select the same repository**:
-   - `DefoxxAnalytics/Refactoring_vstx-analytics-dashboard-v2`
+   - `DefoxxAnalytics/Versatex_Analytics2.0`
 4. **Cancel the auto-deployment** (we need to configure first)
 
 ### Step 5.2: Configure Celery Worker
@@ -320,7 +320,7 @@ The Celery worker handles background tasks (CSV uploads, analytics calculations)
 
 2. **Set Build Configuration**:
    - Go to Settings → Build
-   - Custom Dockerfile Path: `backend/Dockerfile.railway`
+   - Custom Dockerfile Path: `backend/Dockerfile`
    - (Same Docker image as backend)
 
 3. **Configure Environment Variables**:
@@ -378,7 +378,7 @@ The Celery worker handles background tasks (CSV uploads, analytics calculations)
 
 2. **Set Build Configuration**:
    - Settings → Build
-   - Custom Dockerfile Path: `frontend/Dockerfile.railway`
+   - Custom Dockerfile Path: `frontend/Dockerfile`
 
 3. **Set Build Arguments**:
    - These are needed during the Docker build
@@ -668,17 +668,17 @@ ALLOWED_HOSTS=${{RAILWAY_PUBLIC_DOMAIN}},.railway.app,your-frontend-domain.railw
 
 ### Step 9.6: Test API Endpoints
 
-1. **Open API docs**: `https://your-backend-domain.railway.app/api/docs`
+> **Note**: API documentation (`/api/docs`) is only available when `DEBUG=True`. In production, this endpoint returns 404 for security reasons. To test the API, use the Django admin or direct API calls.
 
-2. **You should see**:
-   - Swagger UI with all API endpoints
-   - Authentication, Procurement, Analytics sections
+1. **Test via Django Admin**:
+   - Go to `https://your-backend-domain.railway.app/admin/`
+   - Login with superuser credentials
+   - You can browse data models and verify the database is working
 
-3. **Test an endpoint**:
-   - Click on `/api/analytics/overview/`
-   - Click "Try it out"
-   - Click "Execute"
-   - Should return: `{"status": "success", "data": {...}}`
+2. **Test an API endpoint directly**:
+   - Use curl or your browser's dev tools
+   - Example: `curl https://your-backend-domain.railway.app/api/v1/auth/user/` (requires auth token)
+   - Or test the public health check: `curl https://your-backend-domain.railway.app/admin/`
 
 **✅ Checkpoint**: All tests passing! Your application is live and working! 🎉
 
@@ -1093,7 +1093,8 @@ Congratulations! You now have a production-ready Analytics Dashboard running on 
 - Frontend: `https://your-frontend-domain.railway.app`
 - Backend API: `https://your-backend-domain.railway.app/api`
 - Django Admin: `https://your-backend-domain.railway.app/admin`
-- API Docs: `https://your-backend-domain.railway.app/api/docs`
+
+> **Note**: API docs (`/api/docs`) are disabled in production for security.
 
 **Support:**
 - Deployment Guide: This document
