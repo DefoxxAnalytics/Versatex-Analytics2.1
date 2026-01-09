@@ -265,6 +265,136 @@ GitHub Actions workflow runs on push/PR to master:
 Badges:
 - [![CI](https://github.com/DefoxxAnalytics/Versatex_Analytics2.0/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/DefoxxAnalytics/Versatex_Analytics2.0/actions/workflows/ci.yml)
 
+## Test Coverage
+
+### Backend Tests (621 tests, 74% coverage)
+
+```bash
+# Run all backend tests
+docker-compose exec backend pytest --cov=apps --cov-report=term-missing
+
+# Run specific app tests
+docker-compose exec backend pytest apps/reports/tests/ -v
+docker-compose exec backend pytest apps/procurement/tests/ -v
+docker-compose exec backend pytest apps/analytics/tests/ -v
+docker-compose exec backend pytest apps/authentication/tests/ -v
+```
+
+#### Test Structure
+
+| App | Test Files | Tests | Coverage |
+|-----|------------|-------|----------|
+| **reports** | 4 files | ~180 | 85%+ |
+| **procurement** | 3 files | ~150 | 80%+ |
+| **analytics** | 2 files | ~120 | 75%+ |
+| **authentication** | 2 files | ~170 | 70%+ |
+
+#### Reports App Test Files (`backend/apps/reports/tests/`)
+
+| File | Description | Test Count |
+|------|-------------|------------|
+| `test_views.py` | Report API endpoints, permissions, CRUD operations | ~45 |
+| `test_generators.py` | Core report generators (executive, spend, pareto, etc.) | ~40 |
+| `test_p2p_generators.py` | P2P report generators (PR status, PO compliance, AP aging) | ~40 |
+| `test_renderers.py` | PDF, Excel, CSV rendering with branding | ~55 |
+| `test_tasks.py` | Celery async tasks (generate, schedule, cleanup) | ~23 |
+
+#### Key Test Patterns
+
+**API View Tests:**
+```python
+@pytest.mark.django_db
+class TestReportViewSet:
+    def test_list_reports_authenticated(self, api_client, user, organization):
+        api_client.force_authenticate(user=user)
+        response = api_client.get('/api/v1/reports/')
+        assert response.status_code == 200
+```
+
+**Generator Tests:**
+```python
+@pytest.mark.django_db
+class TestSpendAnalysisGenerator:
+    def test_generate_with_data(self, organization, transactions):
+        generator = SpendAnalysisReportGenerator(organization)
+        data = generator.generate()
+        assert 'summary' in data
+        assert 'spend_by_category' in data
+```
+
+**Celery Task Tests:**
+```python
+@pytest.mark.django_db
+class TestGenerateReportAsync:
+    @patch('apps.reports.services.ReportingService')
+    def test_successful_generation(self, mock_service_class, report):
+        mock_service = MagicMock()
+        mock_service_class.return_value = mock_service
+        result = generate_report_async(str(report.pk))
+        assert result['status'] == 'completed'
+```
+
+**PDF Renderer Tests:**
+```python
+@pytest.mark.django_db
+class TestPDFRendererReportTypes:
+    def test_executive_summary_pdf(self, organization, admin_user):
+        renderer = PDFReportRenderer(organization)
+        data = {'summary': {...}, 'insights': [...]}
+        pdf_bytes = renderer.render('executive_summary', data)
+        assert pdf_bytes.startswith(b'%PDF')
+```
+
+### Frontend Tests (182 tests, 35% coverage)
+
+```bash
+# Run all frontend tests
+cd frontend
+pnpm test:run --coverage
+
+# Run specific test files
+pnpm test:run src/pages/__tests__/Suppliers.test.tsx
+pnpm test:run src/hooks/__tests__/
+```
+
+#### Test Structure
+
+| Category | Test Files | Tests |
+|----------|------------|-------|
+| **Pages** | 5 files | ~80 |
+| **Hooks** | 4 files | ~50 |
+| **Components** | 8 files | ~40 |
+| **Contexts** | 2 files | ~12 |
+
+#### Key Frontend Test Files
+
+| File | Description |
+|------|-------------|
+| `pages/__tests__/Suppliers.test.tsx` | Supplier list, search, HHI risk indicators |
+| `pages/__tests__/Settings.test.tsx` | Profile form, theme, notifications, AI settings |
+| `pages/__tests__/Overview.test.tsx` | Dashboard stats, skeleton loaders, charts |
+| `hooks/__tests__/useFilters.test.ts` | Filter state management |
+| `hooks/__tests__/useProcurementData.test.ts` | Procurement data fetching |
+
+### Running Tests with Coverage
+
+```bash
+# Backend: Full coverage report
+docker-compose exec backend pytest --cov=apps --cov-report=html
+# View at: backend/htmlcov/index.html
+
+# Frontend: Full coverage report
+cd frontend
+pnpm test:run --coverage
+# View at: frontend/coverage/index.html
+```
+
+### Test Configuration Files
+
+- **Backend**: `backend/pytest.ini`, `backend/conftest.py`
+- **Frontend**: `frontend/vitest.config.ts`, `frontend/src/test/setup.ts`
+- **MSW Handlers**: `frontend/src/test/mocks/handlers.ts` (API mocking)
+
 ## Recent Updates (v2.6)
 
 ### Multi-Organization User Support
