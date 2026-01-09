@@ -10,26 +10,26 @@
  * - Event handling
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
-import { useDataPolling } from '../useDataPolling';
-import * as api from '@/lib/api';
-import * as sonner from 'sonner';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { renderHook, act, waitFor } from "@testing-library/react";
+import { useDataPolling } from "../useDataPolling";
+import * as api from "@/lib/api";
+import * as sonner from "sonner";
 
 // Mock dependencies
-vi.mock('@/lib/api', () => ({
+vi.mock("@/lib/api", () => ({
   procurementAPI: {
     getTransactions: vi.fn(),
   },
 }));
 
-vi.mock('sonner', () => ({
+vi.mock("sonner", () => ({
   toast: {
     info: vi.fn(),
   },
 }));
 
-describe('useDataPolling', () => {
+describe("useDataPolling", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
@@ -46,8 +46,8 @@ describe('useDataPolling', () => {
   // =====================
   // Initial State Tests
   // =====================
-  describe('Initial State', () => {
-    it('should initialize with correct default state', () => {
+  describe("Initial State", () => {
+    it("should initialize with correct default state", () => {
       const { result } = renderHook(() => useDataPolling({ enabled: false }));
 
       expect(result.current.isPolling).toBe(false);
@@ -56,38 +56,40 @@ describe('useDataPolling', () => {
       expect(result.current.lastChecked).toBeNull();
     });
 
-    it('should return control functions', () => {
+    it("should return control functions", () => {
       const { result } = renderHook(() => useDataPolling({ enabled: false }));
 
-      expect(typeof result.current.startPolling).toBe('function');
-      expect(typeof result.current.stopPolling).toBe('function');
-      expect(typeof result.current.checkForNewData).toBe('function');
-      expect(typeof result.current.clearNewDataFlag).toBe('function');
+      expect(typeof result.current.startPolling).toBe("function");
+      expect(typeof result.current.stopPolling).toBe("function");
+      expect(typeof result.current.checkForNewData).toBe("function");
+      expect(typeof result.current.clearNewDataFlag).toBe("function");
     });
   });
 
   // =====================
   // Polling Control Tests
   // =====================
-  describe('Polling Control', () => {
-    it('should start polling when enabled', async () => {
+  describe("Polling Control", () => {
+    it("should start polling when enabled", async () => {
       renderHook(() => useDataPolling({ enabled: true, interval: 10000 }));
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(0);
       });
 
-      expect(api.procurementAPI.getTransactions).toHaveBeenCalledWith({ page_size: 1 });
+      expect(api.procurementAPI.getTransactions).toHaveBeenCalledWith({
+        page_size: 1,
+      });
     });
 
-    it('should not start polling when disabled', () => {
+    it("should not start polling when disabled", () => {
       const { result } = renderHook(() => useDataPolling({ enabled: false }));
 
       expect(result.current.isPolling).toBe(false);
       expect(api.procurementAPI.getTransactions).not.toHaveBeenCalled();
     });
 
-    it('should start polling manually', async () => {
+    it("should start polling manually", async () => {
       const { result } = renderHook(() => useDataPolling({ enabled: false }));
 
       await act(async () => {
@@ -99,8 +101,10 @@ describe('useDataPolling', () => {
       expect(api.procurementAPI.getTransactions).toHaveBeenCalled();
     });
 
-    it('should stop polling manually', async () => {
-      const { result } = renderHook(() => useDataPolling({ enabled: true, interval: 10000 }));
+    it("should stop polling manually", async () => {
+      const { result } = renderHook(() =>
+        useDataPolling({ enabled: true, interval: 10000 }),
+      );
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(0);
@@ -113,7 +117,7 @@ describe('useDataPolling', () => {
       expect(result.current.isPolling).toBe(false);
     });
 
-    it('should not start polling multiple times', async () => {
+    it("should not start polling multiple times", async () => {
       const { result } = renderHook(() => useDataPolling({ enabled: false }));
 
       await act(async () => {
@@ -131,9 +135,11 @@ describe('useDataPolling', () => {
   // =====================
   // Data Check Tests
   // =====================
-  describe('Data Checking', () => {
-    it('should store initial count on first check', async () => {
-      const { result } = renderHook(() => useDataPolling({ enabled: true, interval: 10000 }));
+  describe("Data Checking", () => {
+    it("should store initial count on first check", async () => {
+      const { result } = renderHook(() =>
+        useDataPolling({ enabled: true, interval: 10000 }),
+      );
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(0);
@@ -143,8 +149,10 @@ describe('useDataPolling', () => {
       expect(result.current.lastChecked).toBeTruthy();
     });
 
-    it('should detect new data when count increases', async () => {
-      const { result } = renderHook(() => useDataPolling({ enabled: true, interval: 1000 }));
+    it("should detect new data when count increases", async () => {
+      const { result } = renderHook(() =>
+        useDataPolling({ enabled: true, interval: 1000 }),
+      );
 
       // First check
       await act(async () => {
@@ -166,8 +174,10 @@ describe('useDataPolling', () => {
       expect(sonner.toast.info).toHaveBeenCalled();
     });
 
-    it('should detect data change when count decreases', async () => {
-      const { result } = renderHook(() => useDataPolling({ enabled: true, interval: 1000 }));
+    it("should detect data change when count decreases", async () => {
+      const { result } = renderHook(() =>
+        useDataPolling({ enabled: true, interval: 1000 }),
+      );
 
       // First check
       await act(async () => {
@@ -188,8 +198,10 @@ describe('useDataPolling', () => {
       expect(result.current.hasNewData).toBe(true);
     });
 
-    it('should not flag new data when count unchanged', async () => {
-      const { result } = renderHook(() => useDataPolling({ enabled: true, interval: 1000 }));
+    it("should not flag new data when count unchanged", async () => {
+      const { result } = renderHook(() =>
+        useDataPolling({ enabled: true, interval: 1000 }),
+      );
 
       // First check
       await act(async () => {
@@ -208,10 +220,12 @@ describe('useDataPolling', () => {
   // =====================
   // Callback Tests
   // =====================
-  describe('Callbacks', () => {
-    it('should call onNewData callback when data changes', async () => {
+  describe("Callbacks", () => {
+    it("should call onNewData callback when data changes", async () => {
       const onNewData = vi.fn();
-      renderHook(() => useDataPolling({ enabled: true, interval: 1000, onNewData }));
+      renderHook(() =>
+        useDataPolling({ enabled: true, interval: 1000, onNewData }),
+      );
 
       // First check
       await act(async () => {
@@ -235,9 +249,11 @@ describe('useDataPolling', () => {
   // =====================
   // Clear Flag Tests
   // =====================
-  describe('Clear New Data Flag', () => {
-    it('should clear hasNewData flag', async () => {
-      const { result } = renderHook(() => useDataPolling({ enabled: true, interval: 1000 }));
+  describe("Clear New Data Flag", () => {
+    it("should clear hasNewData flag", async () => {
+      const { result } = renderHook(() =>
+        useDataPolling({ enabled: true, interval: 1000 }),
+      );
 
       // First check
       await act(async () => {
@@ -267,8 +283,8 @@ describe('useDataPolling', () => {
   // =====================
   // Polling Interval Tests
   // =====================
-  describe('Polling Interval', () => {
-    it('should use custom interval', async () => {
+  describe("Polling Interval", () => {
+    it("should use custom interval", async () => {
       renderHook(() => useDataPolling({ enabled: true, interval: 5000 }));
 
       // Initial check
@@ -293,7 +309,7 @@ describe('useDataPolling', () => {
       expect(api.procurementAPI.getTransactions).toHaveBeenCalledTimes(2);
     });
 
-    it('should use default 60 second interval', async () => {
+    it("should use default 60 second interval", async () => {
       renderHook(() => useDataPolling({ enabled: true }));
 
       await act(async () => {
@@ -321,11 +337,15 @@ describe('useDataPolling', () => {
   // =====================
   // Error Handling Tests
   // =====================
-  describe('Error Handling', () => {
-    it('should handle API errors gracefully', async () => {
-      vi.mocked(api.procurementAPI.getTransactions).mockRejectedValue(new Error('Network error'));
+  describe("Error Handling", () => {
+    it("should handle API errors gracefully", async () => {
+      vi.mocked(api.procurementAPI.getTransactions).mockRejectedValue(
+        new Error("Network error"),
+      );
 
-      const { result } = renderHook(() => useDataPolling({ enabled: true, interval: 1000 }));
+      const { result } = renderHook(() =>
+        useDataPolling({ enabled: true, interval: 1000 }),
+      );
 
       // Should not throw
       await act(async () => {
@@ -337,9 +357,9 @@ describe('useDataPolling', () => {
       expect(result.current.isPolling).toBe(true);
     });
 
-    it('should continue polling after error', async () => {
+    it("should continue polling after error", async () => {
       vi.mocked(api.procurementAPI.getTransactions)
-        .mockRejectedValueOnce(new Error('Network error'))
+        .mockRejectedValueOnce(new Error("Network error"))
         .mockResolvedValueOnce({ data: { count: 100, results: [] } } as any);
 
       renderHook(() => useDataPolling({ enabled: true, interval: 1000 }));
@@ -361,9 +381,11 @@ describe('useDataPolling', () => {
   // =====================
   // Cleanup Tests
   // =====================
-  describe('Cleanup', () => {
-    it('should stop polling on unmount', async () => {
-      const { unmount } = renderHook(() => useDataPolling({ enabled: true, interval: 1000 }));
+  describe("Cleanup", () => {
+    it("should stop polling on unmount", async () => {
+      const { unmount } = renderHook(() =>
+        useDataPolling({ enabled: true, interval: 1000 }),
+      );
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(0);
@@ -385,9 +407,11 @@ describe('useDataPolling', () => {
   // =====================
   // Event Listener Tests
   // =====================
-  describe('Event Listeners', () => {
-    it('should respond to refreshData event', async () => {
-      const { result } = renderHook(() => useDataPolling({ enabled: true, interval: 10000 }));
+  describe("Event Listeners", () => {
+    it("should respond to refreshData event", async () => {
+      const { result } = renderHook(() =>
+        useDataPolling({ enabled: true, interval: 10000 }),
+      );
 
       // First check
       await act(async () => {
@@ -407,7 +431,7 @@ describe('useDataPolling', () => {
 
       // Dispatch refresh event
       await act(async () => {
-        window.dispatchEvent(new CustomEvent('refreshData'));
+        window.dispatchEvent(new CustomEvent("refreshData"));
         await vi.advanceTimersByTimeAsync(0);
       });
 

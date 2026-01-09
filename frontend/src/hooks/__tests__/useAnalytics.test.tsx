@@ -5,9 +5,9 @@
  * Uses MSW to mock API responses.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { renderHook, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   useOverviewStats,
   useSpendByCategory,
@@ -36,11 +36,11 @@ import {
   useTransactions,
   useSuppliers,
   useCategories,
-} from '../useAnalytics';
+} from "../useAnalytics";
 
 // Mock getOrganizationParam to avoid auth context dependency
-vi.mock('@/lib/api', async () => {
-  const actual = await vi.importActual('@/lib/api');
+vi.mock("@/lib/api", async () => {
+  const actual = await vi.importActual("@/lib/api");
   return {
     ...actual,
     getOrganizationParam: () => ({ organization_id: undefined }),
@@ -63,12 +63,12 @@ function createWrapper() {
   );
 }
 
-describe('useOverviewStats', () => {
+describe("useOverviewStats", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('should fetch overview statistics', async () => {
+  it("should fetch overview statistics", async () => {
     const { result } = renderHook(() => useOverviewStats(), {
       wrapper: createWrapper(),
     });
@@ -86,7 +86,7 @@ describe('useOverviewStats', () => {
     });
   });
 
-  it('should handle loading state', () => {
+  it("should handle loading state", () => {
     const { result } = renderHook(() => useOverviewStats(), {
       wrapper: createWrapper(),
     });
@@ -96,8 +96,8 @@ describe('useOverviewStats', () => {
   });
 });
 
-describe('useSpendByCategory', () => {
-  it('should fetch spend by category data', async () => {
+describe("useSpendByCategory", () => {
+  it("should fetch spend by category data", async () => {
     const { result } = renderHook(() => useSpendByCategory(), {
       wrapper: createWrapper(),
     });
@@ -107,14 +107,14 @@ describe('useSpendByCategory', () => {
     });
 
     expect(result.current.data).toEqual([
-      { category: 'IT Equipment', amount: 45000.0, count: 6 },
-      { category: 'Office Supplies', amount: 15000.0, count: 8 },
+      { category: "IT Equipment", amount: 45000.0, count: 6 },
+      { category: "Office Supplies", amount: 15000.0, count: 8 },
     ]);
   });
 });
 
-describe('useSpendBySupplier', () => {
-  it('should fetch spend by supplier data', async () => {
+describe("useSpendBySupplier", () => {
+  it("should fetch spend by supplier data", async () => {
     const { result } = renderHook(() => useSpendBySupplier(), {
       wrapper: createWrapper(),
     });
@@ -124,14 +124,14 @@ describe('useSpendBySupplier', () => {
     });
 
     expect(result.current.data).toEqual([
-      { supplier: 'Supplier A', amount: 50000.0, count: 10 },
-      { supplier: 'Supplier B', amount: 25000.0, count: 5 },
+      { supplier: "Supplier A", amount: 50000.0, count: 10 },
+      { supplier: "Supplier B", amount: 25000.0, count: 5 },
     ]);
   });
 });
 
-describe('useMonthlyTrend', () => {
-  it('should fetch monthly trend data', async () => {
+describe("useMonthlyTrend", () => {
+  it("should fetch monthly trend data", async () => {
     const { result } = renderHook(() => useMonthlyTrend(), {
       wrapper: createWrapper(),
     });
@@ -141,13 +141,13 @@ describe('useMonthlyTrend', () => {
     });
 
     expect(result.current.data).toEqual([
-      { month: '2024-01', amount: 25000.0, count: 5 },
-      { month: '2024-02', amount: 30000.0, count: 6 },
-      { month: '2024-03', amount: 20000.0, count: 4 },
+      { month: "2024-01", amount: 25000.0, count: 5 },
+      { month: "2024-02", amount: 30000.0, count: 6 },
+      { month: "2024-03", amount: 20000.0, count: 4 },
     ]);
   });
 
-  it('should accept custom months parameter', async () => {
+  it("should accept custom months parameter", async () => {
     const { result } = renderHook(() => useMonthlyTrend(6), {
       wrapper: createWrapper(),
     });
@@ -161,8 +161,8 @@ describe('useMonthlyTrend', () => {
   });
 });
 
-describe('useParetoAnalysis', () => {
-  it('should fetch Pareto analysis data', async () => {
+describe("useParetoAnalysis", () => {
+  it("should fetch Pareto analysis data", async () => {
     const { result } = renderHook(() => useParetoAnalysis(), {
       wrapper: createWrapper(),
     });
@@ -172,14 +172,14 @@ describe('useParetoAnalysis', () => {
     });
 
     expect(result.current.data).toEqual([
-      { supplier: 'Supplier A', amount: 50000.0, cumulative_percentage: 66.67 },
-      { supplier: 'Supplier B', amount: 25000.0, cumulative_percentage: 100.0 },
+      { supplier: "Supplier A", amount: 50000.0, cumulative_percentage: 66.67 },
+      { supplier: "Supplier B", amount: 25000.0, cumulative_percentage: 100.0 },
     ]);
   });
 });
 
-describe('useTailSpend', () => {
-  it('should fetch tail spend analysis data', async () => {
+describe("useTailSpend", () => {
+  it("should fetch tail spend analysis data", async () => {
     const { result } = renderHook(() => useTailSpend(), {
       wrapper: createWrapper(),
     });
@@ -196,7 +196,7 @@ describe('useTailSpend', () => {
     });
   });
 
-  it('should accept threshold parameter', async () => {
+  it("should accept threshold parameter", async () => {
     const { result } = renderHook(() => useTailSpend(30), {
       wrapper: createWrapper(),
     });
@@ -209,8 +209,8 @@ describe('useTailSpend', () => {
   });
 });
 
-describe('useStratification', () => {
-  it('should fetch spend stratification data', async () => {
+describe("useStratification", () => {
+  it("should fetch spend stratification data", async () => {
     const { result } = renderHook(() => useStratification(), {
       wrapper: createWrapper(),
     });
@@ -228,8 +228,8 @@ describe('useStratification', () => {
   });
 });
 
-describe('useSeasonality', () => {
-  it('should fetch seasonality data', async () => {
+describe("useSeasonality", () => {
+  it("should fetch seasonality data", async () => {
     const { result } = renderHook(() => useSeasonality(), {
       wrapper: createWrapper(),
     });
@@ -239,16 +239,16 @@ describe('useSeasonality', () => {
     });
 
     expect(result.current.data).toHaveLength(12);
-    expect(result.current.data[0]).toMatchObject({
-      month: 'Jan',
+    expect(result.current.data![0]).toMatchObject({
+      month: "Jan",
       average_spend: expect.any(Number),
       occurrences: expect.any(Number),
     });
   });
 });
 
-describe('useYearOverYear', () => {
-  it('should fetch year-over-year data', async () => {
+describe("useYearOverYear", () => {
+  it("should fetch year-over-year data", async () => {
     const { result } = renderHook(() => useYearOverYear(), {
       wrapper: createWrapper(),
     });
@@ -258,7 +258,12 @@ describe('useYearOverYear', () => {
     });
 
     expect(result.current.data).toEqual([
-      { year: 2023, total_spend: 500000.0, transaction_count: 100, avg_transaction: 5000.0 },
+      {
+        year: 2023,
+        total_spend: 500000.0,
+        transaction_count: 100,
+        avg_transaction: 5000.0,
+      },
       {
         year: 2024,
         total_spend: 75000.0,
@@ -270,8 +275,8 @@ describe('useYearOverYear', () => {
   });
 });
 
-describe('useConsolidation', () => {
-  it('should fetch consolidation opportunities data', async () => {
+describe("useConsolidation", () => {
+  it("should fetch consolidation opportunities data", async () => {
     const { result } = renderHook(() => useConsolidation(), {
       wrapper: createWrapper(),
     });
@@ -282,13 +287,13 @@ describe('useConsolidation', () => {
 
     expect(result.current.data).toEqual([
       {
-        category: 'Office Supplies',
+        category: "Office Supplies",
         supplier_count: 3,
         total_spend: 15000.0,
         suppliers: [
-          { name: 'Supplier A', spend: 8000.0 },
-          { name: 'Supplier B', spend: 5000.0 },
-          { name: 'Supplier C', spend: 2000.0 },
+          { name: "Supplier A", spend: 8000.0 },
+          { name: "Supplier B", spend: 5000.0 },
+          { name: "Supplier C", spend: 2000.0 },
         ],
         potential_savings: 1500.0,
       },
@@ -296,8 +301,8 @@ describe('useConsolidation', () => {
   });
 });
 
-describe('useCategoryDetails', () => {
-  it('should fetch detailed category analysis', async () => {
+describe("useCategoryDetails", () => {
+  it("should fetch detailed category analysis", async () => {
     const { result } = renderHook(() => useCategoryDetails(), {
       wrapper: createWrapper(),
     });
@@ -309,28 +314,28 @@ describe('useCategoryDetails', () => {
     expect(result.current.data).toEqual([
       {
         id: 1,
-        name: 'IT Equipment',
+        name: "IT Equipment",
         total_spend: 45000.0,
         transaction_count: 6,
         supplier_count: 2,
-        subcategories: ['Hardware', 'Software'],
-        risk_level: 'low',
+        subcategories: ["Hardware", "Software"],
+        risk_level: "low",
       },
       {
         id: 2,
-        name: 'Office Supplies',
+        name: "Office Supplies",
         total_spend: 15000.0,
         transaction_count: 8,
         supplier_count: 3,
-        subcategories: ['Paper', 'Pens'],
-        risk_level: 'low',
+        subcategories: ["Paper", "Pens"],
+        risk_level: "low",
       },
     ]);
   });
 });
 
-describe('useSupplierDetails', () => {
-  it('should fetch detailed supplier analysis', async () => {
+describe("useSupplierDetails", () => {
+  it("should fetch detailed supplier analysis", async () => {
     const { result } = renderHook(() => useSupplierDetails(), {
       wrapper: createWrapper(),
     });
@@ -342,36 +347,42 @@ describe('useSupplierDetails', () => {
     expect(result.current.data).toEqual([
       {
         id: 1,
-        name: 'Supplier A',
+        name: "Supplier A",
         total_spend: 50000.0,
         transaction_count: 10,
         category_count: 2,
         hhi_score: 0.35,
-        concentration: 'moderate',
+        concentration: "moderate",
       },
       {
         id: 2,
-        name: 'Supplier B',
+        name: "Supplier B",
         total_spend: 25000.0,
         transaction_count: 5,
         category_count: 1,
         hhi_score: 0.15,
-        concentration: 'low',
+        concentration: "low",
       },
     ]);
   });
 });
 
-describe('Hook Query Key Isolation', () => {
-  it('should include organization ID in query keys for cache isolation', async () => {
+describe("Hook Query Key Isolation", () => {
+  it("should include organization ID in query keys for cache isolation", async () => {
     // This test verifies that each hook uses orgId in its query key
     // When switching orgs, cache should be properly invalidated
     const wrapper = createWrapper();
 
     // Render multiple hooks
-    const { result: overview } = renderHook(() => useOverviewStats(), { wrapper });
-    const { result: categories } = renderHook(() => useSpendByCategory(), { wrapper });
-    const { result: suppliers } = renderHook(() => useSpendBySupplier(), { wrapper });
+    const { result: overview } = renderHook(() => useOverviewStats(), {
+      wrapper,
+    });
+    const { result: categories } = renderHook(() => useSpendByCategory(), {
+      wrapper,
+    });
+    const { result: suppliers } = renderHook(() => useSpendBySupplier(), {
+      wrapper,
+    });
 
     // All should eventually succeed independently
     await waitFor(() => {
@@ -390,8 +401,8 @@ describe('Hook Query Key Isolation', () => {
 // =====================
 // Drilldown Hooks Tests
 // =====================
-describe('useSupplierDrilldown', () => {
-  it('should not fetch when supplierId is null', () => {
+describe("useSupplierDrilldown", () => {
+  it("should not fetch when supplierId is null", () => {
     const { result } = renderHook(() => useSupplierDrilldown(null), {
       wrapper: createWrapper(),
     });
@@ -401,7 +412,7 @@ describe('useSupplierDrilldown', () => {
     expect(result.current.isFetching).toBe(false);
   });
 
-  it('should fetch when supplierId is provided', async () => {
+  it("should fetch when supplierId is provided", async () => {
     const { result } = renderHook(() => useSupplierDrilldown(1), {
       wrapper: createWrapper(),
     });
@@ -417,8 +428,8 @@ describe('useSupplierDrilldown', () => {
   });
 });
 
-describe('useDetailedTailSpend', () => {
-  it('should fetch detailed tail spend with default threshold', async () => {
+describe("useDetailedTailSpend", () => {
+  it("should fetch detailed tail spend with default threshold", async () => {
     const { result } = renderHook(() => useDetailedTailSpend(), {
       wrapper: createWrapper(),
     });
@@ -430,7 +441,7 @@ describe('useDetailedTailSpend', () => {
     expect(result.current.data).toBeDefined();
   });
 
-  it('should accept custom threshold parameter', async () => {
+  it("should accept custom threshold parameter", async () => {
     const { result } = renderHook(() => useDetailedTailSpend(100000), {
       wrapper: createWrapper(),
     });
@@ -443,8 +454,8 @@ describe('useDetailedTailSpend', () => {
   });
 });
 
-describe('useTailSpendCategoryDrilldown', () => {
-  it('should not fetch when categoryId is null', () => {
+describe("useTailSpendCategoryDrilldown", () => {
+  it("should not fetch when categoryId is null", () => {
     const { result } = renderHook(() => useTailSpendCategoryDrilldown(null), {
       wrapper: createWrapper(),
     });
@@ -453,7 +464,7 @@ describe('useTailSpendCategoryDrilldown', () => {
     expect(result.current.isFetching).toBe(false);
   });
 
-  it('should fetch when categoryId is provided', async () => {
+  it("should fetch when categoryId is provided", async () => {
     const { result } = renderHook(() => useTailSpendCategoryDrilldown(1), {
       wrapper: createWrapper(),
     });
@@ -465,10 +476,13 @@ describe('useTailSpendCategoryDrilldown', () => {
     });
   });
 
-  it('should accept custom threshold', async () => {
-    const { result } = renderHook(() => useTailSpendCategoryDrilldown(1, 25000), {
-      wrapper: createWrapper(),
-    });
+  it("should accept custom threshold", async () => {
+    const { result } = renderHook(
+      () => useTailSpendCategoryDrilldown(1, 25000),
+      {
+        wrapper: createWrapper(),
+      },
+    );
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
@@ -476,8 +490,8 @@ describe('useTailSpendCategoryDrilldown', () => {
   });
 });
 
-describe('useTailSpendVendorDrilldown', () => {
-  it('should not fetch when supplierId is null', () => {
+describe("useTailSpendVendorDrilldown", () => {
+  it("should not fetch when supplierId is null", () => {
     const { result } = renderHook(() => useTailSpendVendorDrilldown(null), {
       wrapper: createWrapper(),
     });
@@ -486,7 +500,7 @@ describe('useTailSpendVendorDrilldown', () => {
     expect(result.current.isFetching).toBe(false);
   });
 
-  it('should fetch when supplierId is provided', async () => {
+  it("should fetch when supplierId is provided", async () => {
     const { result } = renderHook(() => useTailSpendVendorDrilldown(1), {
       wrapper: createWrapper(),
     });
@@ -499,8 +513,8 @@ describe('useTailSpendVendorDrilldown', () => {
   });
 });
 
-describe('useDetailedStratification', () => {
-  it('should fetch detailed stratification data', async () => {
+describe("useDetailedStratification", () => {
+  it("should fetch detailed stratification data", async () => {
     const { result } = renderHook(() => useDetailedStratification(), {
       wrapper: createWrapper(),
     });
@@ -513,8 +527,8 @@ describe('useDetailedStratification', () => {
   });
 });
 
-describe('useSegmentDrilldown', () => {
-  it('should not fetch when segmentName is null', () => {
+describe("useSegmentDrilldown", () => {
+  it("should not fetch when segmentName is null", () => {
     const { result } = renderHook(() => useSegmentDrilldown(null), {
       wrapper: createWrapper(),
     });
@@ -523,8 +537,8 @@ describe('useSegmentDrilldown', () => {
     expect(result.current.isFetching).toBe(false);
   });
 
-  it('should fetch when segmentName is provided', async () => {
-    const { result } = renderHook(() => useSegmentDrilldown('strategic'), {
+  it("should fetch when segmentName is provided", async () => {
+    const { result } = renderHook(() => useSegmentDrilldown("strategic"), {
       wrapper: createWrapper(),
     });
 
@@ -536,8 +550,8 @@ describe('useSegmentDrilldown', () => {
   });
 });
 
-describe('useBandDrilldown', () => {
-  it('should not fetch when bandName is null', () => {
+describe("useBandDrilldown", () => {
+  it("should not fetch when bandName is null", () => {
     const { result } = renderHook(() => useBandDrilldown(null), {
       wrapper: createWrapper(),
     });
@@ -546,8 +560,8 @@ describe('useBandDrilldown', () => {
     expect(result.current.isFetching).toBe(false);
   });
 
-  it('should fetch when bandName is provided', async () => {
-    const { result } = renderHook(() => useBandDrilldown('$10K-$50K'), {
+  it("should fetch when bandName is provided", async () => {
+    const { result } = renderHook(() => useBandDrilldown("$10K-$50K"), {
       wrapper: createWrapper(),
     });
 
@@ -559,8 +573,8 @@ describe('useBandDrilldown', () => {
   });
 });
 
-describe('useDetailedSeasonality', () => {
-  it('should fetch detailed seasonality with default fiscal year setting', async () => {
+describe("useDetailedSeasonality", () => {
+  it("should fetch detailed seasonality with default fiscal year setting", async () => {
     const { result } = renderHook(() => useDetailedSeasonality(), {
       wrapper: createWrapper(),
     });
@@ -572,7 +586,7 @@ describe('useDetailedSeasonality', () => {
     expect(result.current.data).toBeDefined();
   });
 
-  it('should accept useFiscalYear parameter', async () => {
+  it("should accept useFiscalYear parameter", async () => {
     const { result } = renderHook(() => useDetailedSeasonality(false), {
       wrapper: createWrapper(),
     });
@@ -583,8 +597,8 @@ describe('useDetailedSeasonality', () => {
   });
 });
 
-describe('useSeasonalityCategoryDrilldown', () => {
-  it('should not fetch when categoryId is null', () => {
+describe("useSeasonalityCategoryDrilldown", () => {
+  it("should not fetch when categoryId is null", () => {
     const { result } = renderHook(() => useSeasonalityCategoryDrilldown(null), {
       wrapper: createWrapper(),
     });
@@ -593,7 +607,7 @@ describe('useSeasonalityCategoryDrilldown', () => {
     expect(result.current.isFetching).toBe(false);
   });
 
-  it('should fetch when categoryId is provided', async () => {
+  it("should fetch when categoryId is provided", async () => {
     const { result } = renderHook(() => useSeasonalityCategoryDrilldown(1), {
       wrapper: createWrapper(),
     });
@@ -605,10 +619,13 @@ describe('useSeasonalityCategoryDrilldown', () => {
     });
   });
 
-  it('should accept useFiscalYear parameter', async () => {
-    const { result } = renderHook(() => useSeasonalityCategoryDrilldown(1, false), {
-      wrapper: createWrapper(),
-    });
+  it("should accept useFiscalYear parameter", async () => {
+    const { result } = renderHook(
+      () => useSeasonalityCategoryDrilldown(1, false),
+      {
+        wrapper: createWrapper(),
+      },
+    );
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
@@ -616,8 +633,8 @@ describe('useSeasonalityCategoryDrilldown', () => {
   });
 });
 
-describe('useDetailedYearOverYear', () => {
-  it('should fetch detailed YoY with default parameters', async () => {
+describe("useDetailedYearOverYear", () => {
+  it("should fetch detailed YoY with default parameters", async () => {
     const { result } = renderHook(() => useDetailedYearOverYear(), {
       wrapper: createWrapper(),
     });
@@ -629,17 +646,20 @@ describe('useDetailedYearOverYear', () => {
     expect(result.current.data).toBeDefined();
   });
 
-  it('should accept custom year parameters', async () => {
-    const { result } = renderHook(() => useDetailedYearOverYear(true, 2023, 2024), {
-      wrapper: createWrapper(),
-    });
+  it("should accept custom year parameters", async () => {
+    const { result } = renderHook(
+      () => useDetailedYearOverYear(true, 2023, 2024),
+      {
+        wrapper: createWrapper(),
+      },
+    );
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
     });
   });
 
-  it('should accept calendar year setting', async () => {
+  it("should accept calendar year setting", async () => {
     const { result } = renderHook(() => useDetailedYearOverYear(false), {
       wrapper: createWrapper(),
     });
@@ -650,8 +670,8 @@ describe('useDetailedYearOverYear', () => {
   });
 });
 
-describe('useYoYCategoryDrilldown', () => {
-  it('should not fetch when categoryId is null', () => {
+describe("useYoYCategoryDrilldown", () => {
+  it("should not fetch when categoryId is null", () => {
     const { result } = renderHook(() => useYoYCategoryDrilldown(null), {
       wrapper: createWrapper(),
     });
@@ -660,7 +680,7 @@ describe('useYoYCategoryDrilldown', () => {
     expect(result.current.isFetching).toBe(false);
   });
 
-  it('should fetch when categoryId is provided', async () => {
+  it("should fetch when categoryId is provided", async () => {
     const { result } = renderHook(() => useYoYCategoryDrilldown(1), {
       wrapper: createWrapper(),
     });
@@ -672,10 +692,13 @@ describe('useYoYCategoryDrilldown', () => {
     });
   });
 
-  it('should accept custom year parameters', async () => {
-    const { result } = renderHook(() => useYoYCategoryDrilldown(1, true, 2023, 2024), {
-      wrapper: createWrapper(),
-    });
+  it("should accept custom year parameters", async () => {
+    const { result } = renderHook(
+      () => useYoYCategoryDrilldown(1, true, 2023, 2024),
+      {
+        wrapper: createWrapper(),
+      },
+    );
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
@@ -683,8 +706,8 @@ describe('useYoYCategoryDrilldown', () => {
   });
 });
 
-describe('useYoYSupplierDrilldown', () => {
-  it('should not fetch when supplierId is null', () => {
+describe("useYoYSupplierDrilldown", () => {
+  it("should not fetch when supplierId is null", () => {
     const { result } = renderHook(() => useYoYSupplierDrilldown(null), {
       wrapper: createWrapper(),
     });
@@ -693,7 +716,7 @@ describe('useYoYSupplierDrilldown', () => {
     expect(result.current.isFetching).toBe(false);
   });
 
-  it('should fetch when supplierId is provided', async () => {
+  it("should fetch when supplierId is provided", async () => {
     const { result } = renderHook(() => useYoYSupplierDrilldown(1), {
       wrapper: createWrapper(),
     });
@@ -705,10 +728,13 @@ describe('useYoYSupplierDrilldown', () => {
     });
   });
 
-  it('should accept custom year parameters', async () => {
-    const { result } = renderHook(() => useYoYSupplierDrilldown(1, false, 2022, 2023), {
-      wrapper: createWrapper(),
-    });
+  it("should accept custom year parameters", async () => {
+    const { result } = renderHook(
+      () => useYoYSupplierDrilldown(1, false, 2022, 2023),
+      {
+        wrapper: createWrapper(),
+      },
+    );
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
@@ -719,8 +745,8 @@ describe('useYoYSupplierDrilldown', () => {
 // =====================
 // Procurement Data Hooks
 // =====================
-describe('useTransactions', () => {
-  it('should fetch transactions', async () => {
+describe("useTransactions", () => {
+  it("should fetch transactions", async () => {
     const { result } = renderHook(() => useTransactions(), {
       wrapper: createWrapper(),
     });
@@ -732,7 +758,7 @@ describe('useTransactions', () => {
     expect(result.current.data).toBeDefined();
   });
 
-  it('should accept query parameters', async () => {
+  it("should accept query parameters", async () => {
     const { result } = renderHook(() => useTransactions({ supplier: 1 }), {
       wrapper: createWrapper(),
     });
@@ -743,8 +769,8 @@ describe('useTransactions', () => {
   });
 });
 
-describe('useSuppliers', () => {
-  it('should fetch suppliers', async () => {
+describe("useSuppliers", () => {
+  it("should fetch suppliers", async () => {
     const { result } = renderHook(() => useSuppliers(), {
       wrapper: createWrapper(),
     });
@@ -757,8 +783,8 @@ describe('useSuppliers', () => {
   });
 });
 
-describe('useCategories', () => {
-  it('should fetch categories', async () => {
+describe("useCategories", () => {
+  it("should fetch categories", async () => {
     const { result } = renderHook(() => useCategories(), {
       wrapper: createWrapper(),
     });

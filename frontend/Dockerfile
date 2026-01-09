@@ -34,34 +34,9 @@ FROM nginx:alpine
 # Copy built assets from builder
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy nginx configuration
-RUN echo 'server { \
-    listen 80; \
-    server_name _; \
-    root /usr/share/nginx/html; \
-    index index.html; \
-    \
-    # Gzip compression \
-    gzip on; \
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript; \
-    \
-    # Security headers \
-    add_header X-Frame-Options "SAMEORIGIN" always; \
-    add_header X-Content-Type-Options "nosniff" always; \
-    add_header X-XSS-Protection "1; mode=block" always; \
-    \
-    # SPA routing \
-    location / { \
-        try_files $uri $uri/ /index.html; \
-    } \
-    \
-    # Health check \
-    location /health { \
-        access_log off; \
-        return 200 "healthy\n"; \
-        add_header Content-Type text/plain; \
-    } \
-}' > /etc/nginx/conf.d/default.conf
+# Copy nginx configuration (external file for easier maintenance)
+# In production, this can be overridden via docker-compose volume mount
+COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Expose port 80
 EXPOSE 80

@@ -1,6 +1,8 @@
-# Versatex Analytics 2.0
+# Versatex Analytics 2.7
 
 [![CI](https://github.com/DefoxxAnalytics/Versatex_Analytics2.0/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/DefoxxAnalytics/Versatex_Analytics2.0/actions/workflows/ci.yml)
+[![Production Ready](https://img.shields.io/badge/Production-Ready-brightgreen.svg)](docs/SHIPPING_READINESS.md)
+[![Security](https://img.shields.io/badge/Security-8.5%2F10-green.svg)](docs/SHIPPING_READINESS.md)
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 [![Python 3.11](https://img.shields.io/badge/Python-3.11-blue.svg)](https://www.python.org/downloads/release/python-311/)
 [![Django 5.0](https://img.shields.io/badge/Django-5.0-green.svg)](https://docs.djangoproject.com/en/5.0/)
@@ -102,14 +104,17 @@ Versatex Analytics is a full-stack procurement analytics dashboard designed for 
 
 ### Security Features
 - Argon2 password hashing
-- JWT token authentication with refresh
+- JWT token authentication with HTTP-only cookies
 - CORS protection with strict origin validation
 - SQL injection and XSS protection
-- CSRF protection
-- Rate limiting
-- HTTPS enforcement (production)
+- CSRF protection with SameSite cookies
+- Rate limiting (login: 5/min, uploads: 10/hr, API: 1000/hr)
+- HTTPS enforcement with HSTS (1 year)
 - UUID-based resource identifiers (IDOR protection)
 - Failed login tracking with IP lockout
+- Content Security Policy (CSP) headers
+- Permissions-Policy (disables geolocation, microphone, camera)
+- Container security (non-root user, read-only filesystem, no-new-privileges)
 
 ## Quick Start
 
@@ -322,14 +327,38 @@ pnpm check
 pnpm build
 ```
 
-### Testing
+### Production Deployment
 
 ```bash
-# Backend tests
+# Deploy with production Docker Compose (enhanced security)
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
+# Verify security headers
+curl -I https://your-frontend-domain.com
+```
+
+Production features:
+- Internal network isolation (no external DB/Redis access)
+- Redis authentication required
+- Read-only frontend filesystem
+- Resource limits (CPU/memory caps)
+- Security headers (CSP, Permissions-Policy, Referrer-Policy)
+- Non-root container users
+
+See [Production Checklist](docs/SHIPPING_READINESS.md) for complete deployment guide.
+
+### Testing
+
+**Backend:** 621 tests, 70% coverage
+```bash
 cd backend
 python manage.py test
+# Or with coverage
+docker-compose exec backend pytest --cov=apps
+```
 
-# Frontend tests
+**Frontend:** 866 tests
+```bash
 cd frontend
 pnpm test        # Watch mode
 pnpm test:run    # Single run
@@ -436,8 +465,10 @@ FRONTEND_PORT=8080 docker-compose up -d
 | [Windows Setup](docs/setup/WINDOWS-SETUP.md) | Windows-specific instructions |
 | [Docker Troubleshooting](docs/setup/DOCKER-TROUBLESHOOTING.md) | Common issues and solutions |
 | [Railway Deployment](docs/deployment/RAILWAY-STEP-BY-STEP.md) | Production deployment guide |
+| [Shipping Readiness](docs/SHIPPING_READINESS.md) | Production checklist and security assessment |
 | [Development Guide](CLAUDE.md) | Development guidelines and API documentation |
 | [AI Insights Enhancement](docs/AI_INSIGHTS_ENHANCEMENT_PLAN.md) | AI Insights feature roadmap and implementation status |
+| [P2P Analytics Guide](docs/P2P_USER_GUIDE.md) | P2P module user documentation |
 
 ## Troubleshooting
 

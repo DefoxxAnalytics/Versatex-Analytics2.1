@@ -9,7 +9,7 @@
  * - Security context checks
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   isAuthenticated,
   updateActivity,
@@ -20,14 +20,14 @@ import {
   initializeSession,
   setUserData,
   getUserData,
-} from '../auth';
+} from "../auth";
 
 // Constants to match the auth.ts file
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
-const LAST_ACTIVITY_KEY = 'analytics_last_activity';
-const USER_KEY = 'user';
+const LAST_ACTIVITY_KEY = "analytics_last_activity";
+const USER_KEY = "user";
 
-describe('Authentication Utilities', () => {
+describe("Authentication Utilities", () => {
   beforeEach(() => {
     localStorage.clear();
     vi.useFakeTimers();
@@ -41,52 +41,76 @@ describe('Authentication Utilities', () => {
   // =====================
   // isAuthenticated Tests
   // =====================
-  describe('isAuthenticated', () => {
-    it('should return false when no user data exists', () => {
+  describe("isAuthenticated", () => {
+    it("should return false when no user data exists", () => {
       expect(isAuthenticated()).toBe(false);
     });
 
-    it('should return true when user data exists and no timeout', () => {
-      localStorage.setItem(USER_KEY, JSON.stringify({ id: 1, username: 'test' }));
+    it("should return true when user data exists and no timeout", () => {
+      localStorage.setItem(
+        USER_KEY,
+        JSON.stringify({ id: 1, username: "test" }),
+      );
       localStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
 
       expect(isAuthenticated()).toBe(true);
     });
 
-    it('should return true when user exists but no activity timestamp', () => {
-      localStorage.setItem(USER_KEY, JSON.stringify({ id: 1, username: 'test' }));
+    it("should return true when user exists but no activity timestamp", () => {
+      localStorage.setItem(
+        USER_KEY,
+        JSON.stringify({ id: 1, username: "test" }),
+      );
       // No LAST_ACTIVITY_KEY set
 
       expect(isAuthenticated()).toBe(true);
     });
 
-    it('should return false when session has timed out', () => {
+    it("should return false when session has timed out", () => {
       const now = Date.now();
       vi.setSystemTime(now);
 
       // Set user data with old activity
-      localStorage.setItem(USER_KEY, JSON.stringify({ id: 1, username: 'test' }));
-      localStorage.setItem(LAST_ACTIVITY_KEY, (now - SESSION_TIMEOUT_MS - 1000).toString());
+      localStorage.setItem(
+        USER_KEY,
+        JSON.stringify({ id: 1, username: "test" }),
+      );
+      localStorage.setItem(
+        LAST_ACTIVITY_KEY,
+        (now - SESSION_TIMEOUT_MS - 1000).toString(),
+      );
 
       expect(isAuthenticated()).toBe(false);
     });
 
-    it('should return true when session is just under timeout', () => {
+    it("should return true when session is just under timeout", () => {
       const now = Date.now();
       vi.setSystemTime(now);
 
-      localStorage.setItem(USER_KEY, JSON.stringify({ id: 1, username: 'test' }));
-      localStorage.setItem(LAST_ACTIVITY_KEY, (now - SESSION_TIMEOUT_MS + 1000).toString());
+      localStorage.setItem(
+        USER_KEY,
+        JSON.stringify({ id: 1, username: "test" }),
+      );
+      localStorage.setItem(
+        LAST_ACTIVITY_KEY,
+        (now - SESSION_TIMEOUT_MS + 1000).toString(),
+      );
 
       expect(isAuthenticated()).toBe(true);
     });
 
-    it('should clear session data when timeout is detected', () => {
+    it("should clear session data when timeout is detected", () => {
       const now = Date.now();
       vi.setSystemTime(now);
 
-      localStorage.setItem(USER_KEY, JSON.stringify({ id: 1, username: 'test' }));
-      localStorage.setItem(LAST_ACTIVITY_KEY, (now - SESSION_TIMEOUT_MS - 1000).toString());
+      localStorage.setItem(
+        USER_KEY,
+        JSON.stringify({ id: 1, username: "test" }),
+      );
+      localStorage.setItem(
+        LAST_ACTIVITY_KEY,
+        (now - SESSION_TIMEOUT_MS - 1000).toString(),
+      );
 
       isAuthenticated();
 
@@ -99,8 +123,8 @@ describe('Authentication Utilities', () => {
   // =====================
   // updateActivity Tests
   // =====================
-  describe('updateActivity', () => {
-    it('should store current timestamp in localStorage', () => {
+  describe("updateActivity", () => {
+    it("should store current timestamp in localStorage", () => {
       const now = Date.now();
       vi.setSystemTime(now);
 
@@ -109,7 +133,7 @@ describe('Authentication Utilities', () => {
       expect(localStorage.getItem(LAST_ACTIVITY_KEY)).toBe(now.toString());
     });
 
-    it('should update existing timestamp', () => {
+    it("should update existing timestamp", () => {
       const oldTime = Date.now();
       vi.setSystemTime(oldTime);
       localStorage.setItem(LAST_ACTIVITY_KEY, oldTime.toString());
@@ -127,26 +151,26 @@ describe('Authentication Utilities', () => {
   // =====================
   // clearSession Tests
   // =====================
-  describe('clearSession', () => {
-    it('should remove user data from localStorage', () => {
+  describe("clearSession", () => {
+    it("should remove user data from localStorage", () => {
       localStorage.setItem(USER_KEY, JSON.stringify({ id: 1 }));
-      localStorage.setItem(LAST_ACTIVITY_KEY, '12345');
+      localStorage.setItem(LAST_ACTIVITY_KEY, "12345");
 
       clearSession();
 
       expect(localStorage.getItem(USER_KEY)).toBeNull();
     });
 
-    it('should remove activity timestamp from localStorage', () => {
+    it("should remove activity timestamp from localStorage", () => {
       localStorage.setItem(USER_KEY, JSON.stringify({ id: 1 }));
-      localStorage.setItem(LAST_ACTIVITY_KEY, '12345');
+      localStorage.setItem(LAST_ACTIVITY_KEY, "12345");
 
       clearSession();
 
       expect(localStorage.getItem(LAST_ACTIVITY_KEY)).toBeNull();
     });
 
-    it('should not throw when localStorage is already empty', () => {
+    it("should not throw when localStorage is already empty", () => {
       expect(() => clearSession()).not.toThrow();
     });
   });
@@ -154,12 +178,12 @@ describe('Authentication Utilities', () => {
   // =====================
   // getRemainingSessionTime Tests
   // =====================
-  describe('getRemainingSessionTime', () => {
-    it('should return 0 when no activity timestamp exists', () => {
+  describe("getRemainingSessionTime", () => {
+    it("should return 0 when no activity timestamp exists", () => {
       expect(getRemainingSessionTime()).toBe(0);
     });
 
-    it('should return full session time when just logged in', () => {
+    it("should return full session time when just logged in", () => {
       const now = Date.now();
       vi.setSystemTime(now);
       localStorage.setItem(LAST_ACTIVITY_KEY, now.toString());
@@ -168,7 +192,7 @@ describe('Authentication Utilities', () => {
       expect(remaining).toBe(SESSION_TIMEOUT_MS);
     });
 
-    it('should return reduced time after some activity', () => {
+    it("should return reduced time after some activity", () => {
       const now = Date.now();
       vi.setSystemTime(now);
 
@@ -179,22 +203,28 @@ describe('Authentication Utilities', () => {
       expect(remaining).toBe(SESSION_TIMEOUT_MS - elapsedTime);
     });
 
-    it('should return 0 when session has expired', () => {
+    it("should return 0 when session has expired", () => {
       const now = Date.now();
       vi.setSystemTime(now);
 
-      localStorage.setItem(LAST_ACTIVITY_KEY, (now - SESSION_TIMEOUT_MS - 1000).toString());
+      localStorage.setItem(
+        LAST_ACTIVITY_KEY,
+        (now - SESSION_TIMEOUT_MS - 1000).toString(),
+      );
 
       const remaining = getRemainingSessionTime();
       expect(remaining).toBe(0);
     });
 
-    it('should never return negative value', () => {
+    it("should never return negative value", () => {
       const now = Date.now();
       vi.setSystemTime(now);
 
       // Set activity way in the past
-      localStorage.setItem(LAST_ACTIVITY_KEY, (now - SESSION_TIMEOUT_MS * 2).toString());
+      localStorage.setItem(
+        LAST_ACTIVITY_KEY,
+        (now - SESSION_TIMEOUT_MS * 2).toString(),
+      );
 
       const remaining = getRemainingSessionTime();
       expect(remaining).toBeGreaterThanOrEqual(0);
@@ -204,13 +234,13 @@ describe('Authentication Utilities', () => {
   // =====================
   // isSessionExpired Tests
   // =====================
-  describe('isSessionExpired', () => {
-    it('should return true when not authenticated', () => {
+  describe("isSessionExpired", () => {
+    it("should return true when not authenticated", () => {
       // No user data
       expect(isSessionExpired()).toBe(true);
     });
 
-    it('should return false when session is active', () => {
+    it("should return false when session is active", () => {
       const now = Date.now();
       vi.setSystemTime(now);
 
@@ -220,23 +250,29 @@ describe('Authentication Utilities', () => {
       expect(isSessionExpired()).toBe(false);
     });
 
-    it('should return true when session time has run out', () => {
+    it("should return true when session time has run out", () => {
       const now = Date.now();
       vi.setSystemTime(now);
 
       localStorage.setItem(USER_KEY, JSON.stringify({ id: 1 }));
-      localStorage.setItem(LAST_ACTIVITY_KEY, (now - SESSION_TIMEOUT_MS - 1).toString());
+      localStorage.setItem(
+        LAST_ACTIVITY_KEY,
+        (now - SESSION_TIMEOUT_MS - 1).toString(),
+      );
 
       expect(isSessionExpired()).toBe(true);
     });
 
-    it('should return false when exactly at timeout boundary', () => {
+    it("should return false when exactly at timeout boundary", () => {
       const now = Date.now();
       vi.setSystemTime(now);
 
       localStorage.setItem(USER_KEY, JSON.stringify({ id: 1 }));
       // Set activity exactly at timeout boundary (not yet expired)
-      localStorage.setItem(LAST_ACTIVITY_KEY, (now - SESSION_TIMEOUT_MS + 1).toString());
+      localStorage.setItem(
+        LAST_ACTIVITY_KEY,
+        (now - SESSION_TIMEOUT_MS + 1).toString(),
+      );
 
       expect(isSessionExpired()).toBe(false);
     });
@@ -245,7 +281,7 @@ describe('Authentication Utilities', () => {
   // =====================
   // isSecureContext Tests
   // =====================
-  describe('isSecureContext', () => {
+  describe("isSecureContext", () => {
     const originalLocation = window.location;
 
     beforeEach(() => {
@@ -257,41 +293,41 @@ describe('Authentication Utilities', () => {
       window.location = originalLocation;
     });
 
-    it('should return true for localhost', () => {
+    it("should return true for localhost", () => {
       window.location = {
         ...originalLocation,
-        hostname: 'localhost',
-        protocol: 'http:',
+        hostname: "localhost",
+        protocol: "http:",
       } as Location;
 
       expect(isSecureContext()).toBe(true);
     });
 
-    it('should return true for 127.0.0.1', () => {
+    it("should return true for 127.0.0.1", () => {
       window.location = {
         ...originalLocation,
-        hostname: '127.0.0.1',
-        protocol: 'http:',
+        hostname: "127.0.0.1",
+        protocol: "http:",
       } as Location;
 
       expect(isSecureContext()).toBe(true);
     });
 
-    it('should return true for HTTPS in production', () => {
+    it("should return true for HTTPS in production", () => {
       window.location = {
         ...originalLocation,
-        hostname: 'app.example.com',
-        protocol: 'https:',
+        hostname: "app.example.com",
+        protocol: "https:",
       } as Location;
 
       expect(isSecureContext()).toBe(true);
     });
 
-    it('should return false for HTTP in production', () => {
+    it("should return false for HTTP in production", () => {
       window.location = {
         ...originalLocation,
-        hostname: 'app.example.com',
-        protocol: 'http:',
+        hostname: "app.example.com",
+        protocol: "http:",
       } as Location;
 
       expect(isSecureContext()).toBe(false);
@@ -301,8 +337,8 @@ describe('Authentication Utilities', () => {
   // =====================
   // initializeSession Tests
   // =====================
-  describe('initializeSession', () => {
-    it('should set activity timestamp', () => {
+  describe("initializeSession", () => {
+    it("should set activity timestamp", () => {
       const now = Date.now();
       vi.setSystemTime(now);
 
@@ -315,9 +351,9 @@ describe('Authentication Utilities', () => {
   // =====================
   // setUserData Tests
   // =====================
-  describe('setUserData', () => {
-    it('should store user object as JSON string', () => {
-      const user = { id: 1, username: 'testuser', email: 'test@example.com' };
+  describe("setUserData", () => {
+    it("should store user object as JSON string", () => {
+      const user = { id: 1, username: "testuser", email: "test@example.com" };
 
       setUserData(user);
 
@@ -325,7 +361,7 @@ describe('Authentication Utilities', () => {
       expect(stored).toBe(JSON.stringify(user));
     });
 
-    it('should initialize session after storing user data', () => {
+    it("should initialize session after storing user data", () => {
       const now = Date.now();
       vi.setSystemTime(now);
 
@@ -334,14 +370,14 @@ describe('Authentication Utilities', () => {
       expect(localStorage.getItem(LAST_ACTIVITY_KEY)).toBe(now.toString());
     });
 
-    it('should handle complex user objects', () => {
+    it("should handle complex user objects", () => {
       const complexUser = {
         id: 1,
-        username: 'admin',
+        username: "admin",
         profile: {
           organization: 1,
-          role: 'admin',
-          permissions: ['read', 'write', 'delete'],
+          role: "admin",
+          permissions: ["read", "write", "delete"],
         },
       };
 
@@ -355,13 +391,13 @@ describe('Authentication Utilities', () => {
   // =====================
   // getUserData Tests
   // =====================
-  describe('getUserData', () => {
-    it('should return null when no user data exists', () => {
+  describe("getUserData", () => {
+    it("should return null when no user data exists", () => {
       expect(getUserData()).toBeNull();
     });
 
-    it('should return parsed user object', () => {
-      const user = { id: 1, username: 'testuser' };
+    it("should return parsed user object", () => {
+      const user = { id: 1, username: "testuser" };
       localStorage.setItem(USER_KEY, JSON.stringify(user));
 
       const result = getUserData<{ id: number; username: string }>();
@@ -369,32 +405,32 @@ describe('Authentication Utilities', () => {
       expect(result).toEqual(user);
     });
 
-    it('should return typed user data', () => {
+    it("should return typed user data", () => {
       interface TestUser {
         id: number;
         name: string;
-        role: 'admin' | 'user';
+        role: "admin" | "user";
       }
 
-      const user: TestUser = { id: 1, name: 'Test', role: 'admin' };
+      const user: TestUser = { id: 1, name: "Test", role: "admin" };
       localStorage.setItem(USER_KEY, JSON.stringify(user));
 
       const result = getUserData<TestUser>();
 
       expect(result).toEqual(user);
-      expect(result?.role).toBe('admin');
+      expect(result?.role).toBe("admin");
     });
 
-    it('should return null for invalid JSON', () => {
-      localStorage.setItem(USER_KEY, 'not valid json {{{');
+    it("should return null for invalid JSON", () => {
+      localStorage.setItem(USER_KEY, "not valid json {{{");
 
       const result = getUserData();
 
       expect(result).toBeNull();
     });
 
-    it('should return null for empty string', () => {
-      localStorage.setItem(USER_KEY, '');
+    it("should return null for empty string", () => {
+      localStorage.setItem(USER_KEY, "");
 
       // Empty string is falsy but not removed
       const result = getUserData();
@@ -407,13 +443,13 @@ describe('Authentication Utilities', () => {
   // =====================
   // Integration Tests
   // =====================
-  describe('Integration Scenarios', () => {
-    it('should handle complete login-activity-logout flow', () => {
+  describe("Integration Scenarios", () => {
+    it("should handle complete login-activity-logout flow", () => {
       const now = Date.now();
       vi.setSystemTime(now);
 
       // Step 1: Login
-      const user = { id: 1, username: 'testuser' };
+      const user = { id: 1, username: "testuser" };
       setUserData(user);
       expect(isAuthenticated()).toBe(true);
 
@@ -426,7 +462,9 @@ describe('Authentication Utilities', () => {
       // Step 3: More time passes but still active
       vi.setSystemTime(now + 20 * 60 * 1000); // 20 minutes later
       expect(isAuthenticated()).toBe(true);
-      expect(getRemainingSessionTime()).toBe(SESSION_TIMEOUT_MS - 15 * 60 * 1000);
+      expect(getRemainingSessionTime()).toBe(
+        SESSION_TIMEOUT_MS - 15 * 60 * 1000,
+      );
 
       // Step 4: Logout
       clearSession();
@@ -434,7 +472,7 @@ describe('Authentication Utilities', () => {
       expect(getUserData()).toBeNull();
     });
 
-    it('should handle session timeout scenario', () => {
+    it("should handle session timeout scenario", () => {
       const now = Date.now();
       vi.setSystemTime(now);
 
@@ -450,7 +488,7 @@ describe('Authentication Utilities', () => {
       expect(getUserData()).toBeNull();
     });
 
-    it('should keep session alive with regular activity updates', () => {
+    it("should keep session alive with regular activity updates", () => {
       const now = Date.now();
       vi.setSystemTime(now);
 

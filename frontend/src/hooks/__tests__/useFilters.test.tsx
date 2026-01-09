@@ -1,13 +1,13 @@
 /**
  * Tests for Filter Hooks
- * 
+ *
  * Tests the filter state management hooks that persist across tabs.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useFilters, useUpdateFilters, useResetFilters } from '../useFilters';
+import { describe, it, expect, beforeEach } from "vitest";
+import { renderHook, act, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useFilters, useUpdateFilters, useResetFilters } from "../useFilters";
 
 // Test wrapper with QueryClient
 function createWrapper() {
@@ -19,18 +19,16 @@ function createWrapper() {
   });
 
   return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 }
 
-describe('useFilters', () => {
+describe("useFilters", () => {
   beforeEach(() => {
     localStorage.clear();
   });
 
-  it('should return default filters on first load', () => {
+  it("should return default filters on first load", () => {
     const { result } = renderHook(() => useFilters(), {
       wrapper: createWrapper(),
     });
@@ -48,18 +46,18 @@ describe('useFilters', () => {
     });
   });
 
-  it('should load filters from localStorage if available', () => {
+  it("should load filters from localStorage if available", () => {
     const savedFilters = {
-      dateRange: { start: '2024-01-01', end: '2024-12-31' },
-      categories: ['IT', 'Office Supplies'],
+      dateRange: { start: "2024-01-01", end: "2024-12-31" },
+      categories: ["IT", "Office Supplies"],
       subcategories: [],
-      suppliers: ['Acme Corp'],
+      suppliers: ["Acme Corp"],
       locations: [],
       years: [],
       amountRange: { min: 100, max: 10000 },
     };
 
-    localStorage.setItem('procurement_filters', JSON.stringify(savedFilters));
+    localStorage.setItem("procurement_filters", JSON.stringify(savedFilters));
 
     const { result } = renderHook(() => useFilters(), {
       wrapper: createWrapper(),
@@ -71,66 +69,88 @@ describe('useFilters', () => {
   });
 });
 
-describe('useUpdateFilters', () => {
+describe("useUpdateFilters", () => {
   beforeEach(() => {
     localStorage.clear();
   });
 
-  it('should update date range filter', async () => {
+  it("should update date range filter", async () => {
     const wrapper = createWrapper();
-    const { result: filtersResult } = renderHook(() => useFilters(), { wrapper });
-    const { result: updateResult } = renderHook(() => useUpdateFilters(), { wrapper });
+    const { result: filtersResult } = renderHook(() => useFilters(), {
+      wrapper,
+    });
+    const { result: updateResult } = renderHook(() => useUpdateFilters(), {
+      wrapper,
+    });
 
     await act(async () => {
       await updateResult.current.mutateAsync({
-        dateRange: { start: '2024-01-01', end: '2024-12-31' },
+        dateRange: { start: "2024-01-01", end: "2024-12-31" },
       });
     });
 
     await waitFor(() => {
       expect(filtersResult.current.data?.dateRange).toEqual({
-        start: '2024-01-01',
-        end: '2024-12-31',
+        start: "2024-01-01",
+        end: "2024-12-31",
       });
     });
   });
 
-  it('should update category filter', async () => {
+  it("should update category filter", async () => {
     const wrapper = createWrapper();
-    const { result: filtersResult } = renderHook(() => useFilters(), { wrapper });
-    const { result: updateResult } = renderHook(() => useUpdateFilters(), { wrapper });
+    const { result: filtersResult } = renderHook(() => useFilters(), {
+      wrapper,
+    });
+    const { result: updateResult } = renderHook(() => useUpdateFilters(), {
+      wrapper,
+    });
 
     await act(async () => {
       await updateResult.current.mutateAsync({
-        categories: ['IT', 'Office Supplies'],
+        categories: ["IT", "Office Supplies"],
       });
     });
 
     await waitFor(() => {
-      expect(filtersResult.current.data?.categories).toEqual(['IT', 'Office Supplies']);
+      expect(filtersResult.current.data?.categories).toEqual([
+        "IT",
+        "Office Supplies",
+      ]);
     });
   });
 
-  it('should update supplier filter', async () => {
+  it("should update supplier filter", async () => {
     const wrapper = createWrapper();
-    const { result: filtersResult } = renderHook(() => useFilters(), { wrapper });
-    const { result: updateResult } = renderHook(() => useUpdateFilters(), { wrapper });
+    const { result: filtersResult } = renderHook(() => useFilters(), {
+      wrapper,
+    });
+    const { result: updateResult } = renderHook(() => useUpdateFilters(), {
+      wrapper,
+    });
 
     await act(async () => {
       await updateResult.current.mutateAsync({
-        suppliers: ['Acme Corp', 'TechVendor Inc'],
+        suppliers: ["Acme Corp", "TechVendor Inc"],
       });
     });
 
     await waitFor(() => {
-      expect(filtersResult.current.data?.suppliers).toEqual(['Acme Corp', 'TechVendor Inc']);
+      expect(filtersResult.current.data?.suppliers).toEqual([
+        "Acme Corp",
+        "TechVendor Inc",
+      ]);
     });
   });
 
-  it('should update amount range filter', async () => {
+  it("should update amount range filter", async () => {
     const wrapper = createWrapper();
-    const { result: filtersResult } = renderHook(() => useFilters(), { wrapper });
-    const { result: updateResult } = renderHook(() => useUpdateFilters(), { wrapper });
+    const { result: filtersResult } = renderHook(() => useFilters(), {
+      wrapper,
+    });
+    const { result: updateResult } = renderHook(() => useUpdateFilters(), {
+      wrapper,
+    });
 
     await act(async () => {
       await updateResult.current.mutateAsync({
@@ -139,50 +159,61 @@ describe('useUpdateFilters', () => {
     });
 
     await waitFor(() => {
-      expect(filtersResult.current.data?.amountRange).toEqual({ min: 100, max: 10000 });
+      expect(filtersResult.current.data?.amountRange).toEqual({
+        min: 100,
+        max: 10000,
+      });
     });
   });
 
-  it('should persist filters to localStorage', async () => {
+  it("should persist filters to localStorage", async () => {
     const wrapper = createWrapper();
-    const { result: updateResult } = renderHook(() => useUpdateFilters(), { wrapper });
+    const { result: updateResult } = renderHook(() => useUpdateFilters(), {
+      wrapper,
+    });
 
     await act(async () => {
       await updateResult.current.mutateAsync({
-        categories: ['IT'],
-        suppliers: ['Acme Corp'],
+        categories: ["IT"],
+        suppliers: ["Acme Corp"],
       });
     });
 
     await waitFor(() => {
-      const saved = JSON.parse(localStorage.getItem('procurement_filters') || '{}');
-      expect(saved.categories).toEqual(['IT']);
-      expect(saved.suppliers).toEqual(['Acme Corp']);
+      const saved = JSON.parse(
+        localStorage.getItem("procurement_filters") || "{}",
+      );
+      expect(saved.categories).toEqual(["IT"]);
+      expect(saved.suppliers).toEqual(["Acme Corp"]);
     });
   });
 });
 
-describe('useResetFilters', () => {
+describe("useResetFilters", () => {
   beforeEach(() => {
     localStorage.clear();
   });
 
-  it('should reset all filters to default', async () => {
+  it("should reset all filters to default", async () => {
     // Set some filters first
     const savedFilters = {
-      dateRange: { start: '2024-01-01', end: '2024-12-31' },
-      categories: ['IT'],
+      dateRange: { start: "2024-01-01", end: "2024-12-31" },
+      categories: ["IT"],
       subcategories: [],
-      suppliers: ['Acme Corp'],
+      suppliers: ["Acme Corp"],
       locations: [],
       years: [],
       amountRange: { min: 100, max: 10000 },
     };
-    localStorage.setItem('procurement_filters', JSON.stringify(savedFilters));
+    localStorage.setItem("procurement_filters", JSON.stringify(savedFilters));
 
     const wrapper = createWrapper();
-    const { result: filtersResult } = renderHook(() => useFilters(), { wrapper });
-    const { result: resetResult } = renderHook(() => useResetFilters(), { wrapper });
+    const { result: filtersResult } = renderHook(() => useFilters(), {
+      wrapper,
+    });
+    const { result: resetResult } = renderHook(() => useResetFilters(), {
+      wrapper,
+    });
 
     await act(async () => {
       await resetResult.current.mutateAsync();
@@ -201,18 +232,23 @@ describe('useResetFilters', () => {
     });
   });
 
-  it('should clear localStorage on reset', async () => {
-    localStorage.setItem('procurement_filters', JSON.stringify({ categories: ['IT'] }));
+  it("should clear localStorage on reset", async () => {
+    localStorage.setItem(
+      "procurement_filters",
+      JSON.stringify({ categories: ["IT"] }),
+    );
 
     const wrapper = createWrapper();
-    const { result: resetResult } = renderHook(() => useResetFilters(), { wrapper });
+    const { result: resetResult } = renderHook(() => useResetFilters(), {
+      wrapper,
+    });
 
     await act(async () => {
       await resetResult.current.mutateAsync();
     });
 
     await waitFor(() => {
-      const saved = localStorage.getItem('procurement_filters');
+      const saved = localStorage.getItem("procurement_filters");
       expect(saved).toBe(null);
     });
   });

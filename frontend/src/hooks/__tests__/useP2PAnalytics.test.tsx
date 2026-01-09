@@ -10,9 +10,9 @@
  * - Supplier Payment Performance hooks
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, waitFor, act } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { renderHook, waitFor, act } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   useP2PCycleOverview,
   useP2PCycleByCategory,
@@ -49,11 +49,11 @@ import {
   useSupplierPaymentsScorecard,
   useSupplierPaymentDetail,
   useSupplierPaymentHistory,
-} from '../useP2PAnalytics';
-import * as api from '@/lib/api';
+} from "../useP2PAnalytics";
+import * as api from "@/lib/api";
 
 // Mock dependencies
-vi.mock('@/lib/api', () => ({
+vi.mock("@/lib/api", () => ({
   p2pAnalyticsAPI: {
     getCycleOverview: vi.fn(),
     getCycleByCategory: vi.fn(),
@@ -106,7 +106,7 @@ function createWrapper() {
   );
 }
 
-describe('useP2PAnalytics Hooks', () => {
+describe("useP2PAnalytics Hooks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(api.getOrganizationParam).mockReturnValue({});
@@ -119,10 +119,12 @@ describe('useP2PAnalytics Hooks', () => {
   // =====================
   // P2P Cycle Time Analysis
   // =====================
-  describe('P2P Cycle Time Analysis', () => {
-    it('should fetch cycle overview', async () => {
+  describe("P2P Cycle Time Analysis", () => {
+    it("should fetch cycle overview", async () => {
       const mockData = { total_avg_days: 15, stages: [] };
-      vi.mocked(api.p2pAnalyticsAPI.getCycleOverview).mockResolvedValue({ data: mockData } as any);
+      vi.mocked(api.p2pAnalyticsAPI.getCycleOverview).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => useP2PCycleOverview(), {
         wrapper: createWrapper(),
@@ -136,9 +138,11 @@ describe('useP2PAnalytics Hooks', () => {
       expect(result.current.data).toEqual(mockData);
     });
 
-    it('should fetch cycle by category', async () => {
-      const mockData = [{ category: 'IT', avg_days: 10 }];
-      vi.mocked(api.p2pAnalyticsAPI.getCycleByCategory).mockResolvedValue({ data: mockData } as any);
+    it("should fetch cycle by category", async () => {
+      const mockData = [{ category: "IT", avg_days: 10 }];
+      vi.mocked(api.p2pAnalyticsAPI.getCycleByCategory).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => useP2PCycleByCategory(), {
         wrapper: createWrapper(),
@@ -151,9 +155,11 @@ describe('useP2PAnalytics Hooks', () => {
       expect(api.p2pAnalyticsAPI.getCycleByCategory).toHaveBeenCalled();
     });
 
-    it('should fetch cycle by supplier', async () => {
-      const mockData = [{ supplier: 'Acme', avg_days: 12 }];
-      vi.mocked(api.p2pAnalyticsAPI.getCycleBySupplier).mockResolvedValue({ data: mockData } as any);
+    it("should fetch cycle by supplier", async () => {
+      const mockData = [{ supplier: "Acme", avg_days: 12 }];
+      vi.mocked(api.p2pAnalyticsAPI.getCycleBySupplier).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => useP2PCycleBySupplier(), {
         wrapper: createWrapper(),
@@ -166,9 +172,11 @@ describe('useP2PAnalytics Hooks', () => {
       expect(api.p2pAnalyticsAPI.getCycleBySupplier).toHaveBeenCalled();
     });
 
-    it('should fetch cycle trends with default months', async () => {
+    it("should fetch cycle trends with default months", async () => {
       const mockData = { trends: [] };
-      vi.mocked(api.p2pAnalyticsAPI.getCycleTrends).mockResolvedValue({ data: mockData } as any);
+      vi.mocked(api.p2pAnalyticsAPI.getCycleTrends).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => useP2PCycleTrends(), {
         wrapper: createWrapper(),
@@ -181,9 +189,11 @@ describe('useP2PAnalytics Hooks', () => {
       expect(api.p2pAnalyticsAPI.getCycleTrends).toHaveBeenCalledWith(12);
     });
 
-    it('should fetch cycle trends with custom months', async () => {
+    it("should fetch cycle trends with custom months", async () => {
       const mockData = { trends: [] };
-      vi.mocked(api.p2pAnalyticsAPI.getCycleTrends).mockResolvedValue({ data: mockData } as any);
+      vi.mocked(api.p2pAnalyticsAPI.getCycleTrends).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => useP2PCycleTrends(6), {
         wrapper: createWrapper(),
@@ -196,9 +206,11 @@ describe('useP2PAnalytics Hooks', () => {
       expect(api.p2pAnalyticsAPI.getCycleTrends).toHaveBeenCalledWith(6);
     });
 
-    it('should fetch bottlenecks', async () => {
-      const mockData = [{ stage: 'approval', avg_delay: 5 }];
-      vi.mocked(api.p2pAnalyticsAPI.getBottlenecks).mockResolvedValue({ data: mockData } as any);
+    it("should fetch bottlenecks", async () => {
+      const mockData = [{ stage: "approval", avg_delay: 5 }];
+      vi.mocked(api.p2pAnalyticsAPI.getBottlenecks).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => useP2PBottlenecks(), {
         wrapper: createWrapper(),
@@ -211,9 +223,11 @@ describe('useP2PAnalytics Hooks', () => {
       expect(api.p2pAnalyticsAPI.getBottlenecks).toHaveBeenCalled();
     });
 
-    it('should fetch process funnel', async () => {
+    it("should fetch process funnel", async () => {
       const mockData = { funnel: [] };
-      vi.mocked(api.p2pAnalyticsAPI.getProcessFunnel).mockResolvedValue({ data: mockData } as any);
+      vi.mocked(api.p2pAnalyticsAPI.getProcessFunnel).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => useP2PProcessFunnel(), {
         wrapper: createWrapper(),
@@ -226,11 +240,13 @@ describe('useP2PAnalytics Hooks', () => {
       expect(api.p2pAnalyticsAPI.getProcessFunnel).toHaveBeenCalledWith(12);
     });
 
-    it('should fetch stage drilldown when stage provided', async () => {
+    it("should fetch stage drilldown when stage provided", async () => {
       const mockData = { items: [] };
-      vi.mocked(api.p2pAnalyticsAPI.getStageDrilldown).mockResolvedValue({ data: mockData } as any);
+      vi.mocked(api.p2pAnalyticsAPI.getStageDrilldown).mockResolvedValue({
+        data: mockData,
+      } as any);
 
-      const { result } = renderHook(() => useP2PStageDrilldown('approval'), {
+      const { result } = renderHook(() => useP2PStageDrilldown("approval"), {
         wrapper: createWrapper(),
       });
 
@@ -238,15 +254,17 @@ describe('useP2PAnalytics Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(api.p2pAnalyticsAPI.getStageDrilldown).toHaveBeenCalledWith('approval');
+      expect(api.p2pAnalyticsAPI.getStageDrilldown).toHaveBeenCalledWith(
+        "approval",
+      );
     });
 
-    it('should not fetch stage drilldown when stage is null', () => {
+    it("should not fetch stage drilldown when stage is null", () => {
       const { result } = renderHook(() => useP2PStageDrilldown(null), {
         wrapper: createWrapper(),
       });
 
-      expect(result.current.fetchStatus).toBe('idle');
+      expect(result.current.fetchStatus).toBe("idle");
       expect(api.p2pAnalyticsAPI.getStageDrilldown).not.toHaveBeenCalled();
     });
   });
@@ -254,10 +272,12 @@ describe('useP2PAnalytics Hooks', () => {
   // =====================
   // 3-Way Matching
   // =====================
-  describe('3-Way Matching', () => {
-    it('should fetch matching overview', async () => {
+  describe("3-Way Matching", () => {
+    it("should fetch matching overview", async () => {
       const mockData = { match_rate: 0.85, total_invoices: 100 };
-      vi.mocked(api.p2pAnalyticsAPI.getMatchingOverview).mockResolvedValue({ data: mockData } as any);
+      vi.mocked(api.p2pAnalyticsAPI.getMatchingOverview).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => useMatchingOverview(), {
         wrapper: createWrapper(),
@@ -270,24 +290,33 @@ describe('useP2PAnalytics Hooks', () => {
       expect(api.p2pAnalyticsAPI.getMatchingOverview).toHaveBeenCalled();
     });
 
-    it('should fetch matching exceptions', async () => {
+    it("should fetch matching exceptions", async () => {
       const mockData = { results: [], count: 0 };
-      vi.mocked(api.p2pAnalyticsAPI.getMatchingExceptions).mockResolvedValue({ data: mockData } as any);
+      vi.mocked(api.p2pAnalyticsAPI.getMatchingExceptions).mockResolvedValue({
+        data: mockData,
+      } as any);
 
-      const { result } = renderHook(() => useMatchingExceptions({ status: 'open' }), {
-        wrapper: createWrapper(),
-      });
+      const { result } = renderHook(
+        () => useMatchingExceptions({ status: "open" }),
+        {
+          wrapper: createWrapper(),
+        },
+      );
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(api.p2pAnalyticsAPI.getMatchingExceptions).toHaveBeenCalledWith({ status: 'open' });
+      expect(api.p2pAnalyticsAPI.getMatchingExceptions).toHaveBeenCalledWith({
+        status: "open",
+      });
     });
 
-    it('should fetch exceptions by type', async () => {
-      const mockData = [{ type: 'price', count: 10 }];
-      vi.mocked(api.p2pAnalyticsAPI.getExceptionsByType).mockResolvedValue({ data: mockData } as any);
+    it("should fetch exceptions by type", async () => {
+      const mockData = [{ type: "price", count: 10 }];
+      vi.mocked(api.p2pAnalyticsAPI.getExceptionsByType).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => useExceptionsByType(), {
         wrapper: createWrapper(),
@@ -300,9 +329,11 @@ describe('useP2PAnalytics Hooks', () => {
       expect(api.p2pAnalyticsAPI.getExceptionsByType).toHaveBeenCalled();
     });
 
-    it('should fetch exceptions by supplier', async () => {
-      const mockData = [{ supplier: 'Acme', count: 5 }];
-      vi.mocked(api.p2pAnalyticsAPI.getExceptionsBySupplier).mockResolvedValue({ data: mockData } as any);
+    it("should fetch exceptions by supplier", async () => {
+      const mockData = [{ supplier: "Acme", count: 5 }];
+      vi.mocked(api.p2pAnalyticsAPI.getExceptionsBySupplier).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => useExceptionsBySupplier(), {
         wrapper: createWrapper(),
@@ -315,9 +346,11 @@ describe('useP2PAnalytics Hooks', () => {
       expect(api.p2pAnalyticsAPI.getExceptionsBySupplier).toHaveBeenCalled();
     });
 
-    it('should fetch price variance analysis', async () => {
+    it("should fetch price variance analysis", async () => {
       const mockData = { variance: [] };
-      vi.mocked(api.p2pAnalyticsAPI.getPriceVarianceAnalysis).mockResolvedValue({ data: mockData } as any);
+      vi.mocked(api.p2pAnalyticsAPI.getPriceVarianceAnalysis).mockResolvedValue(
+        { data: mockData } as any,
+      );
 
       const { result } = renderHook(() => usePriceVarianceAnalysis(), {
         wrapper: createWrapper(),
@@ -330,9 +363,11 @@ describe('useP2PAnalytics Hooks', () => {
       expect(api.p2pAnalyticsAPI.getPriceVarianceAnalysis).toHaveBeenCalled();
     });
 
-    it('should fetch quantity variance analysis', async () => {
+    it("should fetch quantity variance analysis", async () => {
       const mockData = { variance: [] };
-      vi.mocked(api.p2pAnalyticsAPI.getQuantityVarianceAnalysis).mockResolvedValue({ data: mockData } as any);
+      vi.mocked(
+        api.p2pAnalyticsAPI.getQuantityVarianceAnalysis,
+      ).mockResolvedValue({ data: mockData } as any);
 
       const { result } = renderHook(() => useQuantityVarianceAnalysis(), {
         wrapper: createWrapper(),
@@ -342,12 +377,16 @@ describe('useP2PAnalytics Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(api.p2pAnalyticsAPI.getQuantityVarianceAnalysis).toHaveBeenCalled();
+      expect(
+        api.p2pAnalyticsAPI.getQuantityVarianceAnalysis,
+      ).toHaveBeenCalled();
     });
 
-    it('should fetch invoice match detail when ID provided', async () => {
-      const mockData = { id: 1, po_number: 'PO-001' };
-      vi.mocked(api.p2pAnalyticsAPI.getInvoiceMatchDetail).mockResolvedValue({ data: mockData } as any);
+    it("should fetch invoice match detail when ID provided", async () => {
+      const mockData = { id: 1, po_number: "PO-001" };
+      vi.mocked(api.p2pAnalyticsAPI.getInvoiceMatchDetail).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => useInvoiceMatchDetail(1), {
         wrapper: createWrapper(),
@@ -360,52 +399,70 @@ describe('useP2PAnalytics Hooks', () => {
       expect(api.p2pAnalyticsAPI.getInvoiceMatchDetail).toHaveBeenCalledWith(1);
     });
 
-    it('should not fetch invoice match detail when ID is null', () => {
+    it("should not fetch invoice match detail when ID is null", () => {
       const { result } = renderHook(() => useInvoiceMatchDetail(null), {
         wrapper: createWrapper(),
       });
 
-      expect(result.current.fetchStatus).toBe('idle');
+      expect(result.current.fetchStatus).toBe("idle");
     });
 
-    it('should resolve exception', async () => {
-      const mockData = { id: 1, status: 'resolved' };
-      vi.mocked(api.p2pAnalyticsAPI.resolveException).mockResolvedValue({ data: mockData } as any);
+    it("should resolve exception", async () => {
+      const mockData = { id: 1, status: "resolved" };
+      vi.mocked(api.p2pAnalyticsAPI.resolveException).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => useResolveException(), {
         wrapper: createWrapper(),
       });
 
       await act(async () => {
-        await result.current.mutateAsync({ invoiceId: 1, resolutionNotes: 'Fixed' });
+        await result.current.mutateAsync({
+          invoiceId: 1,
+          resolutionNotes: "Fixed",
+        });
       });
 
-      expect(api.p2pAnalyticsAPI.resolveException).toHaveBeenCalledWith(1, 'Fixed');
+      expect(api.p2pAnalyticsAPI.resolveException).toHaveBeenCalledWith(
+        1,
+        "Fixed",
+      );
     });
 
-    it('should bulk resolve exceptions', async () => {
+    it("should bulk resolve exceptions", async () => {
       const mockData = { resolved_count: 3 };
-      vi.mocked(api.p2pAnalyticsAPI.bulkResolveExceptions).mockResolvedValue({ data: mockData } as any);
+      vi.mocked(api.p2pAnalyticsAPI.bulkResolveExceptions).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => useBulkResolveExceptions(), {
         wrapper: createWrapper(),
       });
 
       await act(async () => {
-        await result.current.mutateAsync({ invoiceIds: [1, 2, 3], resolutionNotes: 'Bulk fix' });
+        await result.current.mutateAsync({
+          invoiceIds: [1, 2, 3],
+          resolutionNotes: "Bulk fix",
+        });
       });
 
-      expect(api.p2pAnalyticsAPI.bulkResolveExceptions).toHaveBeenCalledWith([1, 2, 3], 'Bulk fix');
+      expect(api.p2pAnalyticsAPI.bulkResolveExceptions).toHaveBeenCalledWith(
+        [1, 2, 3],
+        "Bulk fix",
+      );
     });
   });
 
   // =====================
   // Invoice Aging / AP Analysis
   // =====================
-  describe('Invoice Aging / AP Analysis', () => {
-    it('should fetch aging overview', async () => {
+  describe("Invoice Aging / AP Analysis", () => {
+    it("should fetch aging overview", async () => {
       const mockData = { total_ap: 100000, buckets: [] };
-      vi.mocked(api.p2pAnalyticsAPI.getAgingOverview).mockResolvedValue({ data: mockData } as any);
+      vi.mocked(api.p2pAnalyticsAPI.getAgingOverview).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => useAgingOverview(), {
         wrapper: createWrapper(),
@@ -418,9 +475,11 @@ describe('useP2PAnalytics Hooks', () => {
       expect(api.p2pAnalyticsAPI.getAgingOverview).toHaveBeenCalled();
     });
 
-    it('should fetch aging by supplier', async () => {
-      const mockData = [{ supplier: 'Acme', total: 5000 }];
-      vi.mocked(api.p2pAnalyticsAPI.getAgingBySupplier).mockResolvedValue({ data: mockData } as any);
+    it("should fetch aging by supplier", async () => {
+      const mockData = [{ supplier: "Acme", total: 5000 }];
+      vi.mocked(api.p2pAnalyticsAPI.getAgingBySupplier).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => useAgingBySupplier(), {
         wrapper: createWrapper(),
@@ -433,9 +492,11 @@ describe('useP2PAnalytics Hooks', () => {
       expect(api.p2pAnalyticsAPI.getAgingBySupplier).toHaveBeenCalled();
     });
 
-    it('should fetch payment terms compliance', async () => {
+    it("should fetch payment terms compliance", async () => {
       const mockData = { compliance_rate: 0.92 };
-      vi.mocked(api.p2pAnalyticsAPI.getPaymentTermsCompliance).mockResolvedValue({ data: mockData } as any);
+      vi.mocked(
+        api.p2pAnalyticsAPI.getPaymentTermsCompliance,
+      ).mockResolvedValue({ data: mockData } as any);
 
       const { result } = renderHook(() => usePaymentTermsCompliance(), {
         wrapper: createWrapper(),
@@ -448,9 +509,11 @@ describe('useP2PAnalytics Hooks', () => {
       expect(api.p2pAnalyticsAPI.getPaymentTermsCompliance).toHaveBeenCalled();
     });
 
-    it('should fetch DPO trends', async () => {
+    it("should fetch DPO trends", async () => {
       const mockData = { trends: [] };
-      vi.mocked(api.p2pAnalyticsAPI.getDPOTrends).mockResolvedValue({ data: mockData } as any);
+      vi.mocked(api.p2pAnalyticsAPI.getDPOTrends).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => useDPOTrends(6), {
         wrapper: createWrapper(),
@@ -463,9 +526,11 @@ describe('useP2PAnalytics Hooks', () => {
       expect(api.p2pAnalyticsAPI.getDPOTrends).toHaveBeenCalledWith(6);
     });
 
-    it('should fetch cash flow forecast', async () => {
+    it("should fetch cash flow forecast", async () => {
       const mockData = { forecast: [] };
-      vi.mocked(api.p2pAnalyticsAPI.getCashFlowForecast).mockResolvedValue({ data: mockData } as any);
+      vi.mocked(api.p2pAnalyticsAPI.getCashFlowForecast).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => useCashFlowForecast(8), {
         wrapper: createWrapper(),
@@ -482,10 +547,12 @@ describe('useP2PAnalytics Hooks', () => {
   // =====================
   // Purchase Requisitions
   // =====================
-  describe('Purchase Requisitions', () => {
-    it('should fetch PR overview', async () => {
+  describe("Purchase Requisitions", () => {
+    it("should fetch PR overview", async () => {
       const mockData = { total_prs: 50, pending: 10 };
-      vi.mocked(api.p2pAnalyticsAPI.getPROverview).mockResolvedValue({ data: mockData } as any);
+      vi.mocked(api.p2pAnalyticsAPI.getPROverview).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => usePROverview(), {
         wrapper: createWrapper(),
@@ -498,9 +565,11 @@ describe('useP2PAnalytics Hooks', () => {
       expect(api.p2pAnalyticsAPI.getPROverview).toHaveBeenCalled();
     });
 
-    it('should fetch PR approval analysis', async () => {
+    it("should fetch PR approval analysis", async () => {
       const mockData = { avg_approval_days: 3 };
-      vi.mocked(api.p2pAnalyticsAPI.getPRApprovalAnalysis).mockResolvedValue({ data: mockData } as any);
+      vi.mocked(api.p2pAnalyticsAPI.getPRApprovalAnalysis).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => usePRApprovalAnalysis(), {
         wrapper: createWrapper(),
@@ -513,9 +582,11 @@ describe('useP2PAnalytics Hooks', () => {
       expect(api.p2pAnalyticsAPI.getPRApprovalAnalysis).toHaveBeenCalled();
     });
 
-    it('should fetch PR by department', async () => {
-      const mockData = [{ department: 'IT', count: 25 }];
-      vi.mocked(api.p2pAnalyticsAPI.getPRByDepartment).mockResolvedValue({ data: mockData } as any);
+    it("should fetch PR by department", async () => {
+      const mockData = [{ department: "IT", count: 25 }];
+      vi.mocked(api.p2pAnalyticsAPI.getPRByDepartment).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => usePRByDepartment(), {
         wrapper: createWrapper(),
@@ -528,9 +599,11 @@ describe('useP2PAnalytics Hooks', () => {
       expect(api.p2pAnalyticsAPI.getPRByDepartment).toHaveBeenCalled();
     });
 
-    it('should fetch pending PRs with limit', async () => {
+    it("should fetch pending PRs with limit", async () => {
       const mockData = { results: [] };
-      vi.mocked(api.p2pAnalyticsAPI.getPRPending).mockResolvedValue({ data: mockData } as any);
+      vi.mocked(api.p2pAnalyticsAPI.getPRPending).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => usePRPending(25), {
         wrapper: createWrapper(),
@@ -543,9 +616,11 @@ describe('useP2PAnalytics Hooks', () => {
       expect(api.p2pAnalyticsAPI.getPRPending).toHaveBeenCalledWith(25);
     });
 
-    it('should fetch PR detail when ID provided', async () => {
-      const mockData = { id: 1, pr_number: 'PR-001' };
-      vi.mocked(api.p2pAnalyticsAPI.getPRDetail).mockResolvedValue({ data: mockData } as any);
+    it("should fetch PR detail when ID provided", async () => {
+      const mockData = { id: 1, pr_number: "PR-001" };
+      vi.mocked(api.p2pAnalyticsAPI.getPRDetail).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => usePRDetail(1), {
         wrapper: createWrapper(),
@@ -558,22 +633,24 @@ describe('useP2PAnalytics Hooks', () => {
       expect(api.p2pAnalyticsAPI.getPRDetail).toHaveBeenCalledWith(1);
     });
 
-    it('should not fetch PR detail when ID is null', () => {
+    it("should not fetch PR detail when ID is null", () => {
       const { result } = renderHook(() => usePRDetail(null), {
         wrapper: createWrapper(),
       });
 
-      expect(result.current.fetchStatus).toBe('idle');
+      expect(result.current.fetchStatus).toBe("idle");
     });
   });
 
   // =====================
   // Purchase Orders
   // =====================
-  describe('Purchase Orders', () => {
-    it('should fetch PO overview', async () => {
+  describe("Purchase Orders", () => {
+    it("should fetch PO overview", async () => {
       const mockData = { total_pos: 100, total_value: 500000 };
-      vi.mocked(api.p2pAnalyticsAPI.getPOOverview).mockResolvedValue({ data: mockData } as any);
+      vi.mocked(api.p2pAnalyticsAPI.getPOOverview).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => usePOOverview(), {
         wrapper: createWrapper(),
@@ -586,9 +663,11 @@ describe('useP2PAnalytics Hooks', () => {
       expect(api.p2pAnalyticsAPI.getPOOverview).toHaveBeenCalled();
     });
 
-    it('should fetch PO leakage', async () => {
+    it("should fetch PO leakage", async () => {
       const mockData = { maverick_spend: 10000 };
-      vi.mocked(api.p2pAnalyticsAPI.getPOLeakage).mockResolvedValue({ data: mockData } as any);
+      vi.mocked(api.p2pAnalyticsAPI.getPOLeakage).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => usePOLeakage(), {
         wrapper: createWrapper(),
@@ -601,9 +680,11 @@ describe('useP2PAnalytics Hooks', () => {
       expect(api.p2pAnalyticsAPI.getPOLeakage).toHaveBeenCalled();
     });
 
-    it('should fetch PO amendments', async () => {
+    it("should fetch PO amendments", async () => {
       const mockData = { amendment_rate: 0.05 };
-      vi.mocked(api.p2pAnalyticsAPI.getPOAmendments).mockResolvedValue({ data: mockData } as any);
+      vi.mocked(api.p2pAnalyticsAPI.getPOAmendments).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => usePOAmendments(), {
         wrapper: createWrapper(),
@@ -616,9 +697,11 @@ describe('useP2PAnalytics Hooks', () => {
       expect(api.p2pAnalyticsAPI.getPOAmendments).toHaveBeenCalled();
     });
 
-    it('should fetch PO by supplier', async () => {
-      const mockData = [{ supplier: 'Acme', po_count: 15 }];
-      vi.mocked(api.p2pAnalyticsAPI.getPOBySupplier).mockResolvedValue({ data: mockData } as any);
+    it("should fetch PO by supplier", async () => {
+      const mockData = [{ supplier: "Acme", po_count: 15 }];
+      vi.mocked(api.p2pAnalyticsAPI.getPOBySupplier).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => usePOBySupplier(), {
         wrapper: createWrapper(),
@@ -631,9 +714,11 @@ describe('useP2PAnalytics Hooks', () => {
       expect(api.p2pAnalyticsAPI.getPOBySupplier).toHaveBeenCalled();
     });
 
-    it('should fetch PO detail when ID provided', async () => {
-      const mockData = { id: 1, po_number: 'PO-001' };
-      vi.mocked(api.p2pAnalyticsAPI.getPODetail).mockResolvedValue({ data: mockData } as any);
+    it("should fetch PO detail when ID provided", async () => {
+      const mockData = { id: 1, po_number: "PO-001" };
+      vi.mocked(api.p2pAnalyticsAPI.getPODetail).mockResolvedValue({
+        data: mockData,
+      } as any);
 
       const { result } = renderHook(() => usePODetail(1), {
         wrapper: createWrapper(),
@@ -646,22 +731,24 @@ describe('useP2PAnalytics Hooks', () => {
       expect(api.p2pAnalyticsAPI.getPODetail).toHaveBeenCalledWith(1);
     });
 
-    it('should not fetch PO detail when ID is null', () => {
+    it("should not fetch PO detail when ID is null", () => {
       const { result } = renderHook(() => usePODetail(null), {
         wrapper: createWrapper(),
       });
 
-      expect(result.current.fetchStatus).toBe('idle');
+      expect(result.current.fetchStatus).toBe("idle");
     });
   });
 
   // =====================
   // Supplier Payment Performance
   // =====================
-  describe('Supplier Payment Performance', () => {
-    it('should fetch supplier payments overview', async () => {
+  describe("Supplier Payment Performance", () => {
+    it("should fetch supplier payments overview", async () => {
       const mockData = { total_payments: 500000 };
-      vi.mocked(api.p2pAnalyticsAPI.getSupplierPaymentsOverview).mockResolvedValue({ data: mockData } as any);
+      vi.mocked(
+        api.p2pAnalyticsAPI.getSupplierPaymentsOverview,
+      ).mockResolvedValue({ data: mockData } as any);
 
       const { result } = renderHook(() => useSupplierPaymentsOverview(), {
         wrapper: createWrapper(),
@@ -671,12 +758,16 @@ describe('useP2PAnalytics Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(api.p2pAnalyticsAPI.getSupplierPaymentsOverview).toHaveBeenCalled();
+      expect(
+        api.p2pAnalyticsAPI.getSupplierPaymentsOverview,
+      ).toHaveBeenCalled();
     });
 
-    it('should fetch supplier payments scorecard with limit', async () => {
+    it("should fetch supplier payments scorecard with limit", async () => {
       const mockData = { results: [] };
-      vi.mocked(api.p2pAnalyticsAPI.getSupplierPaymentsScorecard).mockResolvedValue({ data: mockData } as any);
+      vi.mocked(
+        api.p2pAnalyticsAPI.getSupplierPaymentsScorecard,
+      ).mockResolvedValue({ data: mockData } as any);
 
       const { result } = renderHook(() => useSupplierPaymentsScorecard(25), {
         wrapper: createWrapper(),
@@ -686,12 +777,16 @@ describe('useP2PAnalytics Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(api.p2pAnalyticsAPI.getSupplierPaymentsScorecard).toHaveBeenCalledWith(25);
+      expect(
+        api.p2pAnalyticsAPI.getSupplierPaymentsScorecard,
+      ).toHaveBeenCalledWith(25);
     });
 
-    it('should fetch supplier payment detail when ID provided', async () => {
-      const mockData = { id: 1, supplier_name: 'Acme' };
-      vi.mocked(api.p2pAnalyticsAPI.getSupplierPaymentDetail).mockResolvedValue({ data: mockData } as any);
+    it("should fetch supplier payment detail when ID provided", async () => {
+      const mockData = { id: 1, supplier_name: "Acme" };
+      vi.mocked(api.p2pAnalyticsAPI.getSupplierPaymentDetail).mockResolvedValue(
+        { data: mockData } as any,
+      );
 
       const { result } = renderHook(() => useSupplierPaymentDetail(1), {
         wrapper: createWrapper(),
@@ -701,20 +796,24 @@ describe('useP2PAnalytics Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(api.p2pAnalyticsAPI.getSupplierPaymentDetail).toHaveBeenCalledWith(1);
+      expect(api.p2pAnalyticsAPI.getSupplierPaymentDetail).toHaveBeenCalledWith(
+        1,
+      );
     });
 
-    it('should not fetch supplier payment detail when ID is null', () => {
+    it("should not fetch supplier payment detail when ID is null", () => {
       const { result } = renderHook(() => useSupplierPaymentDetail(null), {
         wrapper: createWrapper(),
       });
 
-      expect(result.current.fetchStatus).toBe('idle');
+      expect(result.current.fetchStatus).toBe("idle");
     });
 
-    it('should fetch supplier payment history when ID provided', async () => {
+    it("should fetch supplier payment history when ID provided", async () => {
       const mockData = { history: [] };
-      vi.mocked(api.p2pAnalyticsAPI.getSupplierPaymentHistory).mockResolvedValue({ data: mockData } as any);
+      vi.mocked(
+        api.p2pAnalyticsAPI.getSupplierPaymentHistory,
+      ).mockResolvedValue({ data: mockData } as any);
 
       const { result } = renderHook(() => useSupplierPaymentHistory(1, 6), {
         wrapper: createWrapper(),
@@ -724,25 +823,31 @@ describe('useP2PAnalytics Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(api.p2pAnalyticsAPI.getSupplierPaymentHistory).toHaveBeenCalledWith(1, 6);
+      expect(
+        api.p2pAnalyticsAPI.getSupplierPaymentHistory,
+      ).toHaveBeenCalledWith(1, 6);
     });
 
-    it('should not fetch supplier payment history when ID is null', () => {
+    it("should not fetch supplier payment history when ID is null", () => {
       const { result } = renderHook(() => useSupplierPaymentHistory(null), {
         wrapper: createWrapper(),
       });
 
-      expect(result.current.fetchStatus).toBe('idle');
+      expect(result.current.fetchStatus).toBe("idle");
     });
   });
 
   // =====================
   // Organization Scoping
   // =====================
-  describe('Organization Scoping', () => {
-    it('should include org ID in query key when viewing other org', async () => {
-      vi.mocked(api.getOrganizationParam).mockReturnValue({ organization_id: 5 });
-      vi.mocked(api.p2pAnalyticsAPI.getCycleOverview).mockResolvedValue({ data: {} } as any);
+  describe("Organization Scoping", () => {
+    it("should include org ID in query key when viewing other org", async () => {
+      vi.mocked(api.getOrganizationParam).mockReturnValue({
+        organization_id: 5,
+      });
+      vi.mocked(api.p2pAnalyticsAPI.getCycleOverview).mockResolvedValue({
+        data: {},
+      } as any);
 
       const { result } = renderHook(() => useP2PCycleOverview(), {
         wrapper: createWrapper(),
@@ -760,9 +865,11 @@ describe('useP2PAnalytics Hooks', () => {
   // =====================
   // Error Handling
   // =====================
-  describe('Error Handling', () => {
-    it('should handle API error in cycle overview', async () => {
-      vi.mocked(api.p2pAnalyticsAPI.getCycleOverview).mockRejectedValue(new Error('Network error'));
+  describe("Error Handling", () => {
+    it("should handle API error in cycle overview", async () => {
+      vi.mocked(api.p2pAnalyticsAPI.getCycleOverview).mockRejectedValue(
+        new Error("Network error"),
+      );
 
       const { result } = renderHook(() => useP2PCycleOverview(), {
         wrapper: createWrapper(),
@@ -773,8 +880,10 @@ describe('useP2PAnalytics Hooks', () => {
       });
     });
 
-    it('should handle API error in matching overview', async () => {
-      vi.mocked(api.p2pAnalyticsAPI.getMatchingOverview).mockRejectedValue(new Error('Network error'));
+    it("should handle API error in matching overview", async () => {
+      vi.mocked(api.p2pAnalyticsAPI.getMatchingOverview).mockRejectedValue(
+        new Error("Network error"),
+      );
 
       const { result } = renderHook(() => useMatchingOverview(), {
         wrapper: createWrapper(),
@@ -785,8 +894,10 @@ describe('useP2PAnalytics Hooks', () => {
       });
     });
 
-    it('should handle mutation error in resolve exception', async () => {
-      vi.mocked(api.p2pAnalyticsAPI.resolveException).mockRejectedValue(new Error('Failed to resolve'));
+    it("should handle mutation error in resolve exception", async () => {
+      vi.mocked(api.p2pAnalyticsAPI.resolveException).mockRejectedValue(
+        new Error("Failed to resolve"),
+      );
 
       const { result } = renderHook(() => useResolveException(), {
         wrapper: createWrapper(),
@@ -795,7 +906,10 @@ describe('useP2PAnalytics Hooks', () => {
       let errorOccurred = false;
       await act(async () => {
         try {
-          await result.current.mutateAsync({ invoiceId: 1, resolutionNotes: 'Test' });
+          await result.current.mutateAsync({
+            invoiceId: 1,
+            resolutionNotes: "Test",
+          });
         } catch {
           errorOccurred = true;
         }

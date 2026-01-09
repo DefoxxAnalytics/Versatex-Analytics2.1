@@ -9,14 +9,14 @@
  * - Super admin detection
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, act } from '@testing-library/react';
-import { AuthProvider, useAuth } from '../AuthContext';
-import * as authLib from '@/lib/auth';
-import * as api from '@/lib/api';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, waitFor, act } from "@testing-library/react";
+import { AuthProvider, useAuth } from "../AuthContext";
+import * as authLib from "@/lib/auth";
+import * as api from "@/lib/api";
 
 // Mock dependencies
-vi.mock('@/lib/auth', () => ({
+vi.mock("@/lib/auth", () => ({
   isAuthenticated: vi.fn(),
   clearSession: vi.fn(),
   updateActivity: vi.fn(),
@@ -24,13 +24,13 @@ vi.mock('@/lib/auth', () => ({
   getUserData: vi.fn(),
 }));
 
-vi.mock('@/lib/api', () => ({
+vi.mock("@/lib/api", () => ({
   authAPI: {
     logout: vi.fn(),
   },
 }));
 
-vi.mock('sonner', () => ({
+vi.mock("sonner", () => ({
   toast: {
     info: vi.fn(),
     error: vi.fn(),
@@ -40,21 +40,28 @@ vi.mock('sonner', () => ({
 
 // Test component to access context
 function TestConsumer() {
-  const { isAuth, user, role, isSuperAdmin, logout, checkAuth, refreshUser } = useAuth();
+  const { isAuth, user, role, isSuperAdmin, logout, checkAuth, refreshUser } =
+    useAuth();
   return (
     <div>
       <span data-testid="isAuth">{String(isAuth)}</span>
       <span data-testid="user">{JSON.stringify(user)}</span>
-      <span data-testid="role">{role ?? 'null'}</span>
+      <span data-testid="role">{role ?? "null"}</span>
       <span data-testid="isSuperAdmin">{String(isSuperAdmin)}</span>
-      <button data-testid="logout-btn" onClick={logout}>Logout</button>
-      <button data-testid="checkAuth-btn" onClick={checkAuth}>Check Auth</button>
-      <button data-testid="refreshUser-btn" onClick={refreshUser}>Refresh User</button>
+      <button data-testid="logout-btn" onClick={logout}>
+        Logout
+      </button>
+      <button data-testid="checkAuth-btn" onClick={checkAuth}>
+        Check Auth
+      </button>
+      <button data-testid="refreshUser-btn" onClick={refreshUser}>
+        Refresh User
+      </button>
     </div>
   );
 }
 
-describe('AuthContext', () => {
+describe("AuthContext", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Default mocks
@@ -70,61 +77,61 @@ describe('AuthContext', () => {
   // =====================
   // Initial State Tests
   // =====================
-  describe('Initial State', () => {
-    it('should show children after initial auth check', async () => {
+  describe("Initial State", () => {
+    it("should show children after initial auth check", async () => {
       vi.mocked(authLib.isAuthenticated).mockReturnValue(false);
 
       render(
         <AuthProvider>
           <div data-testid="child">Child content</div>
-        </AuthProvider>
+        </AuthProvider>,
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('child')).toBeInTheDocument();
+        expect(screen.getByTestId("child")).toBeInTheDocument();
       });
     });
 
-    it('should have isAuth=false when not authenticated', async () => {
+    it("should have isAuth=false when not authenticated", async () => {
       vi.mocked(authLib.isAuthenticated).mockReturnValue(false);
 
       render(
         <AuthProvider>
           <TestConsumer />
-        </AuthProvider>
+        </AuthProvider>,
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('isAuth')).toHaveTextContent('false');
+        expect(screen.getByTestId("isAuth")).toHaveTextContent("false");
       });
     });
 
-    it('should have user=null when not authenticated', async () => {
+    it("should have user=null when not authenticated", async () => {
       vi.mocked(authLib.isAuthenticated).mockReturnValue(false);
       vi.mocked(authLib.getUserData).mockReturnValue(null);
 
       render(
         <AuthProvider>
           <TestConsumer />
-        </AuthProvider>
+        </AuthProvider>,
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('user')).toHaveTextContent('null');
+        expect(screen.getByTestId("user")).toHaveTextContent("null");
       });
     });
 
-    it('should have role=null when not authenticated', async () => {
+    it("should have role=null when not authenticated", async () => {
       vi.mocked(authLib.isAuthenticated).mockReturnValue(false);
 
       render(
         <AuthProvider>
           <TestConsumer />
-        </AuthProvider>
+        </AuthProvider>,
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('role')).toHaveTextContent('null');
+        expect(screen.getByTestId("role")).toHaveTextContent("null");
       });
     });
   });
@@ -132,69 +139,69 @@ describe('AuthContext', () => {
   // =====================
   // Authenticated State Tests
   // =====================
-  describe('Authenticated State', () => {
+  describe("Authenticated State", () => {
     const mockUser = {
       id: 1,
-      username: 'testuser',
-      email: 'test@example.com',
+      username: "testuser",
+      email: "test@example.com",
       profile: {
         organization: 1,
-        organization_name: 'Test Org',
-        role: 'admin' as const,
+        organization_name: "Test Org",
+        role: "admin" as const,
         is_super_admin: false,
       },
     };
 
-    it('should have isAuth=true when authenticated', async () => {
+    it("should have isAuth=true when authenticated", async () => {
       vi.mocked(authLib.isAuthenticated).mockReturnValue(true);
       vi.mocked(authLib.getUserData).mockReturnValue(mockUser);
 
       render(
         <AuthProvider>
           <TestConsumer />
-        </AuthProvider>
+        </AuthProvider>,
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('isAuth')).toHaveTextContent('true');
+        expect(screen.getByTestId("isAuth")).toHaveTextContent("true");
       });
     });
 
-    it('should load user data when authenticated', async () => {
+    it("should load user data when authenticated", async () => {
       vi.mocked(authLib.isAuthenticated).mockReturnValue(true);
       vi.mocked(authLib.getUserData).mockReturnValue(mockUser);
 
       render(
         <AuthProvider>
           <TestConsumer />
-        </AuthProvider>
+        </AuthProvider>,
       );
 
       await waitFor(() => {
-        const userText = screen.getByTestId('user').textContent;
-        expect(userText).toContain('testuser');
+        const userText = screen.getByTestId("user").textContent;
+        expect(userText).toContain("testuser");
       });
     });
 
-    it('should derive role from user profile', async () => {
+    it("should derive role from user profile", async () => {
       vi.mocked(authLib.isAuthenticated).mockReturnValue(true);
       vi.mocked(authLib.getUserData).mockReturnValue(mockUser);
 
       render(
         <AuthProvider>
           <TestConsumer />
-        </AuthProvider>
+        </AuthProvider>,
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('role')).toHaveTextContent('admin');
+        expect(screen.getByTestId("role")).toHaveTextContent("admin");
       });
     });
 
-    it('should derive manager role correctly', async () => {
+    it("should derive manager role correctly", async () => {
       const managerUser = {
         ...mockUser,
-        profile: { ...mockUser.profile, role: 'manager' as const },
+        profile: { ...mockUser.profile, role: "manager" as const },
       };
       vi.mocked(authLib.isAuthenticated).mockReturnValue(true);
       vi.mocked(authLib.getUserData).mockReturnValue(managerUser);
@@ -202,18 +209,18 @@ describe('AuthContext', () => {
       render(
         <AuthProvider>
           <TestConsumer />
-        </AuthProvider>
+        </AuthProvider>,
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('role')).toHaveTextContent('manager');
+        expect(screen.getByTestId("role")).toHaveTextContent("manager");
       });
     });
 
-    it('should derive viewer role correctly', async () => {
+    it("should derive viewer role correctly", async () => {
       const viewerUser = {
         ...mockUser,
-        profile: { ...mockUser.profile, role: 'viewer' as const },
+        profile: { ...mockUser.profile, role: "viewer" as const },
       };
       vi.mocked(authLib.isAuthenticated).mockReturnValue(true);
       vi.mocked(authLib.getUserData).mockReturnValue(viewerUser);
@@ -221,30 +228,30 @@ describe('AuthContext', () => {
       render(
         <AuthProvider>
           <TestConsumer />
-        </AuthProvider>
+        </AuthProvider>,
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('role')).toHaveTextContent('viewer');
+        expect(screen.getByTestId("role")).toHaveTextContent("viewer");
       });
     });
 
-    it('should have isSuperAdmin=false for regular users', async () => {
+    it("should have isSuperAdmin=false for regular users", async () => {
       vi.mocked(authLib.isAuthenticated).mockReturnValue(true);
       vi.mocked(authLib.getUserData).mockReturnValue(mockUser);
 
       render(
         <AuthProvider>
           <TestConsumer />
-        </AuthProvider>
+        </AuthProvider>,
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('isSuperAdmin')).toHaveTextContent('false');
+        expect(screen.getByTestId("isSuperAdmin")).toHaveTextContent("false");
       });
     });
 
-    it('should have isSuperAdmin=true for super admins', async () => {
+    it("should have isSuperAdmin=true for super admins", async () => {
       const superAdminUser = {
         ...mockUser,
         profile: { ...mockUser.profile, is_super_admin: true },
@@ -255,11 +262,11 @@ describe('AuthContext', () => {
       render(
         <AuthProvider>
           <TestConsumer />
-        </AuthProvider>
+        </AuthProvider>,
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('isSuperAdmin')).toHaveTextContent('true');
+        expect(screen.getByTestId("isSuperAdmin")).toHaveTextContent("true");
       });
     });
   });
@@ -267,20 +274,20 @@ describe('AuthContext', () => {
   // =====================
   // Logout Tests
   // =====================
-  describe('Logout', () => {
+  describe("Logout", () => {
     const mockUser = {
       id: 1,
-      username: 'testuser',
-      email: 'test@example.com',
+      username: "testuser",
+      email: "test@example.com",
       profile: {
         organization: 1,
-        organization_name: 'Test Org',
-        role: 'admin' as const,
+        organization_name: "Test Org",
+        role: "admin" as const,
         is_super_admin: false,
       },
     };
 
-    it('should call authAPI.logout when logging out', async () => {
+    it("should call authAPI.logout when logging out", async () => {
       vi.mocked(authLib.isAuthenticated).mockReturnValue(true);
       vi.mocked(authLib.getUserData).mockReturnValue(mockUser);
       vi.mocked(api.authAPI.logout).mockResolvedValue({ data: {} } as any);
@@ -288,21 +295,21 @@ describe('AuthContext', () => {
       render(
         <AuthProvider>
           <TestConsumer />
-        </AuthProvider>
+        </AuthProvider>,
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('isAuth')).toHaveTextContent('true');
+        expect(screen.getByTestId("isAuth")).toHaveTextContent("true");
       });
 
       await act(async () => {
-        screen.getByTestId('logout-btn').click();
+        screen.getByTestId("logout-btn").click();
       });
 
       expect(api.authAPI.logout).toHaveBeenCalled();
     });
 
-    it('should clear session after logout', async () => {
+    it("should clear session after logout", async () => {
       vi.mocked(authLib.isAuthenticated).mockReturnValue(true);
       vi.mocked(authLib.getUserData).mockReturnValue(mockUser);
       vi.mocked(api.authAPI.logout).mockResolvedValue({ data: {} } as any);
@@ -310,21 +317,21 @@ describe('AuthContext', () => {
       render(
         <AuthProvider>
           <TestConsumer />
-        </AuthProvider>
+        </AuthProvider>,
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('isAuth')).toHaveTextContent('true');
+        expect(screen.getByTestId("isAuth")).toHaveTextContent("true");
       });
 
       await act(async () => {
-        screen.getByTestId('logout-btn').click();
+        screen.getByTestId("logout-btn").click();
       });
 
       expect(authLib.clearSession).toHaveBeenCalled();
     });
 
-    it('should set isAuth=false after logout', async () => {
+    it("should set isAuth=false after logout", async () => {
       vi.mocked(authLib.isAuthenticated).mockReturnValue(true);
       vi.mocked(authLib.getUserData).mockReturnValue(mockUser);
       vi.mocked(api.authAPI.logout).mockResolvedValue({ data: {} } as any);
@@ -332,23 +339,23 @@ describe('AuthContext', () => {
       render(
         <AuthProvider>
           <TestConsumer />
-        </AuthProvider>
+        </AuthProvider>,
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('isAuth')).toHaveTextContent('true');
+        expect(screen.getByTestId("isAuth")).toHaveTextContent("true");
       });
 
       await act(async () => {
-        screen.getByTestId('logout-btn').click();
+        screen.getByTestId("logout-btn").click();
       });
 
       await waitFor(() => {
-        expect(screen.getByTestId('isAuth')).toHaveTextContent('false');
+        expect(screen.getByTestId("isAuth")).toHaveTextContent("false");
       });
     });
 
-    it('should set user=null after logout', async () => {
+    it("should set user=null after logout", async () => {
       vi.mocked(authLib.isAuthenticated).mockReturnValue(true);
       vi.mocked(authLib.getUserData).mockReturnValue(mockUser);
       vi.mocked(api.authAPI.logout).mockResolvedValue({ data: {} } as any);
@@ -356,39 +363,41 @@ describe('AuthContext', () => {
       render(
         <AuthProvider>
           <TestConsumer />
-        </AuthProvider>
+        </AuthProvider>,
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('user')).toHaveTextContent('testuser');
+        expect(screen.getByTestId("user")).toHaveTextContent("testuser");
       });
 
       await act(async () => {
-        screen.getByTestId('logout-btn').click();
+        screen.getByTestId("logout-btn").click();
       });
 
       await waitFor(() => {
-        expect(screen.getByTestId('user')).toHaveTextContent('null');
+        expect(screen.getByTestId("user")).toHaveTextContent("null");
       });
     });
 
-    it('should still clear session if server logout fails', async () => {
+    it("should still clear session if server logout fails", async () => {
       vi.mocked(authLib.isAuthenticated).mockReturnValue(true);
       vi.mocked(authLib.getUserData).mockReturnValue(mockUser);
-      vi.mocked(api.authAPI.logout).mockRejectedValue(new Error('Network error'));
+      vi.mocked(api.authAPI.logout).mockRejectedValue(
+        new Error("Network error"),
+      );
 
       render(
         <AuthProvider>
           <TestConsumer />
-        </AuthProvider>
+        </AuthProvider>,
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('isAuth')).toHaveTextContent('true');
+        expect(screen.getByTestId("isAuth")).toHaveTextContent("true");
       });
 
       await act(async () => {
-        screen.getByTestId('logout-btn').click();
+        screen.getByTestId("logout-btn").click();
       });
 
       expect(authLib.clearSession).toHaveBeenCalled();
@@ -398,66 +407,74 @@ describe('AuthContext', () => {
   // =====================
   // checkAuth Tests
   // =====================
-  describe('checkAuth', () => {
-    it('should update isAuth based on isAuthenticated', async () => {
+  describe("checkAuth", () => {
+    it("should update isAuth based on isAuthenticated", async () => {
       vi.mocked(authLib.isAuthenticated).mockReturnValue(false);
 
       render(
         <AuthProvider>
           <TestConsumer />
-        </AuthProvider>
+        </AuthProvider>,
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('isAuth')).toHaveTextContent('false');
+        expect(screen.getByTestId("isAuth")).toHaveTextContent("false");
       });
 
       // Now simulate becoming authenticated
       vi.mocked(authLib.isAuthenticated).mockReturnValue(true);
       vi.mocked(authLib.getUserData).mockReturnValue({
         id: 1,
-        username: 'test',
-        email: 'test@test.com',
-        profile: { organization: 1, role: 'viewer' as const, is_super_admin: false },
+        username: "test",
+        email: "test@test.com",
+        profile: {
+          organization: 1,
+          role: "viewer" as const,
+          is_super_admin: false,
+        },
       });
 
       await act(async () => {
-        screen.getByTestId('checkAuth-btn').click();
+        screen.getByTestId("checkAuth-btn").click();
       });
 
       await waitFor(() => {
-        expect(screen.getByTestId('isAuth')).toHaveTextContent('true');
+        expect(screen.getByTestId("isAuth")).toHaveTextContent("true");
       });
     });
 
-    it('should clear user when not authenticated', async () => {
+    it("should clear user when not authenticated", async () => {
       vi.mocked(authLib.isAuthenticated).mockReturnValue(true);
       vi.mocked(authLib.getUserData).mockReturnValue({
         id: 1,
-        username: 'test',
-        email: 'test@test.com',
-        profile: { organization: 1, role: 'viewer' as const, is_super_admin: false },
+        username: "test",
+        email: "test@test.com",
+        profile: {
+          organization: 1,
+          role: "viewer" as const,
+          is_super_admin: false,
+        },
       });
 
       render(
         <AuthProvider>
           <TestConsumer />
-        </AuthProvider>
+        </AuthProvider>,
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('user')).toHaveTextContent('test');
+        expect(screen.getByTestId("user")).toHaveTextContent("test");
       });
 
       // Now simulate session expiring
       vi.mocked(authLib.isAuthenticated).mockReturnValue(false);
 
       await act(async () => {
-        screen.getByTestId('checkAuth-btn').click();
+        screen.getByTestId("checkAuth-btn").click();
       });
 
       await waitFor(() => {
-        expect(screen.getByTestId('user')).toHaveTextContent('null');
+        expect(screen.getByTestId("user")).toHaveTextContent("null");
       });
     });
   });
@@ -465,19 +482,27 @@ describe('AuthContext', () => {
   // =====================
   // refreshUser Tests
   // =====================
-  describe('refreshUser', () => {
-    it('should reload user data from localStorage', async () => {
+  describe("refreshUser", () => {
+    it("should reload user data from localStorage", async () => {
       const initialUser = {
         id: 1,
-        username: 'initial',
-        email: 'initial@test.com',
-        profile: { organization: 1, role: 'viewer' as const, is_super_admin: false },
+        username: "initial",
+        email: "initial@test.com",
+        profile: {
+          organization: 1,
+          role: "viewer" as const,
+          is_super_admin: false,
+        },
       };
       const updatedUser = {
         id: 1,
-        username: 'updated',
-        email: 'updated@test.com',
-        profile: { organization: 1, role: 'admin' as const, is_super_admin: true },
+        username: "updated",
+        email: "updated@test.com",
+        profile: {
+          organization: 1,
+          role: "admin" as const,
+          is_super_admin: true,
+        },
       };
 
       vi.mocked(authLib.isAuthenticated).mockReturnValue(true);
@@ -486,22 +511,22 @@ describe('AuthContext', () => {
       render(
         <AuthProvider>
           <TestConsumer />
-        </AuthProvider>
+        </AuthProvider>,
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('user')).toHaveTextContent('initial');
+        expect(screen.getByTestId("user")).toHaveTextContent("initial");
       });
 
       // Update the mock to return new user data
       vi.mocked(authLib.getUserData).mockReturnValue(updatedUser);
 
       await act(async () => {
-        screen.getByTestId('refreshUser-btn').click();
+        screen.getByTestId("refreshUser-btn").click();
       });
 
       await waitFor(() => {
-        expect(screen.getByTestId('user')).toHaveTextContent('updated');
+        expect(screen.getByTestId("user")).toHaveTextContent("updated");
       });
     });
   });
@@ -509,14 +534,16 @@ describe('AuthContext', () => {
   // =====================
   // useAuth Hook Tests
   // =====================
-  describe('useAuth Hook', () => {
-    it('should throw error when used outside provider', () => {
+  describe("useAuth Hook", () => {
+    it("should throw error when used outside provider", () => {
       // Suppress console.error for this test
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       expect(() => {
         render(<TestConsumer />);
-      }).toThrow('useAuth must be used within an AuthProvider');
+      }).toThrow("useAuth must be used within an AuthProvider");
 
       consoleSpy.mockRestore();
     });
@@ -525,12 +552,12 @@ describe('AuthContext', () => {
   // =====================
   // Edge Cases
   // =====================
-  describe('Edge Cases', () => {
-    it('should handle user without profile', async () => {
+  describe("Edge Cases", () => {
+    it("should handle user without profile", async () => {
       const userNoProfile = {
         id: 1,
-        username: 'test',
-        email: 'test@test.com',
+        username: "test",
+        email: "test@test.com",
       };
 
       vi.mocked(authLib.isAuthenticated).mockReturnValue(true);
@@ -539,20 +566,20 @@ describe('AuthContext', () => {
       render(
         <AuthProvider>
           <TestConsumer />
-        </AuthProvider>
+        </AuthProvider>,
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('role')).toHaveTextContent('null');
-        expect(screen.getByTestId('isSuperAdmin')).toHaveTextContent('false');
+        expect(screen.getByTestId("role")).toHaveTextContent("null");
+        expect(screen.getByTestId("isSuperAdmin")).toHaveTextContent("false");
       });
     });
 
-    it('should handle profile without role', async () => {
+    it("should handle profile without role", async () => {
       const userNoRole = {
         id: 1,
-        username: 'test',
-        email: 'test@test.com',
+        username: "test",
+        email: "test@test.com",
         profile: { organization: 1, is_super_admin: false },
       };
 
@@ -562,20 +589,20 @@ describe('AuthContext', () => {
       render(
         <AuthProvider>
           <TestConsumer />
-        </AuthProvider>
+        </AuthProvider>,
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('role')).toHaveTextContent('null');
+        expect(screen.getByTestId("role")).toHaveTextContent("null");
       });
     });
 
-    it('should handle profile without is_super_admin field', async () => {
+    it("should handle profile without is_super_admin field", async () => {
       const userNoSuperAdmin = {
         id: 1,
-        username: 'test',
-        email: 'test@test.com',
-        profile: { organization: 1, role: 'admin' as const },
+        username: "test",
+        email: "test@test.com",
+        profile: { organization: 1, role: "admin" as const },
       };
 
       vi.mocked(authLib.isAuthenticated).mockReturnValue(true);
@@ -584,11 +611,11 @@ describe('AuthContext', () => {
       render(
         <AuthProvider>
           <TestConsumer />
-        </AuthProvider>
+        </AuthProvider>,
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('isSuperAdmin')).toHaveTextContent('false');
+        expect(screen.getByTestId("isSuperAdmin")).toHaveTextContent("false");
       });
     });
   });

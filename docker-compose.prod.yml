@@ -102,6 +102,10 @@ services:
     tmpfs:
       - /tmp
       - /var/cache/nginx
+      - /var/run
+    # Mount nginx config for easier updates without rebuilding
+    volumes:
+      - ./frontend/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
 
 networks:
   internal:

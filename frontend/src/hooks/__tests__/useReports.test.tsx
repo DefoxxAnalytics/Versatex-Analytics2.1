@@ -11,9 +11,9 @@
  * - Report preview
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, waitFor, act } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { renderHook, waitFor, act } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   useReportTemplates,
   useReportTemplate,
@@ -31,11 +31,11 @@ import {
   useDeleteSchedule,
   useRunScheduleNow,
   useReportPreview,
-} from '../useReports';
-import * as api from '@/lib/api';
+} from "../useReports";
+import * as api from "@/lib/api";
 
 // Mock dependencies
-vi.mock('@/lib/api', () => ({
+vi.mock("@/lib/api", () => ({
   reportsAPI: {
     getTemplates: vi.fn(),
     getTemplate: vi.fn(),
@@ -59,21 +59,44 @@ vi.mock('@/lib/api', () => ({
 
 // Mock data
 const mockTemplates = [
-  { id: 'executive-summary', name: 'Executive Summary', category: 'Executive & Overview' },
-  { id: 'spend-analysis', name: 'Spend Analysis', category: 'Supplier Intelligence' },
+  {
+    id: "executive-summary",
+    name: "Executive Summary",
+    category: "Executive & Overview",
+  },
+  {
+    id: "spend-analysis",
+    name: "Spend Analysis",
+    category: "Supplier Intelligence",
+  },
 ];
 
 const mockReports = {
   results: [
-    { id: '1', report_type: 'executive-summary', status: 'completed', created_at: '2024-01-15' },
-    { id: '2', report_type: 'spend-analysis', status: 'generating', created_at: '2024-01-16' },
+    {
+      id: "1",
+      report_type: "executive-summary",
+      status: "completed",
+      created_at: "2024-01-15",
+    },
+    {
+      id: "2",
+      report_type: "spend-analysis",
+      status: "generating",
+      created_at: "2024-01-16",
+    },
   ],
   count: 2,
 };
 
 const mockSchedules = {
   results: [
-    { id: 's1', report_type: 'executive-summary', frequency: 'weekly', is_active: true },
+    {
+      id: "s1",
+      report_type: "executive-summary",
+      frequency: "weekly",
+      is_active: true,
+    },
   ],
   count: 1,
 };
@@ -90,7 +113,7 @@ function createWrapper() {
   );
 }
 
-describe('useReports Hooks', () => {
+describe("useReports Hooks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(api.getOrganizationParam).mockReturnValue({});
@@ -103,9 +126,11 @@ describe('useReports Hooks', () => {
   // =====================
   // useReportTemplates Tests
   // =====================
-  describe('useReportTemplates', () => {
-    it('should fetch report templates', async () => {
-      vi.mocked(api.reportsAPI.getTemplates).mockResolvedValue({ data: mockTemplates } as any);
+  describe("useReportTemplates", () => {
+    it("should fetch report templates", async () => {
+      vi.mocked(api.reportsAPI.getTemplates).mockResolvedValue({
+        data: mockTemplates,
+      } as any);
 
       const { result } = renderHook(() => useReportTemplates(), {
         wrapper: createWrapper(),
@@ -119,8 +144,10 @@ describe('useReports Hooks', () => {
       expect(result.current.data).toEqual(mockTemplates);
     });
 
-    it('should handle template fetch error', async () => {
-      vi.mocked(api.reportsAPI.getTemplates).mockRejectedValue(new Error('Network error'));
+    it("should handle template fetch error", async () => {
+      vi.mocked(api.reportsAPI.getTemplates).mockRejectedValue(
+        new Error("Network error"),
+      );
 
       const { result } = renderHook(() => useReportTemplates(), {
         wrapper: createWrapper(),
@@ -135,29 +162,36 @@ describe('useReports Hooks', () => {
   // =====================
   // useReportTemplate Tests
   // =====================
-  describe('useReportTemplate', () => {
-    it('should fetch single template when ID provided', async () => {
-      const template = { id: 'executive-summary', name: 'Executive Summary' };
-      vi.mocked(api.reportsAPI.getTemplate).mockResolvedValue({ data: template } as any);
+  describe("useReportTemplate", () => {
+    it("should fetch single template when ID provided", async () => {
+      const template = { id: "executive-summary", name: "Executive Summary" };
+      vi.mocked(api.reportsAPI.getTemplate).mockResolvedValue({
+        data: template,
+      } as any);
 
-      const { result } = renderHook(() => useReportTemplate('executive-summary'), {
-        wrapper: createWrapper(),
-      });
+      const { result } = renderHook(
+        () => useReportTemplate("executive-summary"),
+        {
+          wrapper: createWrapper(),
+        },
+      );
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(api.reportsAPI.getTemplate).toHaveBeenCalledWith('executive-summary');
+      expect(api.reportsAPI.getTemplate).toHaveBeenCalledWith(
+        "executive-summary",
+      );
       expect(result.current.data).toEqual(template);
     });
 
-    it('should not fetch when ID is null', () => {
+    it("should not fetch when ID is null", () => {
       const { result } = renderHook(() => useReportTemplate(null), {
         wrapper: createWrapper(),
       });
 
-      expect(result.current.fetchStatus).toBe('idle');
+      expect(result.current.fetchStatus).toBe("idle");
       expect(api.reportsAPI.getTemplate).not.toHaveBeenCalled();
     });
   });
@@ -165,9 +199,11 @@ describe('useReports Hooks', () => {
   // =====================
   // useReportHistory Tests
   // =====================
-  describe('useReportHistory', () => {
-    it('should fetch report history', async () => {
-      vi.mocked(api.reportsAPI.getReports).mockResolvedValue({ data: mockReports } as any);
+  describe("useReportHistory", () => {
+    it("should fetch report history", async () => {
+      vi.mocked(api.reportsAPI.getReports).mockResolvedValue({
+        data: mockReports,
+      } as any);
 
       const { result } = renderHook(() => useReportHistory(), {
         wrapper: createWrapper(),
@@ -181,10 +217,12 @@ describe('useReports Hooks', () => {
       expect(result.current.data).toEqual(mockReports);
     });
 
-    it('should pass filter params to API', async () => {
-      vi.mocked(api.reportsAPI.getReports).mockResolvedValue({ data: mockReports } as any);
+    it("should pass filter params to API", async () => {
+      vi.mocked(api.reportsAPI.getReports).mockResolvedValue({
+        data: mockReports,
+      } as any);
 
-      const params = { status: 'completed' as const, limit: 10 };
+      const params = { status: "completed" as const, limit: 10 };
       const { result } = renderHook(() => useReportHistory(params), {
         wrapper: createWrapper(),
       });
@@ -200,12 +238,18 @@ describe('useReports Hooks', () => {
   // =====================
   // useReportDetail Tests
   // =====================
-  describe('useReportDetail', () => {
-    it('should fetch report details', async () => {
-      const report = { id: '1', report_type: 'executive-summary', status: 'completed' };
-      vi.mocked(api.reportsAPI.getReport).mockResolvedValue({ data: report } as any);
+  describe("useReportDetail", () => {
+    it("should fetch report details", async () => {
+      const report = {
+        id: "1",
+        report_type: "executive-summary",
+        status: "completed",
+      };
+      vi.mocked(api.reportsAPI.getReport).mockResolvedValue({
+        data: report,
+      } as any);
 
-      const { result } = renderHook(() => useReportDetail('1'), {
+      const { result } = renderHook(() => useReportDetail("1"), {
         wrapper: createWrapper(),
       });
 
@@ -213,27 +257,29 @@ describe('useReports Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(api.reportsAPI.getReport).toHaveBeenCalledWith('1');
+      expect(api.reportsAPI.getReport).toHaveBeenCalledWith("1");
     });
 
-    it('should not fetch when ID is null', () => {
+    it("should not fetch when ID is null", () => {
       const { result } = renderHook(() => useReportDetail(null), {
         wrapper: createWrapper(),
       });
 
-      expect(result.current.fetchStatus).toBe('idle');
+      expect(result.current.fetchStatus).toBe("idle");
     });
   });
 
   // =====================
   // useReportStatus Tests
   // =====================
-  describe('useReportStatus', () => {
-    it('should poll status for generating reports', async () => {
-      const status = { id: '1', status: 'generating', progress: 50 };
-      vi.mocked(api.reportsAPI.getStatus).mockResolvedValue({ data: status } as any);
+  describe("useReportStatus", () => {
+    it("should poll status for generating reports", async () => {
+      const status = { id: "1", status: "generating", progress: 50 };
+      vi.mocked(api.reportsAPI.getStatus).mockResolvedValue({
+        data: status,
+      } as any);
 
-      const { result } = renderHook(() => useReportStatus('1'), {
+      const { result } = renderHook(() => useReportStatus("1"), {
         wrapper: createWrapper(),
       });
 
@@ -241,32 +287,34 @@ describe('useReports Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(api.reportsAPI.getStatus).toHaveBeenCalledWith('1');
+      expect(api.reportsAPI.getStatus).toHaveBeenCalledWith("1");
     });
 
-    it('should not fetch when disabled', () => {
-      const { result } = renderHook(() => useReportStatus('1', false), {
+    it("should not fetch when disabled", () => {
+      const { result } = renderHook(() => useReportStatus("1", false), {
         wrapper: createWrapper(),
       });
 
-      expect(result.current.fetchStatus).toBe('idle');
+      expect(result.current.fetchStatus).toBe("idle");
     });
 
-    it('should not fetch when ID is null', () => {
+    it("should not fetch when ID is null", () => {
       const { result } = renderHook(() => useReportStatus(null), {
         wrapper: createWrapper(),
       });
 
-      expect(result.current.fetchStatus).toBe('idle');
+      expect(result.current.fetchStatus).toBe("idle");
     });
   });
 
   // =====================
   // useReportSchedules Tests
   // =====================
-  describe('useReportSchedules', () => {
-    it('should fetch schedules', async () => {
-      vi.mocked(api.reportsAPI.getSchedules).mockResolvedValue({ data: mockSchedules } as any);
+  describe("useReportSchedules", () => {
+    it("should fetch schedules", async () => {
+      vi.mocked(api.reportsAPI.getSchedules).mockResolvedValue({
+        data: mockSchedules,
+      } as any);
 
       const { result } = renderHook(() => useReportSchedules(), {
         wrapper: createWrapper(),
@@ -283,12 +331,18 @@ describe('useReports Hooks', () => {
   // =====================
   // useScheduleDetail Tests
   // =====================
-  describe('useScheduleDetail', () => {
-    it('should fetch schedule details', async () => {
-      const schedule = { id: 's1', report_type: 'executive-summary', frequency: 'weekly' };
-      vi.mocked(api.reportsAPI.getSchedule).mockResolvedValue({ data: schedule } as any);
+  describe("useScheduleDetail", () => {
+    it("should fetch schedule details", async () => {
+      const schedule = {
+        id: "s1",
+        report_type: "executive-summary",
+        frequency: "weekly",
+      };
+      vi.mocked(api.reportsAPI.getSchedule).mockResolvedValue({
+        data: schedule,
+      } as any);
 
-      const { result } = renderHook(() => useScheduleDetail('s1'), {
+      const { result } = renderHook(() => useScheduleDetail("s1"), {
         wrapper: createWrapper(),
       });
 
@@ -296,25 +350,27 @@ describe('useReports Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(api.reportsAPI.getSchedule).toHaveBeenCalledWith('s1');
+      expect(api.reportsAPI.getSchedule).toHaveBeenCalledWith("s1");
     });
 
-    it('should not fetch when ID is null', () => {
+    it("should not fetch when ID is null", () => {
       const { result } = renderHook(() => useScheduleDetail(null), {
         wrapper: createWrapper(),
       });
 
-      expect(result.current.fetchStatus).toBe('idle');
+      expect(result.current.fetchStatus).toBe("idle");
     });
   });
 
   // =====================
   // useGenerateReport Tests
   // =====================
-  describe('useGenerateReport', () => {
-    it('should generate report', async () => {
-      const generatedReport = { id: '3', status: 'generating' };
-      vi.mocked(api.reportsAPI.generate).mockResolvedValue({ data: generatedReport } as any);
+  describe("useGenerateReport", () => {
+    it("should generate report", async () => {
+      const generatedReport = { id: "3", status: "generating" };
+      vi.mocked(api.reportsAPI.generate).mockResolvedValue({
+        data: generatedReport,
+      } as any);
 
       const { result } = renderHook(() => useGenerateReport(), {
         wrapper: createWrapper(),
@@ -323,8 +379,8 @@ describe('useReports Hooks', () => {
       let returnedData: any;
       await act(async () => {
         returnedData = await result.current.mutateAsync({
-          report_type: 'executive-summary',
-          title: 'Test Report',
+          report_type: "executive-summary",
+          title: "Test Report",
         } as any);
       });
 
@@ -332,8 +388,10 @@ describe('useReports Hooks', () => {
       expect(returnedData).toEqual(generatedReport);
     });
 
-    it('should handle generation error', async () => {
-      vi.mocked(api.reportsAPI.generate).mockRejectedValue(new Error('Generation failed'));
+    it("should handle generation error", async () => {
+      vi.mocked(api.reportsAPI.generate).mockRejectedValue(
+        new Error("Generation failed"),
+      );
 
       const { result } = renderHook(() => useGenerateReport(), {
         wrapper: createWrapper(),
@@ -343,8 +401,8 @@ describe('useReports Hooks', () => {
       await act(async () => {
         try {
           await result.current.mutateAsync({
-            report_type: 'executive-summary',
-            title: 'Test Report',
+            report_type: "executive-summary",
+            title: "Test Report",
           } as any);
         } catch {
           errorOccurred = true;
@@ -358,28 +416,28 @@ describe('useReports Hooks', () => {
   // =====================
   // useDeleteReport Tests
   // =====================
-  describe('useDeleteReport', () => {
-    it('should delete report', async () => {
-      vi.mocked(api.reportsAPI.deleteReport).mockResolvedValue(undefined);
+  describe("useDeleteReport", () => {
+    it("should delete report", async () => {
+      vi.mocked(api.reportsAPI.deleteReport).mockResolvedValue({} as any);
 
       const { result } = renderHook(() => useDeleteReport(), {
         wrapper: createWrapper(),
       });
 
       await act(async () => {
-        await result.current.mutateAsync('1');
+        await result.current.mutateAsync("1");
       });
 
-      expect(api.reportsAPI.deleteReport).toHaveBeenCalledWith('1');
+      expect(api.reportsAPI.deleteReport).toHaveBeenCalledWith("1");
     });
   });
 
   // =====================
   // useDownloadReport Tests
   // =====================
-  describe('useDownloadReport', () => {
-    it('should download report and trigger browser download', async () => {
-      const mockBlob = new Blob(['test content'], { type: 'application/pdf' });
+  describe("useDownloadReport", () => {
+    it("should download report and trigger browser download", async () => {
+      const mockBlob = new Blob(["test content"], { type: "application/pdf" });
       vi.mocked(api.reportsAPI.download).mockResolvedValue(mockBlob);
 
       // Store original URL functions
@@ -387,7 +445,7 @@ describe('useReports Hooks', () => {
       const originalRevokeObjectURL = URL.revokeObjectURL;
 
       // Mock URL methods
-      const mockUrl = 'blob:mock-url';
+      const mockUrl = "blob:mock-url";
       URL.createObjectURL = vi.fn().mockReturnValue(mockUrl);
       URL.revokeObjectURL = vi.fn();
 
@@ -396,26 +454,28 @@ describe('useReports Hooks', () => {
       const originalCreateElement = document.createElement.bind(document);
 
       // Only mock 'a' element creation
-      vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
-        const el = originalCreateElement(tagName);
-        if (tagName === 'a') {
-          createdLink = el as HTMLAnchorElement;
-          vi.spyOn(createdLink, 'click').mockImplementation(() => {});
-        }
-        return el;
-      });
+      vi.spyOn(document, "createElement").mockImplementation(
+        (tagName: string) => {
+          const el = originalCreateElement(tagName);
+          if (tagName === "a") {
+            createdLink = el as HTMLAnchorElement;
+            vi.spyOn(createdLink, "click").mockImplementation(() => {});
+          }
+          return el;
+        },
+      );
 
       const { result } = renderHook(() => useDownloadReport(), {
         wrapper: createWrapper(),
       });
 
       await act(async () => {
-        await result.current.mutateAsync({ reportId: '1', format: 'pdf' });
+        await result.current.mutateAsync({ reportId: "1", format: "pdf" });
       });
 
-      expect(api.reportsAPI.download).toHaveBeenCalledWith('1', 'pdf');
+      expect(api.reportsAPI.download).toHaveBeenCalledWith("1", "pdf");
       expect(createdLink).not.toBeNull();
-      expect(createdLink?.click).toHaveBeenCalled();
+      expect(createdLink!.click).toHaveBeenCalled();
 
       // Restore URL functions
       URL.createObjectURL = originalCreateObjectURL;
@@ -426,10 +486,12 @@ describe('useReports Hooks', () => {
   // =====================
   // useShareReport Tests
   // =====================
-  describe('useShareReport', () => {
-    it('should share report with users', async () => {
-      const sharedReport = { id: '1', shared_with: [1, 2] };
-      vi.mocked(api.reportsAPI.share).mockResolvedValue({ data: sharedReport } as any);
+  describe("useShareReport", () => {
+    it("should share report with users", async () => {
+      const sharedReport = { id: "1", shared_with: [1, 2] };
+      vi.mocked(api.reportsAPI.share).mockResolvedValue({
+        data: sharedReport,
+      } as any);
 
       const { result } = renderHook(() => useShareReport(), {
         wrapper: createWrapper(),
@@ -438,12 +500,14 @@ describe('useReports Hooks', () => {
       let returnedData: any;
       await act(async () => {
         returnedData = await result.current.mutateAsync({
-          reportId: '1',
+          reportId: "1",
           data: { user_ids: [1, 2] } as any,
         });
       });
 
-      expect(api.reportsAPI.share).toHaveBeenCalledWith('1', { user_ids: [1, 2] });
+      expect(api.reportsAPI.share).toHaveBeenCalledWith("1", {
+        user_ids: [1, 2],
+      });
       expect(returnedData).toEqual(sharedReport);
     });
   });
@@ -451,10 +515,16 @@ describe('useReports Hooks', () => {
   // =====================
   // useCreateSchedule Tests
   // =====================
-  describe('useCreateSchedule', () => {
-    it('should create schedule', async () => {
-      const newSchedule = { id: 's2', report_type: 'spend-analysis', frequency: 'monthly' };
-      vi.mocked(api.reportsAPI.createSchedule).mockResolvedValue({ data: newSchedule } as any);
+  describe("useCreateSchedule", () => {
+    it("should create schedule", async () => {
+      const newSchedule = {
+        id: "s2",
+        report_type: "spend-analysis",
+        frequency: "monthly",
+      };
+      vi.mocked(api.reportsAPI.createSchedule).mockResolvedValue({
+        data: newSchedule,
+      } as any);
 
       const { result } = renderHook(() => useCreateSchedule(), {
         wrapper: createWrapper(),
@@ -463,8 +533,8 @@ describe('useReports Hooks', () => {
       let returnedData: any;
       await act(async () => {
         returnedData = await result.current.mutateAsync({
-          report_type: 'spend-analysis',
-          frequency: 'monthly',
+          report_type: "spend-analysis",
+          frequency: "monthly",
         } as any);
       });
 
@@ -476,10 +546,12 @@ describe('useReports Hooks', () => {
   // =====================
   // useUpdateSchedule Tests
   // =====================
-  describe('useUpdateSchedule', () => {
-    it('should update schedule', async () => {
-      const updatedSchedule = { id: 's1', frequency: 'daily' };
-      vi.mocked(api.reportsAPI.updateSchedule).mockResolvedValue({ data: updatedSchedule } as any);
+  describe("useUpdateSchedule", () => {
+    it("should update schedule", async () => {
+      const updatedSchedule = { id: "s1", frequency: "daily" };
+      vi.mocked(api.reportsAPI.updateSchedule).mockResolvedValue({
+        data: updatedSchedule,
+      } as any);
 
       const { result } = renderHook(() => useUpdateSchedule(), {
         wrapper: createWrapper(),
@@ -488,12 +560,14 @@ describe('useReports Hooks', () => {
       let returnedData: any;
       await act(async () => {
         returnedData = await result.current.mutateAsync({
-          scheduleId: 's1',
-          data: { frequency: 'daily' } as any,
+          scheduleId: "s1",
+          data: { frequency: "daily" } as any,
         });
       });
 
-      expect(api.reportsAPI.updateSchedule).toHaveBeenCalledWith('s1', { frequency: 'daily' });
+      expect(api.reportsAPI.updateSchedule).toHaveBeenCalledWith("s1", {
+        frequency: "daily",
+      });
       expect(returnedData).toEqual(updatedSchedule);
     });
   });
@@ -501,9 +575,9 @@ describe('useReports Hooks', () => {
   // =====================
   // useDeleteSchedule Tests
   // =====================
-  describe('useDeleteSchedule', () => {
-    it('should delete schedule', async () => {
-      vi.mocked(api.reportsAPI.deleteSchedule).mockResolvedValue(undefined);
+  describe("useDeleteSchedule", () => {
+    it("should delete schedule", async () => {
+      vi.mocked(api.reportsAPI.deleteSchedule).mockResolvedValue({} as any);
 
       const { result } = renderHook(() => useDeleteSchedule(), {
         wrapper: createWrapper(),
@@ -511,11 +585,11 @@ describe('useReports Hooks', () => {
 
       let didResolve = false;
       await act(async () => {
-        await result.current.mutateAsync('s1');
+        await result.current.mutateAsync("s1");
         didResolve = true;
       });
 
-      expect(api.reportsAPI.deleteSchedule).toHaveBeenCalledWith('s1');
+      expect(api.reportsAPI.deleteSchedule).toHaveBeenCalledWith("s1");
       expect(didResolve).toBe(true);
     });
   });
@@ -523,10 +597,12 @@ describe('useReports Hooks', () => {
   // =====================
   // useRunScheduleNow Tests
   // =====================
-  describe('useRunScheduleNow', () => {
-    it('should trigger immediate schedule run', async () => {
-      const runResult = { report_id: '4', status: 'generating' };
-      vi.mocked(api.reportsAPI.runScheduleNow).mockResolvedValue({ data: runResult } as any);
+  describe("useRunScheduleNow", () => {
+    it("should trigger immediate schedule run", async () => {
+      const runResult = { report_id: "4", status: "generating" };
+      vi.mocked(api.reportsAPI.runScheduleNow).mockResolvedValue({
+        data: runResult,
+      } as any);
 
       const { result } = renderHook(() => useRunScheduleNow(), {
         wrapper: createWrapper(),
@@ -534,10 +610,10 @@ describe('useReports Hooks', () => {
 
       let returnedData: any;
       await act(async () => {
-        returnedData = await result.current.mutateAsync('s1');
+        returnedData = await result.current.mutateAsync("s1");
       });
 
-      expect(api.reportsAPI.runScheduleNow).toHaveBeenCalledWith('s1');
+      expect(api.reportsAPI.runScheduleNow).toHaveBeenCalledWith("s1");
       expect(returnedData).toEqual(runResult);
     });
   });
@@ -545,13 +621,15 @@ describe('useReports Hooks', () => {
   // =====================
   // useReportPreview Tests
   // =====================
-  describe('useReportPreview', () => {
-    it('should generate preview data', async () => {
+  describe("useReportPreview", () => {
+    it("should generate preview data", async () => {
       const previewData = {
         metrics: { total_spend: 100000 },
-        top_categories: [{ name: 'IT', spend: 50000 }],
+        top_categories: [{ name: "IT", spend: 50000 }],
       };
-      vi.mocked(api.reportsAPI.preview).mockResolvedValue({ data: previewData } as any);
+      vi.mocked(api.reportsAPI.preview).mockResolvedValue({
+        data: previewData,
+      } as any);
 
       const { result } = renderHook(() => useReportPreview(), {
         wrapper: createWrapper(),
@@ -560,8 +638,8 @@ describe('useReports Hooks', () => {
       let returnedData: any;
       await act(async () => {
         returnedData = await result.current.mutateAsync({
-          report_type: 'executive-summary',
-          title: 'Preview Test',
+          report_type: "executive-summary",
+          title: "Preview Test",
         } as any);
       });
 
@@ -569,8 +647,10 @@ describe('useReports Hooks', () => {
       expect(returnedData).toEqual(previewData);
     });
 
-    it('should handle preview error', async () => {
-      vi.mocked(api.reportsAPI.preview).mockRejectedValue(new Error('Preview failed'));
+    it("should handle preview error", async () => {
+      vi.mocked(api.reportsAPI.preview).mockRejectedValue(
+        new Error("Preview failed"),
+      );
 
       const { result } = renderHook(() => useReportPreview(), {
         wrapper: createWrapper(),
@@ -580,8 +660,8 @@ describe('useReports Hooks', () => {
       await act(async () => {
         try {
           await result.current.mutateAsync({
-            report_type: 'executive-summary',
-            title: 'Preview Test',
+            report_type: "executive-summary",
+            title: "Preview Test",
           } as any);
         } catch {
           errorOccurred = true;

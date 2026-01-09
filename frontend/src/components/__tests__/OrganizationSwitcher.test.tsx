@@ -6,16 +6,16 @@
  * and mock the context functions directly.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { OrganizationSwitcher } from '../OrganizationSwitcher';
-import * as OrganizationContext from '@/contexts/OrganizationContext';
-import * as AuthContext from '@/contexts/AuthContext';
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { OrganizationSwitcher } from "../OrganizationSwitcher";
+import * as OrganizationContext from "@/contexts/OrganizationContext";
+import * as AuthContext from "@/contexts/AuthContext";
 
 // Mock organization context
-vi.mock('@/contexts/OrganizationContext', async () => {
-  const actual = await vi.importActual('@/contexts/OrganizationContext');
+vi.mock("@/contexts/OrganizationContext", async () => {
+  const actual = await vi.importActual("@/contexts/OrganizationContext");
   return {
     ...actual,
     useOrganization: vi.fn(),
@@ -23,8 +23,8 @@ vi.mock('@/contexts/OrganizationContext', async () => {
 });
 
 // Mock auth context
-vi.mock('@/contexts/AuthContext', async () => {
-  const actual = await vi.importActual('@/contexts/AuthContext');
+vi.mock("@/contexts/AuthContext", async () => {
+  const actual = await vi.importActual("@/contexts/AuthContext");
   return {
     ...actual,
     useAuth: vi.fn(),
@@ -44,22 +44,43 @@ function createWrapper() {
   );
 }
 
-describe('OrganizationSwitcher', () => {
+describe("OrganizationSwitcher", () => {
   const mockSwitchOrganization = vi.fn();
   const mockResetToDefault = vi.fn();
   const mockGetRoleInOrg = vi.fn();
 
   const mockOrganizations = [
-    { id: 1, name: 'Test Organization', slug: 'test-org' },
-    { id: 2, name: 'Second Org', slug: 'second-org' },
-    { id: 3, name: 'Third Org', slug: 'third-org' },
+    {
+      id: 1,
+      name: "Test Organization",
+      slug: "test-org",
+      description: "",
+      is_active: true,
+      created_at: "2024-01-01T00:00:00Z",
+    },
+    {
+      id: 2,
+      name: "Second Org",
+      slug: "second-org",
+      description: "",
+      is_active: true,
+      created_at: "2024-01-01T00:00:00Z",
+    },
+    {
+      id: 3,
+      name: "Third Org",
+      slug: "third-org",
+      description: "",
+      is_active: true,
+      created_at: "2024-01-01T00:00:00Z",
+    },
   ];
 
   const defaultOrgContextValue = {
     activeOrganization: mockOrganizations[0],
     userOrganization: mockOrganizations[0],
     organizations: mockOrganizations,
-    activeRole: 'admin' as const,
+    activeRole: "admin" as const,
     canSwitch: true,
     isMultiOrgUser: true,
     isViewingOtherOrg: false,
@@ -70,36 +91,48 @@ describe('OrganizationSwitcher', () => {
   };
 
   const defaultAuthContextValue = {
+    isAuth: true,
     isSuperAdmin: false,
-    isAuthenticated: true,
     user: {
       id: 1,
-      username: 'testuser',
-      email: 'test@example.com',
-      first_name: 'Test',
-      last_name: 'User',
+      username: "testuser",
+      email: "test@example.com",
+      first_name: "Test",
+      last_name: "User",
+      profile: {
+        id: 1,
+        organization: 1,
+        organization_name: "Test Organization",
+        role: "admin" as const,
+        phone: "",
+        department: "",
+        is_active: true,
+        created_at: "2024-01-01T00:00:00Z",
+        is_super_admin: false,
+      },
     },
-    isLoading: false,
-    error: null,
-    login: vi.fn(),
+    role: "admin" as const,
     logout: vi.fn(),
     checkAuth: vi.fn(),
+    refreshUser: vi.fn(),
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetRoleInOrg.mockImplementation((orgId: number) => {
-      if (orgId === 1) return 'admin';
-      if (orgId === 2) return 'manager';
-      if (orgId === 3) return 'viewer';
+      if (orgId === 1) return "admin";
+      if (orgId === 2) return "manager";
+      if (orgId === 3) return "viewer";
       return null;
     });
 
-    vi.mocked(OrganizationContext.useOrganization).mockReturnValue(defaultOrgContextValue);
+    vi.mocked(OrganizationContext.useOrganization).mockReturnValue(
+      defaultOrgContextValue,
+    );
     vi.mocked(AuthContext.useAuth).mockReturnValue(defaultAuthContextValue);
   });
 
-  it('should not render when canSwitch is false', () => {
+  it("should not render when canSwitch is false", () => {
     vi.mocked(OrganizationContext.useOrganization).mockReturnValue({
       ...defaultOrgContextValue,
       canSwitch: false,
@@ -112,7 +145,7 @@ describe('OrganizationSwitcher', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('should not render when loading', () => {
+  it("should not render when loading", () => {
     vi.mocked(OrganizationContext.useOrganization).mockReturnValue({
       ...defaultOrgContextValue,
       isLoading: true,
@@ -125,26 +158,26 @@ describe('OrganizationSwitcher', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('should render organization switcher when canSwitch is true', () => {
+  it("should render organization switcher when canSwitch is true", () => {
     render(<OrganizationSwitcher />, {
       wrapper: createWrapper(),
     });
 
     // Should show the current organization name in button
-    expect(screen.getByText('Test Organization')).toBeInTheDocument();
+    expect(screen.getByText("Test Organization")).toBeInTheDocument();
   });
 
-  it('should show trigger button with current org name', () => {
+  it("should show trigger button with current org name", () => {
     render(<OrganizationSwitcher />, {
       wrapper: createWrapper(),
     });
 
-    const triggerButton = screen.getByRole('button');
+    const triggerButton = screen.getByRole("button");
     expect(triggerButton).toBeInTheDocument();
-    expect(screen.getByText('Test Organization')).toBeInTheDocument();
+    expect(screen.getByText("Test Organization")).toBeInTheDocument();
   });
 
-  it('should apply amber styles when viewing other org', () => {
+  it("should apply amber styles when viewing other org", () => {
     vi.mocked(OrganizationContext.useOrganization).mockReturnValue({
       ...defaultOrgContextValue,
       isViewingOtherOrg: true,
@@ -155,9 +188,9 @@ describe('OrganizationSwitcher', () => {
       wrapper: createWrapper(),
     });
 
-    const button = screen.getByRole('button');
+    const button = screen.getByRole("button");
     // Should have amber styling when viewing other org
-    expect(button.className).toContain('amber');
+    expect(button.className).toContain("amber");
   });
 
   it('should show "Select Org" when no active organization', () => {
@@ -170,62 +203,85 @@ describe('OrganizationSwitcher', () => {
       wrapper: createWrapper(),
     });
 
-    expect(screen.getByText('Select Org')).toBeInTheDocument();
+    expect(screen.getByText("Select Org")).toBeInTheDocument();
   });
 
-  it('should apply light color scheme styles', () => {
-    render(<OrganizationSwitcher colorScheme="light" />, {
+  it("should apply classic color scheme styles", () => {
+    render(<OrganizationSwitcher colorScheme="classic" />, {
       wrapper: createWrapper(),
     });
 
-    const button = screen.getByRole('button');
-    // Light scheme should have different text color
-    expect(button.className).toContain('text-gray-700');
+    const button = screen.getByRole("button");
+    // Classic scheme should have different text color
+    expect(button.className).toContain("text-gray-700");
   });
 
-  it('should apply navy color scheme styles', () => {
+  it("should apply navy color scheme styles", () => {
     render(<OrganizationSwitcher colorScheme="navy" />, {
       wrapper: createWrapper(),
     });
 
-    const button = screen.getByRole('button');
+    const button = screen.getByRole("button");
     // Navy scheme should have white text
-    expect(button.className).toContain('text-white');
+    expect(button.className).toContain("text-white");
   });
 
-  it('should have dropdown trigger functionality', () => {
+  it("should have dropdown trigger functionality", () => {
     render(<OrganizationSwitcher />, {
       wrapper: createWrapper(),
     });
 
-    const triggerButton = screen.getByRole('button');
+    const triggerButton = screen.getByRole("button");
     // Radix UI dropdown trigger should have aria attributes
-    expect(triggerButton).toHaveAttribute('type', 'button');
+    expect(triggerButton).toHaveAttribute("type", "button");
   });
 
-  it('should display icons in button', () => {
+  it("should display icons in button", () => {
     render(<OrganizationSwitcher />, {
       wrapper: createWrapper(),
     });
 
     // lucide-react icons render as SVG elements
-    const button = screen.getByRole('button');
-    const svgs = button.querySelectorAll('svg');
+    const button = screen.getByRole("button");
+    const svgs = button.querySelectorAll("svg");
     // Should have at least 2 icons (Building2 and ChevronDown)
     expect(svgs.length).toBeGreaterThanOrEqual(2);
   });
 });
 
-describe('OrganizationSwitcher - Single Org User', () => {
+describe("OrganizationSwitcher - Single Org User", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
     // Single org user - canSwitch should be false
     vi.mocked(OrganizationContext.useOrganization).mockReturnValue({
-      activeOrganization: { id: 1, name: 'Only Org', slug: 'only-org' },
-      userOrganization: { id: 1, name: 'Only Org', slug: 'only-org' },
-      organizations: [{ id: 1, name: 'Only Org', slug: 'only-org' }],
-      activeRole: 'viewer' as const,
+      activeOrganization: {
+        id: 1,
+        name: "Only Org",
+        slug: "only-org",
+        description: "",
+        is_active: true,
+        created_at: "2024-01-01T00:00:00Z",
+      },
+      userOrganization: {
+        id: 1,
+        name: "Only Org",
+        slug: "only-org",
+        description: "",
+        is_active: true,
+        created_at: "2024-01-01T00:00:00Z",
+      },
+      organizations: [
+        {
+          id: 1,
+          name: "Only Org",
+          slug: "only-org",
+          description: "",
+          is_active: true,
+          created_at: "2024-01-01T00:00:00Z",
+        },
+      ],
+      activeRole: "viewer" as const,
       canSwitch: false,
       isMultiOrgUser: false,
       isViewingOtherOrg: false,
@@ -236,24 +292,34 @@ describe('OrganizationSwitcher - Single Org User', () => {
     });
 
     vi.mocked(AuthContext.useAuth).mockReturnValue({
+      isAuth: true,
       isSuperAdmin: false,
-      isAuthenticated: true,
       user: {
         id: 1,
-        username: 'singleuser',
-        email: 'single@example.com',
-        first_name: 'Single',
-        last_name: 'User',
+        username: "singleuser",
+        email: "single@example.com",
+        first_name: "Single",
+        last_name: "User",
+        profile: {
+          id: 1,
+          organization: 1,
+          organization_name: "Only Org",
+          role: "viewer" as const,
+          phone: "",
+          department: "",
+          is_active: true,
+          created_at: "2024-01-01T00:00:00Z",
+          is_super_admin: false,
+        },
       },
-      isLoading: false,
-      error: null,
-      login: vi.fn(),
+      role: "viewer" as const,
       logout: vi.fn(),
       checkAuth: vi.fn(),
+      refreshUser: vi.fn(),
     });
   });
 
-  it('should not render for single org user', () => {
+  it("should not render for single org user", () => {
     const { container } = render(<OrganizationSwitcher />, {
       wrapper: createWrapper(),
     });
@@ -262,14 +328,28 @@ describe('OrganizationSwitcher - Single Org User', () => {
   });
 });
 
-describe('OrganizationSwitcher - Superuser', () => {
+describe("OrganizationSwitcher - Superuser", () => {
   const mockSwitchOrganization = vi.fn();
   const mockResetToDefault = vi.fn();
   const mockGetRoleInOrg = vi.fn();
 
   const mockOrganizations = [
-    { id: 1, name: 'Org A', slug: 'org-a' },
-    { id: 2, name: 'Org B', slug: 'org-b' },
+    {
+      id: 1,
+      name: "Org A",
+      slug: "org-a",
+      description: "",
+      is_active: true,
+      created_at: "2024-01-01T00:00:00Z",
+    },
+    {
+      id: 2,
+      name: "Org B",
+      slug: "org-b",
+      description: "",
+      is_active: true,
+      created_at: "2024-01-01T00:00:00Z",
+    },
   ];
 
   beforeEach(() => {
@@ -280,7 +360,7 @@ describe('OrganizationSwitcher - Superuser', () => {
       activeOrganization: mockOrganizations[0],
       userOrganization: mockOrganizations[0],
       organizations: mockOrganizations,
-      activeRole: 'admin' as const,
+      activeRole: "admin" as const,
       canSwitch: true,
       isMultiOrgUser: false, // Superuser may not be "multi-org" but can switch
       isViewingOtherOrg: false,
@@ -291,39 +371,49 @@ describe('OrganizationSwitcher - Superuser', () => {
     });
 
     vi.mocked(AuthContext.useAuth).mockReturnValue({
+      isAuth: true,
       isSuperAdmin: true,
-      isAuthenticated: true,
       user: {
         id: 1,
-        username: 'superadmin',
-        email: 'super@example.com',
-        first_name: 'Super',
-        last_name: 'Admin',
+        username: "superadmin",
+        email: "super@example.com",
+        first_name: "Super",
+        last_name: "Admin",
+        profile: {
+          id: 1,
+          organization: 1,
+          organization_name: "Org A",
+          role: "admin" as const,
+          phone: "",
+          department: "",
+          is_active: true,
+          created_at: "2024-01-01T00:00:00Z",
+          is_super_admin: true,
+        },
       },
-      isLoading: false,
-      error: null,
-      login: vi.fn(),
+      role: "admin" as const,
       logout: vi.fn(),
       checkAuth: vi.fn(),
+      refreshUser: vi.fn(),
     });
 
     mockGetRoleInOrg.mockReturnValue(null); // Superuser has access but no specific role
   });
 
-  it('should render for superuser with canSwitch true', () => {
+  it("should render for superuser with canSwitch true", () => {
     render(<OrganizationSwitcher />, {
       wrapper: createWrapper(),
     });
 
-    expect(screen.getByText('Org A')).toBeInTheDocument();
+    expect(screen.getByText("Org A")).toBeInTheDocument();
   });
 
-  it('should render trigger button for superuser', () => {
+  it("should render trigger button for superuser", () => {
     render(<OrganizationSwitcher />, {
       wrapper: createWrapper(),
     });
 
-    const triggerButton = screen.getByRole('button');
+    const triggerButton = screen.getByRole("button");
     expect(triggerButton).toBeInTheDocument();
   });
 });

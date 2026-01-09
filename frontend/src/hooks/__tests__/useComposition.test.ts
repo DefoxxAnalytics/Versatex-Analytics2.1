@@ -8,11 +8,11 @@
  * - Custom callbacks
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-import { useComposition } from '../useComposition';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { renderHook, act } from "@testing-library/react";
+import { useComposition } from "../useComposition";
 
-describe('useComposition', () => {
+describe("useComposition", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -25,8 +25,8 @@ describe('useComposition', () => {
   // =====================
   // Basic Hook Tests
   // =====================
-  describe('Basic Hook', () => {
-    it('should return composition handlers', () => {
+  describe("Basic Hook", () => {
+    it("should return composition handlers", () => {
       const { result } = renderHook(() => useComposition());
 
       expect(result.current.onCompositionStart).toBeDefined();
@@ -35,7 +35,7 @@ describe('useComposition', () => {
       expect(result.current.isComposing).toBeDefined();
     });
 
-    it('should initially not be composing', () => {
+    it("should initially not be composing", () => {
       const { result } = renderHook(() => useComposition());
 
       expect(result.current.isComposing()).toBe(false);
@@ -45,11 +45,13 @@ describe('useComposition', () => {
   // =====================
   // Composition Start Tests
   // =====================
-  describe('onCompositionStart', () => {
-    it('should set composing to true', () => {
+  describe("onCompositionStart", () => {
+    it("should set composing to true", () => {
       const { result } = renderHook(() => useComposition());
 
-      const mockEvent = { data: 'test' } as React.CompositionEvent<HTMLInputElement>;
+      const mockEvent = {
+        data: "test",
+      } as React.CompositionEvent<HTMLInputElement>;
 
       act(() => {
         result.current.onCompositionStart(mockEvent);
@@ -58,13 +60,15 @@ describe('useComposition', () => {
       expect(result.current.isComposing()).toBe(true);
     });
 
-    it('should call original onCompositionStart if provided', () => {
+    it("should call original onCompositionStart if provided", () => {
       const originalHandler = vi.fn();
       const { result } = renderHook(() =>
-        useComposition({ onCompositionStart: originalHandler })
+        useComposition({ onCompositionStart: originalHandler }),
       );
 
-      const mockEvent = { data: 'test' } as React.CompositionEvent<HTMLInputElement>;
+      const mockEvent = {
+        data: "test",
+      } as React.CompositionEvent<HTMLInputElement>;
 
       act(() => {
         result.current.onCompositionStart(mockEvent);
@@ -73,11 +77,13 @@ describe('useComposition', () => {
       expect(originalHandler).toHaveBeenCalledWith(mockEvent);
     });
 
-    it('should clear existing timers when composition starts', () => {
+    it("should clear existing timers when composition starts", () => {
       const { result } = renderHook(() => useComposition());
 
       // Start and end composition to set timers
-      const mockEvent = { data: 'test' } as React.CompositionEvent<HTMLInputElement>;
+      const mockEvent = {
+        data: "test",
+      } as React.CompositionEvent<HTMLInputElement>;
 
       act(() => {
         result.current.onCompositionStart(mockEvent);
@@ -97,11 +103,13 @@ describe('useComposition', () => {
   // =====================
   // Composition End Tests
   // =====================
-  describe('onCompositionEnd', () => {
-    it('should set composing to false after timeout', () => {
+  describe("onCompositionEnd", () => {
+    it("should set composing to false after timeout", () => {
       const { result } = renderHook(() => useComposition());
 
-      const mockEvent = { data: 'test' } as React.CompositionEvent<HTMLInputElement>;
+      const mockEvent = {
+        data: "test",
+      } as React.CompositionEvent<HTMLInputElement>;
 
       act(() => {
         result.current.onCompositionStart(mockEvent);
@@ -124,13 +132,15 @@ describe('useComposition', () => {
       expect(result.current.isComposing()).toBe(false);
     });
 
-    it('should call original onCompositionEnd if provided', () => {
+    it("should call original onCompositionEnd if provided", () => {
       const originalHandler = vi.fn();
       const { result } = renderHook(() =>
-        useComposition({ onCompositionEnd: originalHandler })
+        useComposition({ onCompositionEnd: originalHandler }),
       );
 
-      const mockEvent = { data: 'test' } as React.CompositionEvent<HTMLInputElement>;
+      const mockEvent = {
+        data: "test",
+      } as React.CompositionEvent<HTMLInputElement>;
 
       act(() => {
         result.current.onCompositionEnd(mockEvent);
@@ -143,20 +153,22 @@ describe('useComposition', () => {
   // =====================
   // Key Down Tests
   // =====================
-  describe('onKeyDown', () => {
-    it('should block Escape key during composition', () => {
+  describe("onKeyDown", () => {
+    it("should block Escape key during composition", () => {
       const { result } = renderHook(() => useComposition());
 
       const mockStopPropagation = vi.fn();
       const mockEvent = {
-        key: 'Escape',
+        key: "Escape",
         shiftKey: false,
         stopPropagation: mockStopPropagation,
       } as unknown as React.KeyboardEvent<HTMLInputElement>;
 
       // Start composition
       act(() => {
-        result.current.onCompositionStart({} as React.CompositionEvent<HTMLInputElement>);
+        result.current.onCompositionStart(
+          {} as React.CompositionEvent<HTMLInputElement>,
+        );
       });
 
       // Escape during composition
@@ -167,19 +179,21 @@ describe('useComposition', () => {
       expect(mockStopPropagation).toHaveBeenCalled();
     });
 
-    it('should block Enter key during composition', () => {
+    it("should block Enter key during composition", () => {
       const { result } = renderHook(() => useComposition());
 
       const mockStopPropagation = vi.fn();
       const mockEvent = {
-        key: 'Enter',
+        key: "Enter",
         shiftKey: false,
         stopPropagation: mockStopPropagation,
       } as unknown as React.KeyboardEvent<HTMLInputElement>;
 
       // Start composition
       act(() => {
-        result.current.onCompositionStart({} as React.CompositionEvent<HTMLInputElement>);
+        result.current.onCompositionStart(
+          {} as React.CompositionEvent<HTMLInputElement>,
+        );
       });
 
       // Enter during composition
@@ -190,22 +204,24 @@ describe('useComposition', () => {
       expect(mockStopPropagation).toHaveBeenCalled();
     });
 
-    it('should allow Shift+Enter during composition', () => {
+    it("should allow Shift+Enter during composition", () => {
       const originalHandler = vi.fn();
       const { result } = renderHook(() =>
-        useComposition({ onKeyDown: originalHandler })
+        useComposition({ onKeyDown: originalHandler }),
       );
 
       const mockStopPropagation = vi.fn();
       const mockEvent = {
-        key: 'Enter',
+        key: "Enter",
         shiftKey: true,
         stopPropagation: mockStopPropagation,
       } as unknown as React.KeyboardEvent<HTMLInputElement>;
 
       // Start composition
       act(() => {
-        result.current.onCompositionStart({} as React.CompositionEvent<HTMLInputElement>);
+        result.current.onCompositionStart(
+          {} as React.CompositionEvent<HTMLInputElement>,
+        );
       });
 
       // Shift+Enter during composition
@@ -217,22 +233,24 @@ describe('useComposition', () => {
       expect(originalHandler).toHaveBeenCalledWith(mockEvent);
     });
 
-    it('should allow other keys during composition', () => {
+    it("should allow other keys during composition", () => {
       const originalHandler = vi.fn();
       const { result } = renderHook(() =>
-        useComposition({ onKeyDown: originalHandler })
+        useComposition({ onKeyDown: originalHandler }),
       );
 
       const mockStopPropagation = vi.fn();
       const mockEvent = {
-        key: 'a',
+        key: "a",
         shiftKey: false,
         stopPropagation: mockStopPropagation,
       } as unknown as React.KeyboardEvent<HTMLInputElement>;
 
       // Start composition
       act(() => {
-        result.current.onCompositionStart({} as React.CompositionEvent<HTMLInputElement>);
+        result.current.onCompositionStart(
+          {} as React.CompositionEvent<HTMLInputElement>,
+        );
       });
 
       // Regular key during composition
@@ -244,15 +262,15 @@ describe('useComposition', () => {
       expect(originalHandler).toHaveBeenCalledWith(mockEvent);
     });
 
-    it('should allow Enter key when not composing', () => {
+    it("should allow Enter key when not composing", () => {
       const originalHandler = vi.fn();
       const { result } = renderHook(() =>
-        useComposition({ onKeyDown: originalHandler })
+        useComposition({ onKeyDown: originalHandler }),
       );
 
       const mockStopPropagation = vi.fn();
       const mockEvent = {
-        key: 'Enter',
+        key: "Enter",
         shiftKey: false,
         stopPropagation: mockStopPropagation,
       } as unknown as React.KeyboardEvent<HTMLInputElement>;
@@ -266,15 +284,15 @@ describe('useComposition', () => {
       expect(originalHandler).toHaveBeenCalledWith(mockEvent);
     });
 
-    it('should allow Escape key when not composing', () => {
+    it("should allow Escape key when not composing", () => {
       const originalHandler = vi.fn();
       const { result } = renderHook(() =>
-        useComposition({ onKeyDown: originalHandler })
+        useComposition({ onKeyDown: originalHandler }),
       );
 
       const mockStopPropagation = vi.fn();
       const mockEvent = {
-        key: 'Escape',
+        key: "Escape",
         shiftKey: false,
         stopPropagation: mockStopPropagation,
       } as unknown as React.KeyboardEvent<HTMLInputElement>;
@@ -288,14 +306,14 @@ describe('useComposition', () => {
       expect(originalHandler).toHaveBeenCalledWith(mockEvent);
     });
 
-    it('should call original onKeyDown if provided', () => {
+    it("should call original onKeyDown if provided", () => {
       const originalHandler = vi.fn();
       const { result } = renderHook(() =>
-        useComposition({ onKeyDown: originalHandler })
+        useComposition({ onKeyDown: originalHandler }),
       );
 
       const mockEvent = {
-        key: 'a',
+        key: "a",
         shiftKey: false,
         stopPropagation: vi.fn(),
       } as unknown as React.KeyboardEvent<HTMLInputElement>;
@@ -311,13 +329,15 @@ describe('useComposition', () => {
   // =====================
   // TextArea Type Tests
   // =====================
-  describe('TextArea Support', () => {
-    it('should work with HTMLTextAreaElement type', () => {
+  describe("TextArea Support", () => {
+    it("should work with HTMLTextAreaElement type", () => {
       const { result } = renderHook(() =>
-        useComposition<HTMLTextAreaElement>()
+        useComposition<HTMLTextAreaElement>(),
       );
 
-      const mockEvent = { data: 'test' } as React.CompositionEvent<HTMLTextAreaElement>;
+      const mockEvent = {
+        data: "test",
+      } as React.CompositionEvent<HTMLTextAreaElement>;
 
       act(() => {
         result.current.onCompositionStart(mockEvent);
@@ -330,11 +350,13 @@ describe('useComposition', () => {
   // =====================
   // Edge Cases
   // =====================
-  describe('Edge Cases', () => {
-    it('should handle rapid composition start/end cycles', () => {
+  describe("Edge Cases", () => {
+    it("should handle rapid composition start/end cycles", () => {
       const { result } = renderHook(() => useComposition());
 
-      const mockEvent = { data: 'test' } as React.CompositionEvent<HTMLInputElement>;
+      const mockEvent = {
+        data: "test",
+      } as React.CompositionEvent<HTMLInputElement>;
 
       // Rapid cycles
       for (let i = 0; i < 5; i++) {
@@ -352,10 +374,12 @@ describe('useComposition', () => {
       expect(result.current.isComposing()).toBe(false);
     });
 
-    it('should handle composition end before start has finished', () => {
+    it("should handle composition end before start has finished", () => {
       const { result } = renderHook(() => useComposition());
 
-      const mockEvent = { data: 'test' } as React.CompositionEvent<HTMLInputElement>;
+      const mockEvent = {
+        data: "test",
+      } as React.CompositionEvent<HTMLInputElement>;
 
       act(() => {
         result.current.onCompositionStart(mockEvent);

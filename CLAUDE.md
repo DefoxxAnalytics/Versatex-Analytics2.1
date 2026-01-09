@@ -144,7 +144,7 @@ src/
 
 **Key Patterns:**
 - Wouter for routing (not React Router)
-- TanStack Query v4 for server state management
+- TanStack Query v5 for server state management
 - shadcn/ui components built on Radix primitives
 - All pages lazy-loaded for code splitting
 - Auth state in localStorage (`access_token`, `refresh_token`, `user`)
@@ -215,6 +215,42 @@ Production features:
 - DEBUG=False enforced
 - HTTPS-only CORS origins
 - Resource limits on containers
+- Read-only filesystem on frontend
+- `no-new-privileges:true` security option
+
+### Security Headers (Nginx)
+
+The frontend nginx configuration (`frontend/nginx/nginx.conf`) includes comprehensive security headers:
+
+```
+X-Frame-Options: SAMEORIGIN
+X-Content-Type-Options: nosniff
+X-XSS-Protection: 1; mode=block
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=(), usb=()
+Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; ...
+```
+
+### Production Checklist
+
+Before deploying to production, complete these steps:
+
+```bash
+# 1. Generate new SECRET_KEY
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+
+# 2. Set environment variables
+DEBUG=False
+ALLOWED_HOSTS=your-domain.com
+CORS_ALLOWED_ORIGINS=https://your-frontend.com
+CSRF_TRUSTED_ORIGINS=https://your-frontend.com
+
+# 3. Deploy with production compose
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
+# 4. Verify security headers
+curl -I https://your-frontend.com
+```
 
 ## Database Schema Notes
 
@@ -268,7 +304,7 @@ Badges:
 
 ## Test Coverage
 
-### Backend Tests (621 tests, 74% coverage)
+### Backend Tests (621 tests, 70% coverage)
 
 ```bash
 # Run all backend tests
@@ -346,7 +382,7 @@ class TestPDFRendererReportTypes:
         assert pdf_bytes.startswith(b'%PDF')
 ```
 
-### Frontend Tests (182 tests, 35% coverage)
+### Frontend Tests (866 tests)
 
 ```bash
 # Run all frontend tests
@@ -363,9 +399,11 @@ pnpm test:run src/hooks/__tests__/
 | Category | Test Files | Tests |
 |----------|------------|-------|
 | **Pages** | 5 files | ~80 |
-| **Hooks** | 4 files | ~50 |
-| **Components** | 8 files | ~40 |
-| **Contexts** | 2 files | ~12 |
+| **Hooks** | 10 files | ~200 |
+| **Components** | 8 files | ~150 |
+| **Contexts** | 4 files | ~50 |
+| **Lib** | 4 files | ~100 |
+| **Other** | Various | ~286 |
 
 #### Key Frontend Test Files
 
@@ -396,7 +434,36 @@ pnpm test:run --coverage
 - **Frontend**: `frontend/vitest.config.ts`, `frontend/src/test/setup.ts`
 - **MSW Handlers**: `frontend/src/test/mocks/handlers.ts` (API mocking)
 
-## Recent Updates (v2.6)
+## Recent Updates (v2.7)
+
+### Production Hardening
+
+This release focuses on production readiness with comprehensive security hardening:
+
+#### New Files
+- `frontend/nginx/nginx.conf` - Standalone Nginx config with CSP and security headers
+- `frontend/.env.production.example` - Frontend production environment template
+
+#### Security Headers Added
+- **Content-Security-Policy (CSP)**: Prevents XSS by restricting resource loading
+- **Permissions-Policy**: Disables geolocation, microphone, camera, payment, usb
+- **Referrer-Policy**: Controls referrer information in requests
+- **X-Frame-Options, X-Content-Type-Options, X-XSS-Protection**: Standard protections
+
+#### Docker Improvements
+- Nginx config mounted as volume in production for easy updates
+- Added `/var/run` tmpfs mount for nginx pid file
+- Documentation for production deployment workflow
+
+#### Test Fixes
+- Fixed 65 TypeScript mock type errors in frontend tests
+- Updated TanStack Query v5 mock patterns with `as unknown as ReturnType<typeof useHook>`
+- Created `createPermissionMock` helper for PermissionContext testing
+- All 866 frontend tests passing with 0 TypeScript errors
+
+---
+
+## Previous Updates (v2.6)
 
 ### Multi-Organization User Support
 

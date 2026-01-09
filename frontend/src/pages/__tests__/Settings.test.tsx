@@ -12,39 +12,43 @@
  * - Reset to defaults functionality
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import Settings from '../Settings';
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import Settings from "../Settings";
 
 // Mock useSettings hooks
-vi.mock('@/hooks/useSettings', () => ({
+vi.mock("@/hooks/useSettings", () => ({
   useSettings: vi.fn(),
   useUpdateSettings: vi.fn(),
   useResetSettings: vi.fn(),
 }));
 
 // Mock ThemeContext
-vi.mock('@/contexts/ThemeContext', () => ({
+vi.mock("@/contexts/ThemeContext", () => ({
   useTheme: vi.fn(() => ({
-    theme: 'light',
-    colorScheme: 'navy',
+    theme: "light",
+    colorScheme: "navy",
     setTheme: vi.fn(),
     setColorScheme: vi.fn(),
   })),
 }));
 
 // Mock sonner toast
-vi.mock('sonner', () => ({
+vi.mock("sonner", () => ({
   toast: {
     success: vi.fn(),
     error: vi.fn(),
   },
 }));
 
-import { useSettings, useUpdateSettings, useResetSettings } from '@/hooks/useSettings';
-import { useTheme } from '@/contexts/ThemeContext';
-import { toast } from 'sonner';
+import {
+  useSettings,
+  useUpdateSettings,
+  useResetSettings,
+} from "@/hooks/useSettings";
+import { useTheme } from "@/contexts/ThemeContext";
+import { toast } from "sonner";
 
 // Test wrapper with QueryClient
 function createWrapper() {
@@ -62,23 +66,23 @@ function createWrapper() {
 
 // Default mock settings
 const mockSettings = {
-  theme: 'light' as const,
-  colorScheme: 'navy' as const,
+  theme: "light" as const,
+  colorScheme: "navy" as const,
   notifications: true,
-  exportFormat: 'csv' as const,
-  userName: 'Test User',
-  userEmail: 'test@example.com',
-  userRole: 'Procurement Manager',
-  currency: 'USD',
-  dateFormat: 'MM/DD/YYYY',
-  forecastingModel: 'standard' as const,
+  exportFormat: "csv" as const,
+  userName: "Test User",
+  userEmail: "test@example.com",
+  userRole: "Procurement Manager",
+  currency: "USD",
+  dateFormat: "MM/DD/YYYY",
+  forecastingModel: "standard" as const,
   useExternalAI: false,
-  aiProvider: 'anthropic' as const,
+  aiProvider: "anthropic" as const,
   forecastHorizonMonths: 6,
   anomalySensitivity: 2,
 };
 
-describe('Settings Page', () => {
+describe("Settings Page", () => {
   const mockMutate = vi.fn();
   const mockResetMutate = vi.fn();
 
@@ -95,7 +99,7 @@ describe('Settings Page', () => {
       isPending: false,
       isFetching: false,
       refetch: vi.fn(),
-    } as ReturnType<typeof useSettings>);
+    } as unknown as ReturnType<typeof useSettings>);
 
     vi.mocked(useUpdateSettings).mockReturnValue({
       mutate: mockMutate,
@@ -107,7 +111,7 @@ describe('Settings Page', () => {
       mutateAsync: vi.fn(),
       reset: vi.fn(),
       variables: undefined,
-      status: 'idle',
+      status: "idle",
       context: undefined,
       failureCount: 0,
       failureReason: null,
@@ -126,7 +130,7 @@ describe('Settings Page', () => {
       mutateAsync: vi.fn(),
       reset: vi.fn(),
       variables: undefined,
-      status: 'idle',
+      status: "idle",
       context: undefined,
       failureCount: 0,
       failureReason: null,
@@ -136,15 +140,16 @@ describe('Settings Page', () => {
     } as unknown as ReturnType<typeof useResetSettings>);
 
     vi.mocked(useTheme).mockReturnValue({
-      theme: 'light',
-      colorScheme: 'navy',
+      theme: "light",
+      colorScheme: "navy",
       setTheme: vi.fn(),
       setColorScheme: vi.fn(),
+      switchable: true,
     });
   });
 
-  describe('Loading State', () => {
-    it('should display loading state while settings are being fetched', () => {
+  describe("Loading State", () => {
+    it("should display loading state while settings are being fetched", () => {
       vi.mocked(useSettings).mockReturnValue({
         data: undefined,
         isLoading: true,
@@ -154,101 +159,109 @@ describe('Settings Page', () => {
         isPending: true,
         isFetching: true,
         refetch: vi.fn(),
-      } as ReturnType<typeof useSettings>);
+      } as unknown as ReturnType<typeof useSettings>);
 
       render(<Settings />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Loading settings...')).toBeInTheDocument();
+      expect(screen.getByText("Loading settings...")).toBeInTheDocument();
     });
   });
 
-  describe('Page Header', () => {
-    it('should display page title and description', () => {
+  describe("Page Header", () => {
+    it("should display page title and description", () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Settings')).toBeInTheDocument();
-      expect(screen.getByText('Manage your account settings and preferences')).toBeInTheDocument();
+      expect(screen.getByText("Settings")).toBeInTheDocument();
+      expect(
+        screen.getByText("Manage your account settings and preferences"),
+      ).toBeInTheDocument();
     });
   });
 
-  describe('User Profile Section', () => {
-    it('should display user profile card', () => {
+  describe("User Profile Section", () => {
+    it("should display user profile card", () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('User Profile')).toBeInTheDocument();
-      expect(screen.getByText('Update your personal information')).toBeInTheDocument();
+      expect(screen.getByText("User Profile")).toBeInTheDocument();
+      expect(
+        screen.getByText("Update your personal information"),
+      ).toBeInTheDocument();
     });
 
-    it('should populate form fields with current settings', async () => {
-      render(<Settings />, { wrapper: createWrapper() });
-
-      await waitFor(() => {
-        const nameInput = screen.getByLabelText('Name') as HTMLInputElement;
-        const emailInput = screen.getByLabelText('Email') as HTMLInputElement;
-        const roleInput = screen.getByLabelText('Role') as HTMLInputElement;
-
-        expect(nameInput.value).toBe('Test User');
-        expect(emailInput.value).toBe('test@example.com');
-        expect(roleInput.value).toBe('Procurement Manager');
-      });
-    });
-
-    it('should allow editing profile fields', async () => {
+    it("should populate form fields with current settings", async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        const nameInput = screen.getByLabelText('Name') as HTMLInputElement;
-        fireEvent.change(nameInput, { target: { value: 'New Name' } });
-        expect(nameInput.value).toBe('New Name');
+        const nameInput = screen.getByLabelText("Name") as HTMLInputElement;
+        const emailInput = screen.getByLabelText("Email") as HTMLInputElement;
+        const roleInput = screen.getByLabelText("Role") as HTMLInputElement;
+
+        expect(nameInput.value).toBe("Test User");
+        expect(emailInput.value).toBe("test@example.com");
+        expect(roleInput.value).toBe("Procurement Manager");
       });
     });
 
-    it('should call updateSettings when Save Profile is clicked', async () => {
+    it("should allow editing profile fields", async () => {
+      render(<Settings />, { wrapper: createWrapper() });
+
+      await waitFor(() => {
+        const nameInput = screen.getByLabelText("Name") as HTMLInputElement;
+        fireEvent.change(nameInput, { target: { value: "New Name" } });
+        expect(nameInput.value).toBe("New Name");
+      });
+    });
+
+    it("should call updateSettings when Save Profile is clicked", async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
       // Wait for initial values to be set
       await waitFor(() => {
-        expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe('Test User');
+        expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe(
+          "Test User",
+        );
       });
 
       // Click save button
-      const saveButton = screen.getByText('Save Profile');
+      const saveButton = screen.getByText("Save Profile");
       fireEvent.click(saveButton);
 
       expect(mockMutate).toHaveBeenCalledWith(
         expect.objectContaining({
-          userName: 'Test User',
-          userEmail: 'test@example.com',
-          userRole: 'Procurement Manager',
+          userName: "Test User",
+          userEmail: "test@example.com",
+          userRole: "Procurement Manager",
         }),
-        expect.any(Object)
+        expect.any(Object),
       );
     });
 
-    it('should validate email format', async () => {
+    it("should validate email format", async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        const emailInput = screen.getByLabelText('Email') as HTMLInputElement;
-        fireEvent.change(emailInput, { target: { value: 'invalid-email' } });
+        const emailInput = screen.getByLabelText("Email") as HTMLInputElement;
+        fireEvent.change(emailInput, { target: { value: "invalid-email" } });
       });
 
-      const saveButton = screen.getByText('Save Profile');
+      const saveButton = screen.getByText("Save Profile");
       fireEvent.click(saveButton);
 
-      expect(toast.error).toHaveBeenCalledWith('Please enter a valid email address');
+      expect(toast.error).toHaveBeenCalledWith(
+        "Please enter a valid email address",
+      );
       expect(mockMutate).not.toHaveBeenCalled();
     });
 
-    it('should allow empty email', async () => {
+    it("should allow empty email", async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        const emailInput = screen.getByLabelText('Email') as HTMLInputElement;
-        fireEvent.change(emailInput, { target: { value: '' } });
+        const emailInput = screen.getByLabelText("Email") as HTMLInputElement;
+        fireEvent.change(emailInput, { target: { value: "" } });
       });
 
-      const saveButton = screen.getByText('Save Profile');
+      const saveButton = screen.getByText("Save Profile");
       fireEvent.click(saveButton);
 
       // Should not show error for empty email
@@ -257,110 +270,150 @@ describe('Settings Page', () => {
     });
   });
 
-  describe('Theme Preferences Section', () => {
-    it('should display theme preferences card', () => {
+  describe("Theme Preferences Section", () => {
+    it("should display theme preferences card", () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Theme Preferences')).toBeInTheDocument();
-      expect(screen.getByText('Customize the look and feel of the application')).toBeInTheDocument();
+      expect(screen.getByText("Theme Preferences")).toBeInTheDocument();
+      expect(
+        screen.getByText("Customize the look and feel of the application"),
+      ).toBeInTheDocument();
     });
 
-    it('should display color scheme selector', () => {
+    it("should display color scheme selector", () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Color Scheme')).toBeInTheDocument();
-      expect(screen.getByText('Choose between the modern navy theme or the original classic look')).toBeInTheDocument();
+      expect(screen.getByText("Color Scheme")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "Choose between the modern navy theme or the original classic look",
+        ),
+      ).toBeInTheDocument();
     });
 
-    it('should display appearance selector', () => {
+    it("should display appearance selector", () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Appearance')).toBeInTheDocument();
-      expect(screen.getByText('Select light or dark mode for the interface')).toBeInTheDocument();
+      expect(screen.getByText("Appearance")).toBeInTheDocument();
+      expect(
+        screen.getByText("Select light or dark mode for the interface"),
+      ).toBeInTheDocument();
     });
   });
 
-  describe('Notification Settings Section', () => {
-    it('should display notifications card', () => {
+  describe("Notification Settings Section", () => {
+    it("should display notifications card", () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Notifications')).toBeInTheDocument();
-      expect(screen.getByText('Manage your notification preferences')).toBeInTheDocument();
+      expect(screen.getByText("Notifications")).toBeInTheDocument();
+      expect(
+        screen.getByText("Manage your notification preferences"),
+      ).toBeInTheDocument();
     });
 
-    it('should display notification toggle', () => {
+    it("should display notification toggle", () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Enable Notifications')).toBeInTheDocument();
-      expect(screen.getByText('Receive alerts and updates')).toBeInTheDocument();
+      expect(screen.getByText("Enable Notifications")).toBeInTheDocument();
+      expect(
+        screen.getByText("Receive alerts and updates"),
+      ).toBeInTheDocument();
     });
 
-    it('should toggle notifications when switch is clicked', async () => {
+    it("should toggle notifications when switch is clicked", async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      const notificationSwitch = screen.getByRole('switch', { name: /enable notifications/i });
+      const notificationSwitch = screen.getByRole("switch", {
+        name: /enable notifications/i,
+      });
       fireEvent.click(notificationSwitch);
 
       expect(mockMutate).toHaveBeenCalledWith(
         { notifications: false },
-        expect.any(Object)
+        expect.any(Object),
       );
     });
   });
 
-  describe('Export Preferences Section', () => {
-    it('should display export preferences card', () => {
+  describe("Export Preferences Section", () => {
+    it("should display export preferences card", () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Export Preferences')).toBeInTheDocument();
-      expect(screen.getByText('Set your default export format')).toBeInTheDocument();
+      expect(screen.getByText("Export Preferences")).toBeInTheDocument();
+      expect(
+        screen.getByText("Set your default export format"),
+      ).toBeInTheDocument();
     });
 
-    it('should display export format selector', () => {
+    it("should display export format selector", () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Default Export Format')).toBeInTheDocument();
+      expect(screen.getByText("Default Export Format")).toBeInTheDocument();
     });
   });
 
-  describe('AI & Predictive Analytics Section', () => {
-    it('should display AI settings card', () => {
+  describe("AI & Predictive Analytics Section", () => {
+    it("should display AI settings card", () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('AI & Predictive Analytics')).toBeInTheDocument();
-      expect(screen.getByText('Configure AI-powered insights and forecasting settings')).toBeInTheDocument();
+      expect(screen.getByText("AI & Predictive Analytics")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "Configure AI-powered insights and forecasting settings",
+        ),
+      ).toBeInTheDocument();
     });
 
-    it('should display forecasting model selector', () => {
+    it("should display forecasting model selector", () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Forecasting Model')).toBeInTheDocument();
-      expect(screen.getByText('Standard ML provides more accurate forecasts with trend and seasonality detection')).toBeInTheDocument();
+      expect(screen.getByText("Forecasting Model")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "Standard ML provides more accurate forecasts with trend and seasonality detection",
+        ),
+      ).toBeInTheDocument();
     });
 
-    it('should display external AI toggle', () => {
+    it("should display external AI toggle", () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Enable External AI Enhancement')).toBeInTheDocument();
-      expect(screen.getByText('Use Claude or OpenAI to enhance insights with strategic recommendations')).toBeInTheDocument();
+      expect(
+        screen.getByText("Enable External AI Enhancement"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "Use Claude or OpenAI to enhance insights with strategic recommendations",
+        ),
+      ).toBeInTheDocument();
     });
 
-    it('should display forecast horizon slider', () => {
+    it("should display forecast horizon slider", () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Forecast Horizon')).toBeInTheDocument();
-      expect(screen.getByText('6 months')).toBeInTheDocument();
-      expect(screen.getByText('How far ahead to forecast spending trends (3-24 months)')).toBeInTheDocument();
+      expect(screen.getByText("Forecast Horizon")).toBeInTheDocument();
+      expect(screen.getByText("6 months")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "How far ahead to forecast spending trends (3-24 months)",
+        ),
+      ).toBeInTheDocument();
     });
 
-    it('should display anomaly sensitivity slider', () => {
+    it("should display anomaly sensitivity slider", () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Anomaly Detection Sensitivity')).toBeInTheDocument();
-      expect(screen.getByText('Lower values detect more anomalies, higher values only flag extreme outliers')).toBeInTheDocument();
+      expect(
+        screen.getByText("Anomaly Detection Sensitivity"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "Lower values detect more anomalies, higher values only flag extreme outliers",
+        ),
+      ).toBeInTheDocument();
     });
 
-    it('should not show AI provider options when external AI is disabled', () => {
+    it("should not show AI provider options when external AI is disabled", () => {
       vi.mocked(useSettings).mockReturnValue({
         data: { ...mockSettings, useExternalAI: false },
         isLoading: false,
@@ -370,15 +423,15 @@ describe('Settings Page', () => {
         isPending: false,
         isFetching: false,
         refetch: vi.fn(),
-      } as ReturnType<typeof useSettings>);
+      } as unknown as ReturnType<typeof useSettings>);
 
       render(<Settings />, { wrapper: createWrapper() });
 
       // AI Provider should not be visible
-      expect(screen.queryByText('AI Provider')).not.toBeInTheDocument();
+      expect(screen.queryByText("AI Provider")).not.toBeInTheDocument();
     });
 
-    it('should show AI provider options when external AI is enabled', () => {
+    it("should show AI provider options when external AI is enabled", () => {
       vi.mocked(useSettings).mockReturnValue({
         data: { ...mockSettings, useExternalAI: true },
         isLoading: false,
@@ -388,63 +441,73 @@ describe('Settings Page', () => {
         isPending: false,
         isFetching: false,
         refetch: vi.fn(),
-      } as ReturnType<typeof useSettings>);
+      } as unknown as ReturnType<typeof useSettings>);
 
       render(<Settings />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('AI Provider')).toBeInTheDocument();
-      expect(screen.getByText('API Key')).toBeInTheDocument();
+      expect(screen.getByText("AI Provider")).toBeInTheDocument();
+      expect(screen.getByText("API Key")).toBeInTheDocument();
     });
 
-    it('should toggle external AI', async () => {
+    it("should toggle external AI", async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      const aiSwitch = screen.getByRole('switch', { name: /external ai/i });
+      const aiSwitch = screen.getByRole("switch", { name: /external ai/i });
       fireEvent.click(aiSwitch);
 
       expect(mockMutate).toHaveBeenCalledWith(
         { useExternalAI: true },
-        expect.any(Object)
+        expect.any(Object),
       );
     });
   });
 
-  describe('Reset Settings Section', () => {
-    it('should display reset settings card', () => {
+  describe("Reset Settings Section", () => {
+    it("should display reset settings card", () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Reset Settings')).toBeInTheDocument();
-      expect(screen.getByText('Reset all settings to their default values')).toBeInTheDocument();
+      expect(screen.getByText("Reset Settings")).toBeInTheDocument();
+      expect(
+        screen.getByText("Reset all settings to their default values"),
+      ).toBeInTheDocument();
     });
 
-    it('should have a destructive reset button', () => {
+    it("should have a destructive reset button", () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      const resetButton = screen.getByRole('button', { name: /reset to defaults/i });
+      const resetButton = screen.getByRole("button", {
+        name: /reset to defaults/i,
+      });
       expect(resetButton).toBeInTheDocument();
     });
 
-    it('should show confirmation before reset', () => {
+    it("should show confirmation before reset", () => {
       // Mock window.confirm
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+      const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
 
       render(<Settings />, { wrapper: createWrapper() });
 
-      const resetButton = screen.getByRole('button', { name: /reset to defaults/i });
+      const resetButton = screen.getByRole("button", {
+        name: /reset to defaults/i,
+      });
       fireEvent.click(resetButton);
 
-      expect(confirmSpy).toHaveBeenCalledWith('Are you sure you want to reset all settings to defaults?');
+      expect(confirmSpy).toHaveBeenCalledWith(
+        "Are you sure you want to reset all settings to defaults?",
+      );
       expect(mockResetMutate).not.toHaveBeenCalled();
 
       confirmSpy.mockRestore();
     });
 
-    it('should reset settings when confirmed', () => {
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    it("should reset settings when confirmed", () => {
+      const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
 
       render(<Settings />, { wrapper: createWrapper() });
 
-      const resetButton = screen.getByRole('button', { name: /reset to defaults/i });
+      const resetButton = screen.getByRole("button", {
+        name: /reset to defaults/i,
+      });
       fireEvent.click(resetButton);
 
       expect(mockResetMutate).toHaveBeenCalled();
@@ -453,35 +516,41 @@ describe('Settings Page', () => {
     });
   });
 
-  describe('Form Accessibility', () => {
-    it('should have proper labels for all form inputs', () => {
+  describe("Form Accessibility", () => {
+    it("should have proper labels for all form inputs", () => {
       render(<Settings />, { wrapper: createWrapper() });
 
       // User profile fields - use getByLabelText for inputs with htmlFor
-      expect(screen.getByLabelText('Name')).toBeInTheDocument();
-      expect(screen.getByLabelText('Email')).toBeInTheDocument();
-      expect(screen.getByLabelText('Role')).toBeInTheDocument();
+      expect(screen.getByLabelText("Name")).toBeInTheDocument();
+      expect(screen.getByLabelText("Email")).toBeInTheDocument();
+      expect(screen.getByLabelText("Role")).toBeInTheDocument();
 
       // Theme settings - Select components
-      expect(screen.getByLabelText('Color Scheme')).toBeInTheDocument();
-      expect(screen.getByLabelText('Appearance')).toBeInTheDocument();
+      expect(screen.getByLabelText("Color Scheme")).toBeInTheDocument();
+      expect(screen.getByLabelText("Appearance")).toBeInTheDocument();
 
       // Notifications - verify label text exists
-      expect(screen.getByText('Enable Notifications')).toBeInTheDocument();
+      expect(screen.getByText("Enable Notifications")).toBeInTheDocument();
 
       // Export format
-      expect(screen.getByLabelText('Default Export Format')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText("Default Export Format"),
+      ).toBeInTheDocument();
 
       // AI settings - verify label text exists for sliders and switches
-      expect(screen.getByLabelText('Forecasting Model')).toBeInTheDocument();
-      expect(screen.getByText('Enable External AI Enhancement')).toBeInTheDocument();
-      expect(screen.getByText('Forecast Horizon')).toBeInTheDocument();
-      expect(screen.getByText('Anomaly Detection Sensitivity')).toBeInTheDocument();
+      expect(screen.getByLabelText("Forecasting Model")).toBeInTheDocument();
+      expect(
+        screen.getByText("Enable External AI Enhancement"),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Forecast Horizon")).toBeInTheDocument();
+      expect(
+        screen.getByText("Anomaly Detection Sensitivity"),
+      ).toBeInTheDocument();
     });
   });
 
-  describe('Disabled States', () => {
-    it('should disable Save Profile button while mutation is pending', () => {
+  describe("Disabled States", () => {
+    it("should disable Save Profile button while mutation is pending", () => {
       vi.mocked(useUpdateSettings).mockReturnValue({
         mutate: mockMutate,
         isPending: true,
@@ -492,7 +561,7 @@ describe('Settings Page', () => {
         mutateAsync: vi.fn(),
         reset: vi.fn(),
         variables: undefined,
-        status: 'pending',
+        status: "pending",
         context: undefined,
         failureCount: 0,
         failureReason: null,
@@ -503,11 +572,11 @@ describe('Settings Page', () => {
 
       render(<Settings />, { wrapper: createWrapper() });
 
-      const saveButton = screen.getByRole('button', { name: /save profile/i });
+      const saveButton = screen.getByRole("button", { name: /save profile/i });
       expect(saveButton).toBeDisabled();
     });
 
-    it('should disable Reset button while mutation is pending', () => {
+    it("should disable Reset button while mutation is pending", () => {
       vi.mocked(useResetSettings).mockReturnValue({
         mutate: mockResetMutate,
         isPending: true,
@@ -518,7 +587,7 @@ describe('Settings Page', () => {
         mutateAsync: vi.fn(),
         reset: vi.fn(),
         variables: undefined,
-        status: 'pending',
+        status: "pending",
         context: undefined,
         failureCount: 0,
         failureReason: null,
@@ -529,7 +598,9 @@ describe('Settings Page', () => {
 
       render(<Settings />, { wrapper: createWrapper() });
 
-      const resetButton = screen.getByRole('button', { name: /reset to defaults/i });
+      const resetButton = screen.getByRole("button", {
+        name: /reset to defaults/i,
+      });
       expect(resetButton).toBeDisabled();
     });
   });

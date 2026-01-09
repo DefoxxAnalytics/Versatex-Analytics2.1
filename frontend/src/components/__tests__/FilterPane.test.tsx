@@ -12,17 +12,17 @@
  * - Filter badges with removal
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { FilterPane } from '../FilterPane';
-import * as useFiltersModule from '@/hooks/useFilters';
-import * as useProcurementDataModule from '@/hooks/useProcurementData';
-import * as useFilterPresetsModule from '@/hooks/useFilterPresets';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { FilterPane } from "../FilterPane";
+import * as useFiltersModule from "@/hooks/useFilters";
+import * as useProcurementDataModule from "@/hooks/useProcurementData";
+import * as useFilterPresetsModule from "@/hooks/useFilterPresets";
 
 // Mock sonner
-vi.mock('sonner', () => ({
+vi.mock("sonner", () => ({
   toast: {
     success: vi.fn(),
     error: vi.fn(),
@@ -30,17 +30,17 @@ vi.mock('sonner', () => ({
 }));
 
 // Mock hooks
-vi.mock('@/hooks/useFilters', () => ({
+vi.mock("@/hooks/useFilters", () => ({
   useFilters: vi.fn(),
   useUpdateFilters: vi.fn(),
   useResetFilters: vi.fn(),
 }));
 
-vi.mock('@/hooks/useProcurementData', () => ({
+vi.mock("@/hooks/useProcurementData", () => ({
   useProcurementData: vi.fn(),
 }));
 
-vi.mock('@/hooks/useFilterPresets', () => ({
+vi.mock("@/hooks/useFilterPresets", () => ({
   useFilterPresets: vi.fn(),
 }));
 
@@ -56,29 +56,29 @@ const defaultFilters = {
 
 const mockProcurementData = [
   {
-    category: 'IT Equipment',
-    subcategory: 'Hardware',
-    supplier: 'Supplier A',
-    location: 'New York',
-    date: '2024-01-15',
+    category: "IT Equipment",
+    subcategory: "Hardware",
+    supplier: "Supplier A",
+    location: "New York",
+    date: "2024-01-15",
     year: 2024,
     amount: 5000,
   },
   {
-    category: 'Office Supplies',
-    subcategory: 'Paper',
-    supplier: 'Supplier B',
-    location: 'Chicago',
-    date: '2023-06-20',
+    category: "Office Supplies",
+    subcategory: "Paper",
+    supplier: "Supplier B",
+    location: "Chicago",
+    date: "2023-06-20",
     year: 2023,
     amount: 500,
   },
   {
-    category: 'IT Equipment',
-    subcategory: 'Software',
-    supplier: 'Supplier C',
-    location: 'New York',
-    date: '2024-03-10',
+    category: "IT Equipment",
+    subcategory: "Software",
+    supplier: "Supplier C",
+    location: "New York",
+    date: "2024-03-10",
     year: 2024,
     amount: 15000,
   },
@@ -96,7 +96,7 @@ function createWrapper() {
   );
 }
 
-describe('FilterPane', () => {
+describe("FilterPane", () => {
   const mockUpdateFilters = { mutate: vi.fn() };
   const mockResetFilters = { mutate: vi.fn() };
   const mockSavePreset = vi.fn();
@@ -112,8 +112,12 @@ describe('FilterPane', () => {
       isSuccess: true,
     } as any);
 
-    vi.mocked(useFiltersModule.useUpdateFilters).mockReturnValue(mockUpdateFilters as any);
-    vi.mocked(useFiltersModule.useResetFilters).mockReturnValue(mockResetFilters as any);
+    vi.mocked(useFiltersModule.useUpdateFilters).mockReturnValue(
+      mockUpdateFilters as any,
+    );
+    vi.mocked(useFiltersModule.useResetFilters).mockReturnValue(
+      mockResetFilters as any,
+    );
 
     vi.mocked(useProcurementDataModule.useProcurementData).mockReturnValue({
       data: mockProcurementData,
@@ -125,6 +129,8 @@ describe('FilterPane', () => {
       presets: [],
       savePreset: mockSavePreset,
       deletePreset: mockDeletePreset,
+      updatePreset: vi.fn(),
+      getPreset: vi.fn(),
       nameExists: mockNameExists,
     });
   });
@@ -136,55 +142,57 @@ describe('FilterPane', () => {
   // =====================
   // Basic Render Tests
   // =====================
-  describe('Basic Rendering', () => {
-    it('should render filter pane with title', () => {
+  describe("Basic Rendering", () => {
+    it("should render filter pane with title", () => {
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Filters')).toBeInTheDocument();
+      expect(screen.getByText("Filters")).toBeInTheDocument();
     });
 
-    it('should render date range section', () => {
+    it("should render date range section", () => {
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Date Range')).toBeInTheDocument();
-      expect(screen.getByLabelText('Start Date')).toBeInTheDocument();
-      expect(screen.getByLabelText('End Date')).toBeInTheDocument();
+      expect(screen.getByText("Date Range")).toBeInTheDocument();
+      expect(screen.getByLabelText("Start Date")).toBeInTheDocument();
+      expect(screen.getByLabelText("End Date")).toBeInTheDocument();
     });
 
-    it('should render category section', () => {
+    it("should render category section", () => {
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Categories')).toBeInTheDocument();
+      expect(screen.getByText("Categories")).toBeInTheDocument();
     });
 
-    it('should render supplier section', () => {
+    it("should render supplier section", () => {
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Suppliers')).toBeInTheDocument();
+      expect(screen.getByText("Suppliers")).toBeInTheDocument();
     });
 
-    it('should render location section', () => {
+    it("should render location section", () => {
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Locations')).toBeInTheDocument();
+      expect(screen.getByText("Locations")).toBeInTheDocument();
     });
 
-    it('should render amount range section', () => {
+    it("should render amount range section", () => {
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Amount Range')).toBeInTheDocument();
-      expect(screen.getByLabelText('Minimum')).toBeInTheDocument();
-      expect(screen.getByLabelText('Maximum')).toBeInTheDocument();
+      expect(screen.getByText("Amount Range")).toBeInTheDocument();
+      expect(screen.getByLabelText("Minimum")).toBeInTheDocument();
+      expect(screen.getByLabelText("Maximum")).toBeInTheDocument();
     });
 
-    it('should return null when filters are not loaded', () => {
+    it("should return null when filters are not loaded", () => {
       vi.mocked(useFiltersModule.useFilters).mockReturnValue({
         data: undefined,
         isLoading: true,
         isSuccess: false,
       } as any);
 
-      const { container } = render(<FilterPane />, { wrapper: createWrapper() });
+      const { container } = render(<FilterPane />, {
+        wrapper: createWrapper(),
+      });
 
       expect(container.firstChild).toBeNull();
     });
@@ -193,22 +201,32 @@ describe('FilterPane', () => {
   // =====================
   // Quick Date Presets Tests
   // =====================
-  describe('Quick Date Presets', () => {
-    it('should render quick date preset buttons', () => {
+  describe("Quick Date Presets", () => {
+    it("should render quick date preset buttons", () => {
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      expect(screen.getByRole('button', { name: 'Last 7 days' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Last 30 days' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Last 90 days' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'This Year' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Last Year' })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Last 7 days" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Last 30 days" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Last 90 days" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "This Year" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Last Year" }),
+      ).toBeInTheDocument();
     });
 
-    it('should apply Last 7 days preset when clicked', async () => {
+    it("should apply Last 7 days preset when clicked", async () => {
       const user = userEvent.setup();
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      await user.click(screen.getByRole('button', { name: 'Last 7 days' }));
+      await user.click(screen.getByRole("button", { name: "Last 7 days" }));
 
       expect(mockUpdateFilters.mutate).toHaveBeenCalledWith({
         dateRange: expect.objectContaining({
@@ -218,11 +236,11 @@ describe('FilterPane', () => {
       });
     });
 
-    it('should apply Last 30 days preset when clicked', async () => {
+    it("should apply Last 30 days preset when clicked", async () => {
       const user = userEvent.setup();
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      await user.click(screen.getByRole('button', { name: 'Last 30 days' }));
+      await user.click(screen.getByRole("button", { name: "Last 30 days" }));
 
       expect(mockUpdateFilters.mutate).toHaveBeenCalledWith({
         dateRange: expect.objectContaining({
@@ -232,11 +250,11 @@ describe('FilterPane', () => {
       });
     });
 
-    it('should apply This Year preset when clicked', async () => {
+    it("should apply This Year preset when clicked", async () => {
       const user = userEvent.setup();
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      await user.click(screen.getByRole('button', { name: 'This Year' }));
+      await user.click(screen.getByRole("button", { name: "This Year" }));
 
       const currentYear = new Date().getFullYear();
       expect(mockUpdateFilters.mutate).toHaveBeenCalledWith({
@@ -247,11 +265,11 @@ describe('FilterPane', () => {
       });
     });
 
-    it('should apply Last Year preset when clicked', async () => {
+    it("should apply Last Year preset when clicked", async () => {
       const user = userEvent.setup();
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      await user.click(screen.getByRole('button', { name: 'Last Year' }));
+      await user.click(screen.getByRole("button", { name: "Last Year" }));
 
       const lastYear = new Date().getFullYear() - 1;
       expect(mockUpdateFilters.mutate).toHaveBeenCalledWith({
@@ -266,19 +284,19 @@ describe('FilterPane', () => {
   // =====================
   // Custom Date Range Tests
   // =====================
-  describe('Custom Date Range', () => {
-    it('should update date range on blur', async () => {
+  describe("Custom Date Range", () => {
+    it("should update date range on blur", async () => {
       const user = userEvent.setup();
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      const startDateInput = screen.getByLabelText('Start Date');
+      const startDateInput = screen.getByLabelText("Start Date");
       await user.clear(startDateInput);
-      await user.type(startDateInput, '2024-01-01');
+      await user.type(startDateInput, "2024-01-01");
       fireEvent.blur(startDateInput);
 
       expect(mockUpdateFilters.mutate).toHaveBeenCalledWith({
         dateRange: expect.objectContaining({
-          start: '2024-01-01',
+          start: "2024-01-01",
         }),
       });
     });
@@ -287,14 +305,14 @@ describe('FilterPane', () => {
   // =====================
   // Amount Range Tests
   // =====================
-  describe('Amount Range Filter', () => {
-    it('should update min amount on blur', async () => {
+  describe("Amount Range Filter", () => {
+    it("should update min amount on blur", async () => {
       const user = userEvent.setup();
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      const minAmountInput = screen.getByLabelText('Minimum');
+      const minAmountInput = screen.getByLabelText("Minimum");
       await user.clear(minAmountInput);
-      await user.type(minAmountInput, '1000');
+      await user.type(minAmountInput, "1000");
       fireEvent.blur(minAmountInput);
 
       expect(mockUpdateFilters.mutate).toHaveBeenCalledWith({
@@ -305,13 +323,13 @@ describe('FilterPane', () => {
       });
     });
 
-    it('should update max amount on blur', async () => {
+    it("should update max amount on blur", async () => {
       const user = userEvent.setup();
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      const maxAmountInput = screen.getByLabelText('Maximum');
+      const maxAmountInput = screen.getByLabelText("Maximum");
       await user.clear(maxAmountInput);
-      await user.type(maxAmountInput, '50000');
+      await user.type(maxAmountInput, "50000");
       fireEvent.blur(maxAmountInput);
 
       expect(mockUpdateFilters.mutate).toHaveBeenCalledWith({
@@ -326,22 +344,24 @@ describe('FilterPane', () => {
   // =====================
   // Active Filter Count Tests
   // =====================
-  describe('Active Filter Count', () => {
-    it('should not show filter count badge when no active filters', () => {
+  describe("Active Filter Count", () => {
+    it("should not show filter count badge when no active filters", () => {
       render(<FilterPane />, { wrapper: createWrapper() });
 
       // Badge with count should not be visible
-      const badges = screen.queryAllByRole('status');
-      const countBadges = badges.filter(b => /^\d+$/.test(b.textContent || ''));
+      const badges = screen.queryAllByRole("status");
+      const countBadges = badges.filter((b) =>
+        /^\d+$/.test(b.textContent || ""),
+      );
       expect(countBadges).toHaveLength(0);
     });
 
-    it('should show filter count badge with active filters', () => {
+    it("should show filter count badge with active filters", () => {
       vi.mocked(useFiltersModule.useFilters).mockReturnValue({
         data: {
           ...defaultFilters,
-          categories: ['IT Equipment'],
-          suppliers: ['Supplier A'],
+          categories: ["IT Equipment"],
+          suppliers: ["Supplier A"],
         },
         isLoading: false,
         isSuccess: true,
@@ -350,14 +370,14 @@ describe('FilterPane', () => {
       render(<FilterPane />, { wrapper: createWrapper() });
 
       // Should show "2" for 2 active filters
-      expect(screen.getByText('2')).toBeInTheDocument();
+      expect(screen.getByText("2")).toBeInTheDocument();
     });
 
-    it('should count date range as one filter', () => {
+    it("should count date range as one filter", () => {
       vi.mocked(useFiltersModule.useFilters).mockReturnValue({
         data: {
           ...defaultFilters,
-          dateRange: { start: '2024-01-01', end: '2024-12-31' },
+          dateRange: { start: "2024-01-01", end: "2024-12-31" },
         },
         isLoading: false,
         isSuccess: true,
@@ -365,10 +385,10 @@ describe('FilterPane', () => {
 
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('1')).toBeInTheDocument();
+      expect(screen.getByText("1")).toBeInTheDocument();
     });
 
-    it('should count amount range as one filter', () => {
+    it("should count amount range as one filter", () => {
       vi.mocked(useFiltersModule.useFilters).mockReturnValue({
         data: {
           ...defaultFilters,
@@ -380,19 +400,19 @@ describe('FilterPane', () => {
 
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('1')).toBeInTheDocument();
+      expect(screen.getByText("1")).toBeInTheDocument();
     });
   });
 
   // =====================
   // Reset Filters Tests
   // =====================
-  describe('Reset Filters', () => {
-    it('should show reset button when filters are active', () => {
+  describe("Reset Filters", () => {
+    it("should show reset button when filters are active", () => {
       vi.mocked(useFiltersModule.useFilters).mockReturnValue({
         data: {
           ...defaultFilters,
-          categories: ['IT Equipment'],
+          categories: ["IT Equipment"],
         },
         isLoading: false,
         isSuccess: true,
@@ -400,21 +420,25 @@ describe('FilterPane', () => {
 
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      expect(screen.getByRole('button', { name: 'Reset all filters' })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Reset all filters" }),
+      ).toBeInTheDocument();
     });
 
-    it('should not show reset button when no active filters', () => {
+    it("should not show reset button when no active filters", () => {
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      expect(screen.queryByRole('button', { name: 'Reset all filters' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Reset all filters" }),
+      ).not.toBeInTheDocument();
     });
 
-    it('should call resetFilters when reset button clicked', async () => {
+    it("should call resetFilters when reset button clicked", async () => {
       const user = userEvent.setup();
       vi.mocked(useFiltersModule.useFilters).mockReturnValue({
         data: {
           ...defaultFilters,
-          categories: ['IT Equipment'],
+          categories: ["IT Equipment"],
         },
         isLoading: false,
         isSuccess: true,
@@ -422,7 +446,9 @@ describe('FilterPane', () => {
 
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      await user.click(screen.getByRole('button', { name: 'Reset all filters' }));
+      await user.click(
+        screen.getByRole("button", { name: "Reset all filters" }),
+      );
 
       expect(mockResetFilters.mutate).toHaveBeenCalled();
     });
@@ -431,12 +457,12 @@ describe('FilterPane', () => {
   // =====================
   // Filter Badges Tests
   // =====================
-  describe('Filter Badges', () => {
-    it('should display date range badges when set', () => {
+  describe("Filter Badges", () => {
+    it("should display date range badges when set", () => {
       vi.mocked(useFiltersModule.useFilters).mockReturnValue({
         data: {
           ...defaultFilters,
-          dateRange: { start: '2024-01-01', end: '2024-12-31' },
+          dateRange: { start: "2024-01-01", end: "2024-12-31" },
         },
         isLoading: false,
         isSuccess: true,
@@ -444,11 +470,11 @@ describe('FilterPane', () => {
 
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('From: 2024-01-01')).toBeInTheDocument();
-      expect(screen.getByText('To: 2024-12-31')).toBeInTheDocument();
+      expect(screen.getByText("From: 2024-01-01")).toBeInTheDocument();
+      expect(screen.getByText("To: 2024-12-31")).toBeInTheDocument();
     });
 
-    it('should display amount range badges when set', () => {
+    it("should display amount range badges when set", () => {
       vi.mocked(useFiltersModule.useFilters).mockReturnValue({
         data: {
           ...defaultFilters,
@@ -468,74 +494,78 @@ describe('FilterPane', () => {
   // =====================
   // Filter Presets Tests
   // =====================
-  describe('Filter Presets', () => {
-    it('should render preset dropdown button', () => {
+  describe("Filter Presets", () => {
+    it("should render preset dropdown button", () => {
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      expect(screen.getByRole('button', { name: 'Filter presets' })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Filter presets" }),
+      ).toBeInTheDocument();
     });
 
-    it('should show no presets message when empty', async () => {
+    it("should show no presets message when empty", async () => {
       const user = userEvent.setup();
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      await user.click(screen.getByRole('button', { name: 'Filter presets' }));
+      await user.click(screen.getByRole("button", { name: "Filter presets" }));
 
-      expect(screen.getByText('No saved presets')).toBeInTheDocument();
+      expect(screen.getByText("No saved presets")).toBeInTheDocument();
     });
 
-    it('should show save current filters option', async () => {
+    it("should show save current filters option", async () => {
       const user = userEvent.setup();
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      await user.click(screen.getByRole('button', { name: 'Filter presets' }));
+      await user.click(screen.getByRole("button", { name: "Filter presets" }));
 
-      expect(screen.getByText('Save Current Filters')).toBeInTheDocument();
+      expect(screen.getByText("Save Current Filters")).toBeInTheDocument();
     });
 
-    it('should display saved presets', async () => {
+    it("should display saved presets", async () => {
       const user = userEvent.setup();
       vi.mocked(useFilterPresetsModule.useFilterPresets).mockReturnValue({
         presets: [
           {
-            id: '1',
-            name: 'Q1 2024',
+            id: "1",
+            name: "Q1 2024",
             filters: defaultFilters,
             createdAt: new Date().toISOString(),
           },
         ],
         savePreset: mockSavePreset,
         deletePreset: mockDeletePreset,
+        updatePreset: vi.fn(),
+        getPreset: vi.fn(),
         nameExists: mockNameExists,
       });
 
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      await user.click(screen.getByRole('button', { name: 'Filter presets' }));
+      await user.click(screen.getByRole("button", { name: "Filter presets" }));
 
-      expect(screen.getByText('Q1 2024')).toBeInTheDocument();
+      expect(screen.getByText("Q1 2024")).toBeInTheDocument();
     });
   });
 
   // =====================
   // Years Filter Tests
   // =====================
-  describe('Years Filter', () => {
-    it('should render years section', () => {
+  describe("Years Filter", () => {
+    it("should render years section", () => {
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Years')).toBeInTheDocument();
+      expect(screen.getByText("Years")).toBeInTheDocument();
     });
   });
 
   // =====================
   // Subcategories Filter Tests
   // =====================
-  describe('Subcategories Filter', () => {
-    it('should render subcategories section', () => {
+  describe("Subcategories Filter", () => {
+    it("should render subcategories section", () => {
       render(<FilterPane />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Subcategories')).toBeInTheDocument();
+      expect(screen.getByText("Subcategories")).toBeInTheDocument();
     });
   });
 });

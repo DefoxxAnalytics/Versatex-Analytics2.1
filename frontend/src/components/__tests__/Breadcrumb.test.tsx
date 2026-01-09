@@ -1,9 +1,9 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { Breadcrumb } from '../Breadcrumb';
-import { Router, useLocation } from 'wouter';
-import React from 'react';
+import { describe, it, expect } from "vitest";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { Breadcrumb } from "../Breadcrumb";
+import { Router, useLocation } from "wouter";
+import React from "react";
 
 /**
  * Test suite for Breadcrumb component
@@ -16,28 +16,28 @@ function createWrapper() {
   );
 }
 
-describe('Breadcrumb Component', () => {
-  describe('Rendering', () => {
-    it('should render breadcrumb navigation', () => {
+describe("Breadcrumb Component", () => {
+  describe("Rendering", () => {
+    it("should render breadcrumb navigation", () => {
       render(<Breadcrumb />, { wrapper: createWrapper() });
 
-      const nav = screen.getByRole('navigation', { name: /breadcrumb/i });
+      const nav = screen.getByRole("navigation", { name: /breadcrumb/i });
       expect(nav).toBeInTheDocument();
     });
 
-    it('should show Overview for root path', () => {
+    it("should show Overview for root path", () => {
       render(<Breadcrumb />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Overview')).toBeInTheDocument();
+      expect(screen.getByText("Overview")).toBeInTheDocument();
     });
 
-    it('should show breadcrumb trail for nested paths', () => {
+    it("should show breadcrumb trail for nested paths", () => {
       // Render with Router hook to set location
       const TestComponent = () => {
         const [, setLocation] = useLocation();
         // Set location on mount
         React.useEffect(() => {
-          setLocation('/categories');
+          setLocation("/categories");
         }, [setLocation]);
         return <Breadcrumb />;
       };
@@ -45,19 +45,19 @@ describe('Breadcrumb Component', () => {
       render(
         <Router>
           <TestComponent />
-        </Router>
+        </Router>,
       );
 
       // Should show Overview > Categories
-      expect(screen.getByText('Overview')).toBeInTheDocument();
-      expect(screen.getByText('Categories')).toBeInTheDocument();
+      expect(screen.getByText("Overview")).toBeInTheDocument();
+      expect(screen.getByText("Categories")).toBeInTheDocument();
     });
 
-    it('should handle multi-word paths correctly', () => {
+    it("should handle multi-word paths correctly", () => {
       const TestComponent = () => {
         const [, setLocation] = useLocation();
         React.useEffect(() => {
-          setLocation('/ai-insights');
+          setLocation("/ai-insights");
         }, [setLocation]);
         return <Breadcrumb />;
       };
@@ -65,14 +65,14 @@ describe('Breadcrumb Component', () => {
       render(
         <Router>
           <TestComponent />
-        </Router>
+        </Router>,
       );
 
       // Should convert "ai-insights" to "AI Insights"
       expect(screen.getByText(/AI Insights/i)).toBeInTheDocument();
     });
 
-    it('should show separator between breadcrumb items', () => {
+    it("should show separator between breadcrumb items", () => {
       const Wrapper = ({ children }: { children: React.ReactNode }) => (
         <Router base="/categories">{children}</Router>
       );
@@ -80,17 +80,19 @@ describe('Breadcrumb Component', () => {
       render(<Breadcrumb />, { wrapper: Wrapper });
 
       // Should have a separator (chevron or slash)
-      const breadcrumb = screen.getByRole('navigation', { name: /breadcrumb/i });
+      const breadcrumb = screen.getByRole("navigation", {
+        name: /breadcrumb/i,
+      });
       expect(breadcrumb).toBeInTheDocument();
     });
   });
 
-  describe('Navigation', () => {
-    it('should have clickable links for all items except current', () => {
+  describe("Navigation", () => {
+    it("should have clickable links for all items except current", () => {
       const TestComponent = () => {
         const [, setLocation] = useLocation();
         React.useEffect(() => {
-          setLocation('/categories');
+          setLocation("/categories");
         }, [setLocation]);
         return <Breadcrumb />;
       };
@@ -98,20 +100,20 @@ describe('Breadcrumb Component', () => {
       render(
         <Router>
           <TestComponent />
-        </Router>
+        </Router>,
       );
 
       // Overview should be a link (not current page)
-      const homeLink = screen.getByText('Overview').closest('a');
+      const homeLink = screen.getByText("Overview").closest("a");
       expect(homeLink).toBeInTheDocument();
-      expect(homeLink?.tagName).toBe('A');
+      expect(homeLink?.tagName).toBe("A");
     });
 
-    it('should not have link for current page', () => {
+    it("should not have link for current page", () => {
       const TestComponent = () => {
         const [, setLocation] = useLocation();
         React.useEffect(() => {
-          setLocation('/categories');
+          setLocation("/categories");
         }, [setLocation]);
         return <Breadcrumb />;
       };
@@ -119,19 +121,19 @@ describe('Breadcrumb Component', () => {
       render(
         <Router>
           <TestComponent />
-        </Router>
+        </Router>,
       );
 
-      const currentPage = screen.getByText('Categories');
-      expect(currentPage.closest('a')).toBeNull();
+      const currentPage = screen.getByText("Categories");
+      expect(currentPage.closest("a")).toBeNull();
     });
 
-    it('should navigate when clicking breadcrumb links', async () => {
+    it("should navigate when clicking breadcrumb links", async () => {
       const user = userEvent.setup();
       const TestComponent = () => {
         const [, setLocation] = useLocation();
         React.useEffect(() => {
-          setLocation('/categories');
+          setLocation("/categories");
         }, [setLocation]);
         return <Breadcrumb />;
       };
@@ -139,38 +141,38 @@ describe('Breadcrumb Component', () => {
       render(
         <Router>
           <TestComponent />
-        </Router>
+        </Router>,
       );
 
-      const homeLink = screen.getByText('Overview');
-      
+      const homeLink = screen.getByText("Overview");
+
       // Link should exist and be clickable
-      const anchor = homeLink.closest('a');
+      const anchor = homeLink.closest("a");
       expect(anchor).toBeInTheDocument();
-      
+
       // Click should work without errors
       if (anchor) {
         await user.click(anchor);
       }
-      
+
       // Component should still render after click
-      expect(screen.getByRole('navigation')).toBeInTheDocument();
+      expect(screen.getByRole("navigation")).toBeInTheDocument();
     });
   });
 
-  describe('Accessibility', () => {
-    it('should have proper ARIA labels', () => {
+  describe("Accessibility", () => {
+    it("should have proper ARIA labels", () => {
       render(<Breadcrumb />, { wrapper: createWrapper() });
 
-      const nav = screen.getByRole('navigation');
-      expect(nav).toHaveAttribute('aria-label', 'Breadcrumb');
+      const nav = screen.getByRole("navigation");
+      expect(nav).toHaveAttribute("aria-label", "Breadcrumb");
     });
 
-    it('should mark current page with aria-current', () => {
+    it("should mark current page with aria-current", () => {
       const TestComponent = () => {
         const [, setLocation] = useLocation();
         React.useEffect(() => {
-          setLocation('/categories');
+          setLocation("/categories");
         }, [setLocation]);
         return <Breadcrumb />;
       };
@@ -178,19 +180,19 @@ describe('Breadcrumb Component', () => {
       render(
         <Router>
           <TestComponent />
-        </Router>
+        </Router>,
       );
 
-      const currentPage = screen.getByText('Categories');
-      expect(currentPage).toHaveAttribute('aria-current', 'page');
+      const currentPage = screen.getByText("Categories");
+      expect(currentPage).toHaveAttribute("aria-current", "page");
     });
 
-    it('should be keyboard navigable', async () => {
+    it("should be keyboard navigable", async () => {
       const user = userEvent.setup();
       const TestComponent = () => {
         const [, setLocation] = useLocation();
         React.useEffect(() => {
-          setLocation('/categories');
+          setLocation("/categories");
         }, [setLocation]);
         return <Breadcrumb />;
       };
@@ -198,24 +200,24 @@ describe('Breadcrumb Component', () => {
       render(
         <Router>
           <TestComponent />
-        </Router>
+        </Router>,
       );
 
       // Tab to the home link
       await user.tab();
-      
+
       // Active element should be an anchor tag
-      expect(document.activeElement?.tagName).toBe('A');
-      expect(document.activeElement?.textContent).toContain('Overview');
+      expect(document.activeElement?.tagName).toBe("A");
+      expect(document.activeElement?.textContent).toContain("Overview");
     });
   });
 
-  describe('Path Formatting', () => {
-    it('should capitalize single-word paths', () => {
+  describe("Path Formatting", () => {
+    it("should capitalize single-word paths", () => {
       const TestComponent = () => {
         const [, setLocation] = useLocation();
         React.useEffect(() => {
-          setLocation('/suppliers');
+          setLocation("/suppliers");
         }, [setLocation]);
         return <Breadcrumb />;
       };
@@ -223,17 +225,17 @@ describe('Breadcrumb Component', () => {
       render(
         <Router>
           <TestComponent />
-        </Router>
+        </Router>,
       );
 
-      expect(screen.getByText('Suppliers')).toBeInTheDocument();
+      expect(screen.getByText("Suppliers")).toBeInTheDocument();
     });
 
-    it('should handle hyphenated paths', () => {
+    it("should handle hyphenated paths", () => {
       const TestComponent = () => {
         const [, setLocation] = useLocation();
         React.useEffect(() => {
-          setLocation('/tail-spend');
+          setLocation("/tail-spend");
         }, [setLocation]);
         return <Breadcrumb />;
       };
@@ -241,17 +243,17 @@ describe('Breadcrumb Component', () => {
       render(
         <Router>
           <TestComponent />
-        </Router>
+        </Router>,
       );
 
       expect(screen.getByText(/Tail Spend/i)).toBeInTheDocument();
     });
 
-    it('should handle year-over-year path', () => {
+    it("should handle year-over-year path", () => {
       const TestComponent = () => {
         const [, setLocation] = useLocation();
         React.useEffect(() => {
-          setLocation('/yoy');
+          setLocation("/yoy");
         }, [setLocation]);
         return <Breadcrumb />;
       };
@@ -259,30 +261,30 @@ describe('Breadcrumb Component', () => {
       render(
         <Router>
           <TestComponent />
-        </Router>
+        </Router>,
       );
 
       expect(screen.getByText(/Year-over-Year/i)).toBeInTheDocument();
     });
   });
 
-  describe('Edge Cases', () => {
-    it('should handle root path gracefully', () => {
+  describe("Edge Cases", () => {
+    it("should handle root path gracefully", () => {
       render(<Breadcrumb />, { wrapper: createWrapper() });
 
       // Should show Overview
-      const homePage = screen.getByText('Overview');
+      const homePage = screen.getByText("Overview");
       expect(homePage).toBeInTheDocument();
-      
+
       // On root path, Overview should be rendered
-      expect(screen.getByRole('navigation')).toBeInTheDocument();
+      expect(screen.getByRole("navigation")).toBeInTheDocument();
     });
 
-    it('should handle unknown paths', () => {
+    it("should handle unknown paths", () => {
       const TestComponent = () => {
         const [, setLocation] = useLocation();
         React.useEffect(() => {
-          setLocation('/unknown-page');
+          setLocation("/unknown-page");
         }, [setLocation]);
         return <Breadcrumb />;
       };
@@ -290,7 +292,7 @@ describe('Breadcrumb Component', () => {
       render(
         <Router>
           <TestComponent />
-        </Router>
+        </Router>,
       );
 
       // Should still render and capitalize

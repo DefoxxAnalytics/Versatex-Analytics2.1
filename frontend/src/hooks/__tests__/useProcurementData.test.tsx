@@ -9,27 +9,27 @@
  * - Organization-scoped query keys
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, waitFor, act } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { renderHook, waitFor, act } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   useProcurementData,
   useFilteredProcurementData,
   useRefreshData,
   useProcurementStats,
-} from '../useProcurementData';
-import * as api from '@/lib/api';
-import * as analyticsLib from '@/lib/analytics';
+} from "../useProcurementData";
+import * as api from "@/lib/api";
+import * as analyticsLib from "@/lib/analytics";
 
 // Mock dependencies
-vi.mock('@/lib/api', () => ({
+vi.mock("@/lib/api", () => ({
   procurementAPI: {
     getTransactions: vi.fn(),
   },
   getOrganizationParam: vi.fn(),
 }));
 
-vi.mock('@/lib/analytics', () => ({
+vi.mock("@/lib/analytics", () => ({
   applyFilters: vi.fn(),
 }));
 
@@ -37,33 +37,33 @@ vi.mock('@/lib/analytics', () => ({
 const mockTransactions = [
   {
     id: 1,
-    supplier_name: 'Acme Corp',
-    category_name: 'Office Supplies',
-    subcategory: 'Paper',
-    amount: '1500.00',
-    date: '2024-01-15',
-    location: 'New York',
-    spend_band: '$1K-$5K',
+    supplier_name: "Acme Corp",
+    category_name: "Office Supplies",
+    subcategory: "Paper",
+    amount: "1500.00",
+    date: "2024-01-15",
+    location: "New York",
+    spend_band: "$1K-$5K",
   },
   {
     id: 2,
-    supplier_name: 'Beta Inc',
-    category_name: 'IT Equipment',
-    subcategory: 'Computers',
-    amount: '5000.00',
-    date: '2024-02-20',
-    location: 'Chicago',
-    spend_band: '$5K-$10K',
+    supplier_name: "Beta Inc",
+    category_name: "IT Equipment",
+    subcategory: "Computers",
+    amount: "5000.00",
+    date: "2024-02-20",
+    location: "Chicago",
+    spend_band: "$5K-$10K",
   },
   {
     id: 3,
-    supplier_name: 'Gamma LLC',
-    category_name: 'Office Supplies',
-    subcategory: 'Pens',
-    amount: '250.00',
-    date: '2024-03-10',
-    location: 'Los Angeles',
-    spend_band: '<$1K',
+    supplier_name: "Gamma LLC",
+    category_name: "Office Supplies",
+    subcategory: "Pens",
+    amount: "250.00",
+    date: "2024-03-10",
+    location: "Los Angeles",
+    spend_band: "<$1K",
   },
 ];
 
@@ -79,7 +79,7 @@ function createWrapper() {
   );
 }
 
-describe('useProcurementData', () => {
+describe("useProcurementData", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
@@ -93,8 +93,8 @@ describe('useProcurementData', () => {
   // =====================
   // useProcurementData Tests
   // =====================
-  describe('useProcurementData', () => {
-    it('should fetch transactions from API', async () => {
+  describe("useProcurementData", () => {
+    it("should fetch transactions from API", async () => {
       vi.mocked(api.procurementAPI.getTransactions).mockResolvedValue({
         data: { results: mockTransactions },
       } as any);
@@ -107,10 +107,12 @@ describe('useProcurementData', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(api.procurementAPI.getTransactions).toHaveBeenCalledWith({ page_size: 10000 });
+      expect(api.procurementAPI.getTransactions).toHaveBeenCalledWith({
+        page_size: 10000,
+      });
     });
 
-    it('should transform transactions to ProcurementRecord format', async () => {
+    it("should transform transactions to ProcurementRecord format", async () => {
       vi.mocked(api.procurementAPI.getTransactions).mockResolvedValue({
         data: { results: mockTransactions },
       } as any);
@@ -125,18 +127,18 @@ describe('useProcurementData', () => {
 
       expect(result.current.data).toHaveLength(3);
       expect(result.current.data?.[0]).toEqual({
-        supplier: 'Acme Corp',
-        category: 'Office Supplies',
-        subcategory: 'Paper',
+        supplier: "Acme Corp",
+        category: "Office Supplies",
+        subcategory: "Paper",
         amount: 1500,
-        date: '2024-01-15',
-        location: 'New York',
+        date: "2024-01-15",
+        location: "New York",
         year: 2024,
-        spendBand: '$1K-$5K',
+        spendBand: "$1K-$5K",
       });
     });
 
-    it('should handle missing subcategory with default', async () => {
+    it("should handle missing subcategory with default", async () => {
       const txWithoutSubcategory = [
         { ...mockTransactions[0], subcategory: null },
       ];
@@ -152,13 +154,11 @@ describe('useProcurementData', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(result.current.data?.[0].subcategory).toBe('Unspecified');
+      expect(result.current.data?.[0].subcategory).toBe("Unspecified");
     });
 
-    it('should handle missing location with default', async () => {
-      const txWithoutLocation = [
-        { ...mockTransactions[0], location: null },
-      ];
+    it("should handle missing location with default", async () => {
+      const txWithoutLocation = [{ ...mockTransactions[0], location: null }];
       vi.mocked(api.procurementAPI.getTransactions).mockResolvedValue({
         data: { results: txWithoutLocation },
       } as any);
@@ -171,12 +171,12 @@ describe('useProcurementData', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(result.current.data?.[0].location).toBe('Unknown');
+      expect(result.current.data?.[0].location).toBe("Unknown");
     });
 
-    it('should return empty array on API error', async () => {
+    it("should return empty array on API error", async () => {
       vi.mocked(api.procurementAPI.getTransactions).mockRejectedValue(
-        new Error('Network error')
+        new Error("Network error"),
       );
 
       const { result } = renderHook(() => useProcurementData(), {
@@ -190,8 +190,10 @@ describe('useProcurementData', () => {
       expect(result.current.data).toEqual([]);
     });
 
-    it('should include org ID in query key when viewing other org', async () => {
-      vi.mocked(api.getOrganizationParam).mockReturnValue({ organization_id: 5 });
+    it("should include org ID in query key when viewing other org", async () => {
+      vi.mocked(api.getOrganizationParam).mockReturnValue({
+        organization_id: 5,
+      });
       vi.mocked(api.procurementAPI.getTransactions).mockResolvedValue({
         data: { results: mockTransactions },
       } as any);
@@ -208,10 +210,10 @@ describe('useProcurementData', () => {
       expect(result.current.data).toHaveLength(3);
     });
 
-    it('should parse year from date correctly', async () => {
+    it("should parse year from date correctly", async () => {
       const txWithDifferentYears = [
-        { ...mockTransactions[0], date: '2023-06-15' },
-        { ...mockTransactions[1], date: '2024-12-01' },
+        { ...mockTransactions[0], date: "2023-06-15" },
+        { ...mockTransactions[1], date: "2024-12-01" },
       ];
       vi.mocked(api.procurementAPI.getTransactions).mockResolvedValue({
         data: { results: txWithDifferentYears },
@@ -229,9 +231,9 @@ describe('useProcurementData', () => {
       expect(result.current.data?.[1].year).toBe(2024);
     });
 
-    it('should handle invalid date gracefully', async () => {
+    it("should handle invalid date gracefully", async () => {
       const txWithInvalidDate = [
-        { ...mockTransactions[0], date: 'invalid-date' },
+        { ...mockTransactions[0], date: "invalid-date" },
       ];
       vi.mocked(api.procurementAPI.getTransactions).mockResolvedValue({
         data: { results: txWithInvalidDate },
@@ -252,8 +254,8 @@ describe('useProcurementData', () => {
   // =====================
   // useFilteredProcurementData Tests
   // =====================
-  describe('useFilteredProcurementData', () => {
-    it('should return raw data when no filters are stored', async () => {
+  describe("useFilteredProcurementData", () => {
+    it("should return raw data when no filters are stored", async () => {
       vi.mocked(api.procurementAPI.getTransactions).mockResolvedValue({
         data: { results: mockTransactions },
       } as any);
@@ -269,13 +271,13 @@ describe('useProcurementData', () => {
       expect(result.current.data).toHaveLength(3);
     });
 
-    it('should apply filters from localStorage', async () => {
+    it("should apply filters from localStorage", async () => {
       vi.mocked(api.procurementAPI.getTransactions).mockResolvedValue({
         data: { results: mockTransactions },
       } as any);
 
       const filters = {
-        categories: ['Office Supplies'],
+        categories: ["Office Supplies"],
         suppliers: [],
         dateRange: { start: null, end: null },
         minAmount: null,
@@ -283,18 +285,18 @@ describe('useProcurementData', () => {
         years: [],
         locations: [],
       };
-      localStorage.setItem('procurement_filters', JSON.stringify(filters));
+      localStorage.setItem("procurement_filters", JSON.stringify(filters));
 
       const filteredRecords = [
         {
-          supplier: 'Acme Corp',
-          category: 'Office Supplies',
-          subcategory: 'Paper',
+          supplier: "Acme Corp",
+          category: "Office Supplies",
+          subcategory: "Paper",
           amount: 1500,
-          date: '2024-01-15',
-          location: 'New York',
+          date: "2024-01-15",
+          location: "New York",
           year: 2024,
-          spendBand: '$1K-$5K',
+          spendBand: "$1K-$5K",
         },
       ];
       vi.mocked(analyticsLib.applyFilters).mockReturnValue(filteredRecords);
@@ -310,12 +312,12 @@ describe('useProcurementData', () => {
       expect(analyticsLib.applyFilters).toHaveBeenCalled();
     });
 
-    it('should handle corrupted filter JSON gracefully', async () => {
+    it("should handle corrupted filter JSON gracefully", async () => {
       vi.mocked(api.procurementAPI.getTransactions).mockResolvedValue({
         data: { results: mockTransactions },
       } as any);
 
-      localStorage.setItem('procurement_filters', 'not valid json {{{');
+      localStorage.setItem("procurement_filters", "not valid json {{{");
 
       const { result } = renderHook(() => useFilteredProcurementData(), {
         wrapper: createWrapper(),
@@ -329,7 +331,7 @@ describe('useProcurementData', () => {
       expect(result.current.data).toHaveLength(3);
     });
 
-    it('should respond to filtersUpdated event', async () => {
+    it("should respond to filtersUpdated event", async () => {
       vi.mocked(api.procurementAPI.getTransactions).mockResolvedValue({
         data: { results: mockTransactions },
       } as any);
@@ -344,14 +346,14 @@ describe('useProcurementData', () => {
 
       // Dispatch filter update event
       await act(async () => {
-        window.dispatchEvent(new CustomEvent('filtersUpdated'));
+        window.dispatchEvent(new CustomEvent("filtersUpdated"));
       });
 
       // Hook should still work after event
       expect(result.current.data).toHaveLength(3);
     });
 
-    it('should return empty array when raw data is empty', async () => {
+    it("should return empty array when raw data is empty", async () => {
       vi.mocked(api.procurementAPI.getTransactions).mockResolvedValue({
         data: { results: [] },
       } as any);
@@ -371,8 +373,8 @@ describe('useProcurementData', () => {
   // =====================
   // useRefreshData Tests
   // =====================
-  describe('useRefreshData', () => {
-    it('should invalidate procurement queries on refresh', async () => {
+  describe("useRefreshData", () => {
+    it("should invalidate procurement queries on refresh", async () => {
       const { result } = renderHook(() => useRefreshData(), {
         wrapper: createWrapper(),
       });
@@ -387,7 +389,7 @@ describe('useProcurementData', () => {
       expect(didResolve).toBe(true);
     });
 
-    it('should not throw on multiple refreshes', async () => {
+    it("should not throw on multiple refreshes", async () => {
       const { result } = renderHook(() => useRefreshData(), {
         wrapper: createWrapper(),
       });
@@ -408,8 +410,8 @@ describe('useProcurementData', () => {
   // =====================
   // useProcurementStats Tests
   // =====================
-  describe('useProcurementStats', () => {
-    it('should compute total spend correctly', async () => {
+  describe("useProcurementStats", () => {
+    it("should compute total spend correctly", async () => {
       vi.mocked(api.procurementAPI.getTransactions).mockResolvedValue({
         data: { results: mockTransactions },
       } as any);
@@ -425,7 +427,7 @@ describe('useProcurementData', () => {
       expect(result.current.totalSpend).toBe(6750); // 1500 + 5000 + 250
     });
 
-    it('should count unique suppliers correctly', async () => {
+    it("should count unique suppliers correctly", async () => {
       vi.mocked(api.procurementAPI.getTransactions).mockResolvedValue({
         data: { results: mockTransactions },
       } as any);
@@ -441,7 +443,7 @@ describe('useProcurementData', () => {
       expect(result.current.uniqueSuppliers).toBe(3);
     });
 
-    it('should count unique categories correctly', async () => {
+    it("should count unique categories correctly", async () => {
       vi.mocked(api.procurementAPI.getTransactions).mockResolvedValue({
         data: { results: mockTransactions },
       } as any);
@@ -458,7 +460,7 @@ describe('useProcurementData', () => {
       expect(result.current.uniqueCategories).toBe(2);
     });
 
-    it('should return correct record count', async () => {
+    it("should return correct record count", async () => {
       vi.mocked(api.procurementAPI.getTransactions).mockResolvedValue({
         data: { results: mockTransactions },
       } as any);
@@ -472,7 +474,7 @@ describe('useProcurementData', () => {
       });
     });
 
-    it('should return zeros when no data', async () => {
+    it("should return zeros when no data", async () => {
       vi.mocked(api.procurementAPI.getTransactions).mockResolvedValue({
         data: { results: [] },
       } as any);
@@ -490,7 +492,7 @@ describe('useProcurementData', () => {
       expect(result.current.uniqueCategories).toBe(0);
     });
 
-    it('should handle duplicate suppliers correctly', async () => {
+    it("should handle duplicate suppliers correctly", async () => {
       const txWithDuplicates = [
         ...mockTransactions,
         { ...mockTransactions[0], id: 4 }, // Duplicate Acme Corp
