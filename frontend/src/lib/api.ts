@@ -838,12 +838,265 @@ export interface AIInsightsSummary {
 export interface AIInsightsResponse {
   insights: AIInsight[];
   summary: AIInsightsSummary;
+  ai_enhancement?: AIEnhancement;
+  cache_hit?: boolean;
 }
 
 export interface AIInsightsListResponse {
   insights: AIInsight[];
   count: number;
   sensitivity?: number;
+}
+
+// Structured AI Enhancement types (from tool calling)
+export type AIImpactLevel = 'high' | 'medium' | 'low';
+export type AIEffortLevel = 'low' | 'medium' | 'high';
+export type AIRiskLevel = 'critical' | 'high' | 'moderate' | 'low';
+
+export interface AIRecommendation {
+  action: string;
+  impact: AIImpactLevel;
+  effort: AIEffortLevel;
+  savings_estimate?: number;
+  timeframe?: string;
+  affected_insight_ids?: string[];
+}
+
+export interface AIRiskAssessment {
+  overall_risk_level: AIRiskLevel;
+  key_risks?: string[];
+  mitigation_steps?: string[];
+}
+
+export interface AIQuickWin {
+  action: string;
+  expected_benefit: string;
+}
+
+export interface AIEnhancement {
+  priority_actions: AIRecommendation[];
+  risk_assessment?: AIRiskAssessment;
+  quick_wins?: AIQuickWin[];
+  strategic_summary: string;
+  provider: 'anthropic' | 'openai';
+  generated_at: string;
+}
+
+// Per-Insight AI Enhancement (from Haiku/GPT-4o-mini)
+export interface PerInsightEnhancement {
+  analysis: string;
+  implementation_steps: string[];
+  risk_factors: string[];
+  confidence_rationale: string;
+  timeline_recommendation: string;
+}
+
+// AI Insight Feedback types (ROI tracking)
+export type InsightActionTaken = 'implemented' | 'dismissed' | 'deferred' | 'investigating' | 'partial';
+export type InsightOutcome = 'pending' | 'success' | 'partial_success' | 'no_change' | 'failed';
+
+export interface InsightFeedbackRequest {
+  insight_id: string;
+  insight_type: AIInsightType;
+  insight_title: string;
+  insight_severity: AIInsightSeverity;
+  predicted_savings?: number;
+  action_taken: InsightActionTaken;
+  action_notes?: string;
+}
+
+export interface InsightFeedbackResponse {
+  id: string;
+  insight_id: string;
+  insight_type: AIInsightType;
+  insight_title: string;
+  action_taken: InsightActionTaken;
+  action_date: string;
+  outcome: InsightOutcome;
+  message: string;
+}
+
+export interface InsightOutcomeUpdateRequest {
+  outcome: InsightOutcome;
+  actual_savings?: number;
+  outcome_notes?: string;
+}
+
+export interface InsightOutcomeResponse {
+  id: string;
+  insight_id: string;
+  insight_type: AIInsightType;
+  action_taken: InsightActionTaken;
+  outcome: InsightOutcome;
+  outcome_date: string | null;
+  predicted_savings: number | null;
+  actual_savings: number | null;
+  savings_accuracy: number | null;
+  savings_variance: number | null;
+  message: string;
+}
+
+export interface InsightFeedbackItem {
+  id: string;
+  insight_id: string;
+  insight_type: AIInsightType;
+  insight_title: string;
+  insight_severity: AIInsightSeverity;
+  predicted_savings: number | null;
+  action_taken: InsightActionTaken;
+  action_date: string;
+  action_by: string | null;
+  action_notes: string;
+  outcome: InsightOutcome;
+  actual_savings: number | null;
+  outcome_date: string | null;
+  outcome_notes: string;
+  savings_accuracy: number | null;
+  savings_variance: number | null;
+}
+
+export interface InsightFeedbackListResponse {
+  feedback: InsightFeedbackItem[];
+  count: number;
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface InsightEffectivenessMetrics {
+  total_feedback: number;
+  action_breakdown: { action_taken: InsightActionTaken; count: number }[];
+  outcome_breakdown: { outcome: InsightOutcome; count: number }[];
+  type_breakdown: {
+    insight_type: AIInsightType;
+    count: number;
+    total_predicted: number;
+    total_actual: number;
+  }[];
+  savings_metrics: {
+    total_predicted_savings: number;
+    total_actual_savings: number;
+    avg_predicted_savings: number;
+    avg_actual_savings: number;
+    implemented_insights: number;
+    roi_accuracy_percent: number | null;
+    savings_variance: number;
+  };
+  implementation_success_rate: number;
+  successful_implementations: number;
+  total_implemented: number;
+}
+
+// Async AI Enhancement types
+export type AsyncEnhancementStatus = 'queued' | 'processing' | 'completed' | 'failed' | 'not_found';
+
+export interface AsyncEnhancementRequest {
+  insights: AIInsight[];
+}
+
+export interface AsyncEnhancementRequestResponse {
+  task_id: string;
+  status: 'queued';
+  message: string;
+}
+
+export interface AsyncEnhancementStatusResponse {
+  status: AsyncEnhancementStatus;
+  progress: number;
+  enhancement?: AIEnhancement;
+  error?: string;
+  message?: string;
+}
+
+// Deep Analysis types
+export interface DeepAnalysisRequest {
+  insight: AIInsight;
+}
+
+export interface DeepAnalysisRequestResponse {
+  task_id: string;
+  insight_id: string;
+  status: 'queued';
+  message: string;
+}
+
+export interface DeepAnalysisRootCause {
+  primary_cause: string;
+  contributing_factors?: string[];
+  systemic_issues?: string[];
+}
+
+export interface DeepAnalysisPhase {
+  phase: number;
+  title: string;
+  duration?: string;
+  tasks: string[];
+  dependencies?: string[];
+  deliverables?: string[];
+}
+
+export interface DeepAnalysisSavingsBreakdown {
+  category: string;
+  amount: number;
+  description?: string;
+}
+
+export interface DeepAnalysisFinancialImpact {
+  estimated_savings?: number;
+  implementation_cost?: number;
+  payback_period?: string;
+  roi_percentage?: number;
+  savings_breakdown?: DeepAnalysisSavingsBreakdown[];
+}
+
+export interface DeepAnalysisRiskFactor {
+  risk: string;
+  likelihood: 'high' | 'medium' | 'low';
+  impact: 'high' | 'medium' | 'low';
+  mitigation: string;
+}
+
+export interface DeepAnalysisSuccessMetric {
+  metric: string;
+  target: string;
+  measurement_method?: string;
+}
+
+export interface DeepAnalysisStakeholder {
+  role: string;
+  responsibility: string;
+}
+
+export interface DeepAnalysisIndustryContext {
+  benchmark?: string;
+  best_practices?: string[];
+}
+
+export interface DeepAnalysis {
+  insight_id: string;
+  executive_summary: string;
+  root_cause_analysis: DeepAnalysisRootCause;
+  implementation_roadmap: DeepAnalysisPhase[];
+  financial_impact: DeepAnalysisFinancialImpact;
+  risk_factors?: DeepAnalysisRiskFactor[];
+  success_metrics?: DeepAnalysisSuccessMetric[];
+  stakeholders?: DeepAnalysisStakeholder[];
+  industry_context?: DeepAnalysisIndustryContext;
+  next_steps: string[];
+  provider: 'anthropic' | 'openai';
+  model: string;
+  generated_at: string;
+}
+
+export type DeepAnalysisStatus = 'processing' | 'completed' | 'failed' | 'not_found';
+
+export interface DeepAnalysisStatusResponse {
+  status: DeepAnalysisStatus;
+  progress: number;
+  insight_id: string;
+  analysis?: DeepAnalysis;
+  error?: string;
+  message?: string;
 }
 
 // Predictive Analytics types
@@ -1672,8 +1925,8 @@ export const analyticsAPI = {
     api.get('/analytics/consolidation/', { params: getOrganizationParam() }),
 
   // AI Insights endpoints
-  getAIInsights: (): Promise<AxiosResponse<AIInsightsResponse>> =>
-    api.get('/analytics/ai-insights/', { params: getOrganizationParam() }),
+  getAIInsights: (refresh: boolean = false): Promise<AxiosResponse<AIInsightsResponse>> =>
+    api.get('/analytics/ai-insights/', { params: { refresh: refresh ? 'true' : undefined, ...getOrganizationParam() } }),
 
   getAIInsightsCost: (): Promise<AxiosResponse<AIInsightsListResponse>> =>
     api.get('/analytics/ai-insights/cost/', { params: getOrganizationParam() }),
@@ -1683,6 +1936,36 @@ export const analyticsAPI = {
 
   getAIInsightsAnomalies: (sensitivity: number = 2.0): Promise<AxiosResponse<AIInsightsListResponse>> =>
     api.get('/analytics/ai-insights/anomalies/', { params: { sensitivity, ...getOrganizationParam() } }),
+
+  // AI Insight Feedback endpoints (ROI tracking)
+  recordInsightFeedback: (data: InsightFeedbackRequest): Promise<AxiosResponse<InsightFeedbackResponse>> =>
+    api.post('/analytics/ai-insights/feedback/', data, { params: getOrganizationParam() }),
+
+  updateInsightOutcome: (feedbackId: string, data: InsightOutcomeUpdateRequest): Promise<AxiosResponse<InsightOutcomeResponse>> =>
+    api.patch(`/analytics/ai-insights/feedback/${feedbackId}/`, data, { params: getOrganizationParam() }),
+
+  getInsightEffectiveness: (): Promise<AxiosResponse<InsightEffectivenessMetrics>> =>
+    api.get('/analytics/ai-insights/feedback/effectiveness/', { params: getOrganizationParam() }),
+
+  listInsightFeedback: (params?: { insight_type?: AIInsightType; action_taken?: InsightActionTaken; outcome?: InsightOutcome; limit?: number; offset?: number }): Promise<AxiosResponse<InsightFeedbackListResponse>> =>
+    api.get('/analytics/ai-insights/feedback/list/', { params: { ...params, ...getOrganizationParam() } }),
+
+  deleteInsightFeedback: (feedbackId: string): Promise<AxiosResponse<void>> =>
+    api.delete(`/analytics/ai-insights/feedback/${feedbackId}/delete/`, { params: getOrganizationParam() }),
+
+  // Async AI Enhancement endpoints
+  requestAsyncEnhancement: (data: AsyncEnhancementRequest): Promise<AxiosResponse<AsyncEnhancementRequestResponse>> =>
+    api.post('/analytics/ai-insights/enhance/request/', data, { params: getOrganizationParam() }),
+
+  getAsyncEnhancementStatus: (): Promise<AxiosResponse<AsyncEnhancementStatusResponse>> =>
+    api.get('/analytics/ai-insights/enhance/status/', { params: getOrganizationParam() }),
+
+  // Deep Analysis endpoints
+  requestDeepAnalysis: (data: DeepAnalysisRequest): Promise<AxiosResponse<DeepAnalysisRequestResponse>> =>
+    api.post('/analytics/ai-insights/deep-analysis/request/', data, { params: getOrganizationParam() }),
+
+  getDeepAnalysisStatus: (insightId: string): Promise<AxiosResponse<DeepAnalysisStatusResponse>> =>
+    api.get(`/analytics/ai-insights/deep-analysis/status/${insightId}/`, { params: getOrganizationParam() }),
 
   // Predictive Analytics endpoints
   getSpendingForecast: (months: number = 6): Promise<AxiosResponse<SpendingForecastResponse>> =>

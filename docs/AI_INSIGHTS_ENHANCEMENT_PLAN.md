@@ -1,8 +1,9 @@
 # AI Insights Enhancement Plan
 
-> **Document Version**: 1.0
+> **Document Version**: 2.0
 > **Created**: 2025-01-08
-> **Status**: Proposed
+> **Last Updated**: 2026-01-09
+> **Status**: Partially Implemented
 > **Author**: Claude Code Analysis
 
 ---
@@ -104,6 +105,14 @@ The AI Insights feature provides intelligent procurement recommendations through
 | User AI Settings | ✅ Implemented | Provider, API key, toggle |
 | Insight Filtering | ✅ Implemented | By type tabs |
 | Sorting | ✅ Implemented | By severity, savings, confidence |
+| **Redis Caching Layer** | ✅ Implemented | `ai_cache.py` with TTL-based caching |
+| **Async AI Enhancement** | ✅ Implemented | Celery task + polling endpoints |
+| **Feedback Loop (ROI Tracking)** | ✅ Implemented | InsightFeedback model, full CRUD + delete |
+| **Effectiveness Dashboard** | ✅ Implemented | Metrics visualization with charts |
+| **Deep Analysis** | ✅ Implemented | On-demand detailed analysis per insight |
+| **Multi-Provider Fallback** | ✅ Implemented | Automatic failover between providers |
+| **Action History** | ✅ Implemented | Track & manage recorded actions with delete |
+| **Outcome Updates** | ✅ Implemented | Update actual savings after implementation |
 
 ---
 
@@ -1868,16 +1877,16 @@ export function DeepAnalysisModal({ insight, isOpen, onClose }: DeepAnalysisModa
 
 ## Implementation Priority Matrix
 
-| Priority | Enhancement | Effort | Impact | Cost Reduction |
-|----------|-------------|--------|--------|----------------|
-| **P0** | Structured AI output (tool calling) | Medium | High | 0% |
-| **P0** | Redis caching layer | Low | High | 70% |
-| **P1** | Rich context building | Low | Medium | 0% |
-| **P1** | Per-insight enhancement | Medium | High | -20% (more calls) |
-| **P2** | Async processing + streaming | High | Medium | 0% |
-| **P2** | Feedback loop model | Medium | Medium | 0% |
-| **P3** | Multi-provider fallback | Low | Low | 0% |
-| **P3** | Deep analysis endpoint | Medium | Medium | 0% |
+| Priority | Enhancement | Effort | Impact | Cost Reduction | Status |
+|----------|-------------|--------|--------|----------------|--------|
+| **P0** | Structured AI output (tool calling) | Medium | High | 0% | 🔄 Partial |
+| **P0** | Redis caching layer | Low | High | 70% | ✅ **Done** |
+| **P1** | Rich context building | Low | Medium | 0% | 🔄 Partial |
+| **P1** | Per-insight enhancement | Medium | High | -20% (more calls) | 🔄 Partial |
+| **P2** | Async processing + streaming | High | Medium | 0% | ✅ **Done** |
+| **P2** | Feedback loop model | Medium | Medium | 0% | ✅ **Done** |
+| **P3** | Multi-provider fallback | Low | Low | 0% | ✅ **Done** |
+| **P3** | Deep analysis endpoint | Medium | Medium | 0% | ✅ **Done** |
 
 ### Recommended Implementation Order
 
@@ -2387,6 +2396,44 @@ AI_DEEP_ANALYSIS_PER_DAY=10
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2025-01-08 | Claude Code | Initial document |
+| 2.0 | 2026-01-09 | Claude Code | Updated status to reflect implemented features: Redis caching, async enhancement, feedback loop (ROI tracking), effectiveness dashboard, deep analysis, multi-provider fallback, action history with delete functionality |
+
+---
+
+## Implementation Summary (v2.0)
+
+### Completed Enhancements
+
+**Enhancement 2 - Redis Caching:** Implemented in `backend/apps/analytics/ai_cache.py` with TTL-based caching and automatic invalidation on data uploads.
+
+**Enhancement 5 - Async Processing:** Celery task `enhance_insights_async` in `tasks.py` with polling endpoints `request_ai_enhancement` and `get_ai_enhancement_status`.
+
+**Enhancement 6 - Feedback Loop (ROI Tracking):** Full implementation including:
+- `InsightFeedback` model in `apps/analytics/models.py`
+- API endpoints: record, list, update outcome, get effectiveness, **delete**
+- Frontend: ROI Tracking tab with Effectiveness Metrics, Action History panel, Take Action buttons
+- Delete functionality with confirmation dialog (owner or admin can delete)
+
+**Enhancement 7 - Multi-Provider Fallback:** Implemented in `ai_services.py` with automatic failover between Anthropic and OpenAI providers.
+
+**Enhancement 8 - Deep Analysis:** On-demand detailed analysis with `request_deep_analysis` and `get_deep_analysis_status` endpoints, plus `DeepAnalysisModal` component.
+
+### API Endpoints Added
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/analytics/ai-insights/enhance/request/` | POST | Trigger async AI enhancement |
+| `/api/v1/analytics/ai-insights/enhance/status/` | GET | Poll enhancement status |
+| `/api/v1/analytics/ai-insights/deep-analysis/request/` | POST | Request deep analysis |
+| `/api/v1/analytics/ai-insights/deep-analysis/status/<id>/` | GET | Poll deep analysis status |
+| `/api/v1/analytics/ai-insights/feedback/` | POST | Record insight feedback |
+| `/api/v1/analytics/ai-insights/feedback/list/` | GET | List feedback history |
+| `/api/v1/analytics/ai-insights/feedback/effectiveness/` | GET | Get effectiveness metrics |
+| `/api/v1/analytics/ai-insights/feedback/<id>/` | PATCH | Update outcome |
+| `/api/v1/analytics/ai-insights/feedback/<id>/delete/` | DELETE | Delete feedback entry |
+| `/api/v1/analytics/ai-insights/metrics/` | GET | AI insights metrics |
+| `/api/v1/analytics/ai-insights/metrics/prometheus/` | GET | Prometheus-format metrics |
+| `/api/v1/analytics/ai-insights/cache/invalidate/` | POST | Invalidate AI cache |
 
 ---
 

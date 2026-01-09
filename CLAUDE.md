@@ -157,6 +157,7 @@ src/
 /api/v1/auth/          # login, register, logout, token/refresh, user, change-password
 /api/v1/procurement/   # suppliers, categories, transactions (CRUD + upload_csv, bulk_delete, export), uploads
 /api/v1/analytics/     # overview, spend-by-category, spend-by-supplier, pareto, tail-spend, monthly-trend, stratification, seasonality, year-over-year, consolidation
+/api/v1/analytics/ai-insights/  # AI insights, feedback, ROI tracking, deep analysis (see AI Insights below)
 /api/v1/analytics/p2p/ # P2P analytics: cycle, matching, aging, requisitions, purchase-orders, supplier-payments
 /api/v1/reports/       # Report generation, scheduling, and downloads (see Reports Module below)
 ```
@@ -498,6 +499,97 @@ UserOrganizationMembership.objects.create(
     is_primary=False
 )
 ```
+
+### AI Insights ROI Tracking
+
+Track actions taken on AI-generated insights and measure their real-world effectiveness.
+
+#### Features
+
+| Feature | Description |
+|---------|-------------|
+| **Take Action Dropdown** | Record actions on insights: Implemented, Investigating, Deferred, Partially Implemented, Dismissed |
+| **ROI Tracking Tab** | Dashboard showing effectiveness metrics, savings comparison, action/outcome breakdown |
+| **Action History** | Paginated list of all feedback entries with filters by type, action, and outcome |
+| **Outcome Updates** | Record actual results: Success, Partial Success, No Change, Failed |
+| **Delete Feedback** | Remove erroneous entries (owner or admin only) |
+
+#### AI Insights API Endpoints
+
+```
+# Core AI Insights
+GET  /api/v1/analytics/ai-insights/                    # All insights with optional AI enhancement
+GET  /api/v1/analytics/ai-insights/cost/               # Cost optimization insights
+GET  /api/v1/analytics/ai-insights/risk/               # Supplier risk insights
+GET  /api/v1/analytics/ai-insights/anomalies/          # Anomaly detection insights
+
+# Async AI Enhancement
+POST /api/v1/analytics/ai-insights/enhance/request/    # Request background AI enhancement
+GET  /api/v1/analytics/ai-insights/enhance/status/     # Poll enhancement status
+
+# Deep Analysis
+POST /api/v1/analytics/ai-insights/deep-analysis/request/           # Request deep analysis for an insight
+GET  /api/v1/analytics/ai-insights/deep-analysis/status/<insight_id>/ # Poll deep analysis status
+
+# Insight Feedback (ROI Tracking)
+POST   /api/v1/analytics/ai-insights/feedback/                    # Record action on an insight
+GET    /api/v1/analytics/ai-insights/feedback/list/               # List feedback entries (paginated)
+GET    /api/v1/analytics/ai-insights/feedback/effectiveness/      # Get ROI metrics
+PATCH  /api/v1/analytics/ai-insights/feedback/<uuid:id>/          # Update outcome
+DELETE /api/v1/analytics/ai-insights/feedback/<uuid:id>/delete/   # Delete feedback entry
+
+# Metrics & Monitoring
+GET  /api/v1/analytics/ai-insights/metrics/            # Internal metrics
+GET  /api/v1/analytics/ai-insights/metrics/prometheus/ # Prometheus format
+POST /api/v1/analytics/ai-insights/cache/invalidate/   # Invalidate AI cache
+```
+
+#### Frontend Hooks (`useAIInsights.ts`)
+
+```typescript
+// Core Insights
+useAIInsights()                    // Fetch all AI insights
+useRefreshAIInsights()             // Force refresh (bypass cache)
+useAIInsightsCost()                // Cost optimization only
+useAIInsightsRisk()                // Risk insights only
+useAIInsightsAnomalies(sensitivity) // Anomaly detection
+
+// Async Enhancement
+useRequestAsyncEnhancement()       // Trigger background AI enhancement
+useAsyncEnhancementStatus()        // Poll status with auto-refetch
+
+// Deep Analysis
+useRequestDeepAnalysis()           // Request deep analysis for an insight
+useDeepAnalysisStatus(insightId)   // Poll status with auto-refetch
+
+// Feedback (ROI Tracking)
+useRecordInsightFeedback()         // Record action on insight
+useInsightFeedbackList(params)     // List feedback with filters
+useInsightEffectiveness()          // Get ROI metrics
+useUpdateInsightOutcome()          // Update outcome for feedback
+useDeleteInsightFeedback()         // Delete feedback entry
+
+// Helper Functions
+getActionLabel(action)             // Display label for action
+getActionColor(action)             // Badge color for action
+getOutcomeLabel(outcome)           // Display label for outcome
+getOutcomeColor(outcome)           // Badge color for outcome
+```
+
+#### Frontend Pages
+
+- `/ai-insights` - Main AI Insights page with two tabs:
+  - **Insights Tab**: View insights by category (Cost, Risk, Anomaly, Consolidation) with Take Action dropdown
+  - **ROI Tracking Tab**: Effectiveness dashboard + Action History with Update/Delete actions
+
+#### Permission Model
+
+| Action | Who Can Perform |
+|--------|-----------------|
+| View insights | All authenticated users |
+| Record feedback | All authenticated users |
+| Update outcome | All authenticated users |
+| Delete feedback | Owner (creator) or Admin |
 
 ---
 

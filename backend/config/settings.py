@@ -298,6 +298,20 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@analytics.com
 CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')
 
+# Django Cache Configuration (Redis)
+# Uses Django's native Redis backend (Django 4.0+)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': config('REDIS_URL', default='redis://localhost:6379/1'),
+        'KEY_PREFIX': 'versatex',
+        'TIMEOUT': 3600,  # 1 hour default TTL
+    }
+}
+
+# AI Insights Cache Settings
+AI_INSIGHTS_CACHE_TTL = config('AI_INSIGHTS_CACHE_TTL', default=3600, cast=int)  # 1 hour
+
 # API Documentation
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Versatex Analytics API',

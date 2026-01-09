@@ -50,6 +50,7 @@ urlpatterns = [
     path('ai-insights/feedback/list/', views.list_insight_feedback, name='list-insight-feedback'),
     path('ai-insights/feedback/effectiveness/', views.get_insight_effectiveness, name='insight-effectiveness'),
     path('ai-insights/feedback/<uuid:feedback_id>/', views.update_insight_outcome, name='update-insight-outcome'),
+    path('ai-insights/feedback/<uuid:feedback_id>/delete/', views.delete_insight_feedback, name='delete-insight-feedback'),
 
     # AI Insights Metrics & Monitoring (for Prometheus/Grafana integration)
     path('ai-insights/metrics/', views.ai_insights_metrics, name='ai-insights-metrics'),

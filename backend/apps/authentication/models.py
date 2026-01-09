@@ -308,7 +308,9 @@ class AuditLog(models.Model):
         # AI & Predictive Analytics keys
         'months', 'category_id', 'supplier_id', 'annual_budget', 'days',
         'contract_id', 'violation_id', 'resolved', 'severity', 'sensitivity',
-        'insight_count', 'resolution_notes',
+        'insight_count', 'resolution_notes', 'ai_enhanced', 'cache_hit', 'insight_id', 'insight_type',
+        # Insight Feedback keys
+        'action_taken', 'outcome', 'actual_savings',
         # Tail Spend Analysis keys
         'threshold',
         # Data Upload Center keys

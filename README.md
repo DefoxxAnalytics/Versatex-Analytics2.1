@@ -58,6 +58,23 @@ Versatex Analytics is a full-stack procurement analytics dashboard designed for 
 | **Seasonality** | Pattern detection across periods |
 | **Year-over-Year** | Comparative analysis |
 | **Consolidation** | Supplier optimization opportunities |
+| **AI Insights** | AI-powered recommendations with ROI tracking |
+| **Predictive Analytics** | Spending forecasts and trend predictions |
+| **Contract Analytics** | Contract utilization, renewals, and compliance |
+| **Compliance/Maverick Spend** | Policy violations and spending compliance |
+
+### AI Insights Module
+| Feature | Description |
+|---------|-------------|
+| **Cost Optimization** | Price variance detection across suppliers |
+| **Supplier Risk** | Concentration risk and dependency analysis |
+| **Anomaly Detection** | Z-score based statistical outlier detection |
+| **Consolidation** | Multi-supplier category recommendations |
+| **External AI Enhancement** | Claude/OpenAI integration for deeper analysis |
+| **Deep Analysis** | On-demand detailed analysis per insight |
+| **ROI Tracking** | Track actions taken on insights and actual savings realized |
+| **Effectiveness Dashboard** | Metrics on insight implementation success |
+| **Action History** | Full history of recorded actions with CRUD support |
 
 ### Reports Module
 | Feature | Description |
@@ -192,6 +209,52 @@ docker-compose exec backend python manage.py shell
 | `/api/v1/analytics/year-over-year/` | GET | Year over year |
 | `/api/v1/analytics/consolidation/` | GET | Consolidation opportunities |
 
+### AI Insights
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/analytics/ai-insights/` | GET | All AI insights combined |
+| `/api/v1/analytics/ai-insights/cost/` | GET | Cost optimization insights |
+| `/api/v1/analytics/ai-insights/risk/` | GET | Supplier risk insights |
+| `/api/v1/analytics/ai-insights/anomalies/` | GET | Anomaly detection insights |
+| `/api/v1/analytics/ai-insights/enhance/request/` | POST | Trigger async AI enhancement |
+| `/api/v1/analytics/ai-insights/enhance/status/` | GET | Poll enhancement status |
+| `/api/v1/analytics/ai-insights/deep-analysis/request/` | POST | Request deep analysis |
+| `/api/v1/analytics/ai-insights/deep-analysis/status/<id>/` | GET | Poll deep analysis status |
+| `/api/v1/analytics/ai-insights/feedback/` | POST | Record insight feedback |
+| `/api/v1/analytics/ai-insights/feedback/list/` | GET | List feedback history |
+| `/api/v1/analytics/ai-insights/feedback/effectiveness/` | GET | Get effectiveness metrics |
+| `/api/v1/analytics/ai-insights/feedback/<id>/` | PATCH | Update outcome |
+| `/api/v1/analytics/ai-insights/feedback/<id>/delete/` | DELETE | Delete feedback entry |
+| `/api/v1/analytics/ai-insights/metrics/` | GET | AI insights metrics |
+| `/api/v1/analytics/ai-insights/cache/invalidate/` | POST | Invalidate AI cache |
+
+### Predictive Analytics
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/analytics/predictions/spending/` | GET | Spending forecast |
+| `/api/v1/analytics/predictions/category/<id>/` | GET | Category forecast |
+| `/api/v1/analytics/predictions/supplier/<id>/` | GET | Supplier forecast |
+| `/api/v1/analytics/predictions/trends/` | GET | Trend analysis |
+| `/api/v1/analytics/predictions/budget/` | GET | Budget projection |
+
+### Contracts
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/analytics/contracts/overview/` | GET | Contract portfolio overview |
+| `/api/v1/analytics/contracts/` | GET | List contracts |
+| `/api/v1/analytics/contracts/<id>/` | GET | Contract detail |
+| `/api/v1/analytics/contracts/expiring/` | GET | Expiring contracts |
+| `/api/v1/analytics/contracts/<id>/performance/` | GET | Contract performance |
+| `/api/v1/analytics/contracts/savings/` | GET | Savings opportunities |
+
+### Compliance
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/analytics/compliance/overview/` | GET | Compliance statistics |
+| `/api/v1/analytics/compliance/maverick-spend/` | GET | Maverick spend analysis |
+| `/api/v1/analytics/compliance/violations/` | GET | Policy violations list |
+| `/api/v1/analytics/compliance/violations/<id>/resolve/` | POST | Resolve violation |
+
 ### Reports
 | Endpoint | Method | Description |
 |----------|--------|-------------|
@@ -287,6 +350,9 @@ pnpm test:ui     # With UI
 | **Transaction** | Procurement transactions |
 | **DataUpload** | Upload history tracking |
 | **Report** | Generated reports with scheduling support |
+| **InsightFeedback** | Track actions taken on AI insights and actual savings |
+| **Contract** | Contract details with utilization tracking |
+| **PolicyViolation** | Compliance violations and resolutions |
 
 ### P2P Models
 
@@ -370,7 +436,8 @@ FRONTEND_PORT=8080 docker-compose up -d
 | [Windows Setup](docs/setup/WINDOWS-SETUP.md) | Windows-specific instructions |
 | [Docker Troubleshooting](docs/setup/DOCKER-TROUBLESHOOTING.md) | Common issues and solutions |
 | [Railway Deployment](docs/deployment/RAILWAY-STEP-BY-STEP.md) | Production deployment guide |
-| [Development Guide](docs/development/CLAUDE.md) | AI assistant guidelines |
+| [Development Guide](CLAUDE.md) | Development guidelines and API documentation |
+| [AI Insights Enhancement](docs/AI_INSIGHTS_ENHANCEMENT_PLAN.md) | AI Insights feature roadmap and implementation status |
 
 ## Troubleshooting
 

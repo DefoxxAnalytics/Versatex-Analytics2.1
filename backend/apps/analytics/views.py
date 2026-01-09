@@ -2223,3 +2223,54 @@ def list_insight_feedback(request):
         'limit': limit,
         'offset': offset
     })
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+@throttle_classes([InsightFeedbackThrottle])
+def delete_insight_feedback(request, feedback_id):
+    """
+    Delete an insight feedback entry.
+
+    Only the user who created the feedback or an admin can delete it.
+
+    Query params (superusers only):
+    - organization_id: Delete feedback from a specific organization
+    """
+    organization = get_target_organization(request)
+    if organization is None:
+        return Response({'error': 'User profile not found'}, status=400)
+
+    try:
+        feedback = InsightFeedback.objects.get(id=feedback_id, organization=organization)
+    except InsightFeedback.DoesNotExist:
+        return Response({'error': 'Feedback not found'}, status=404)
+
+    profile = request.user.profile
+    is_owner = feedback.action_by == request.user
+    is_admin = profile.role == 'admin'
+
+    if not is_owner and not is_admin:
+        return Response(
+            {'error': 'Permission denied. Only the creator or an admin can delete this feedback.'},
+            status=403
+        )
+
+    feedback_details = {
+        'insight_id': feedback.insight_id,
+        'insight_type': feedback.insight_type,
+        'action_taken': feedback.action_taken,
+    }
+
+    log_action(
+        user=request.user,
+        action='delete',
+        resource='insight_feedback',
+        resource_id=str(feedback_id),
+        request=request,
+        details=feedback_details
+    )
+
+    feedback.delete()
+
+    return Response(status=204)
