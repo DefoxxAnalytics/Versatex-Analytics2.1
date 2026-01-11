@@ -80,9 +80,9 @@ export function useUpdateOrganizationSavingsConfig() {
  */
 export function getBenchmarkProfileLabel(profile: BenchmarkProfile): string {
   const labels: Record<BenchmarkProfile, string> = {
-    conservative: "Conservative (Risk-averse, 70%+ confidence)",
-    moderate: "Moderate (Balanced approach)",
-    aggressive: "Aggressive (Mature procurement)",
+    conservative: "Conservative (Risk-averse, 85-95% realization)",
+    moderate: "Moderate (Balanced approach, 70-85% realization)",
+    aggressive: "Aggressive (Mature procurement, 50-70% realization)",
     custom: "Custom (Set your own rates)",
   };
   return labels[profile];
