@@ -51,6 +51,121 @@ def validate_int_param(request, param_name, default, min_val=1, max_val=1000):
         })
 
 
+def parse_filter_params(request):
+    """
+    Extract filter parameters from request query params for analytics filtering.
+
+    Supported filters:
+    - date_from: Start date (YYYY-MM-DD)
+    - date_to: End date (YYYY-MM-DD)
+    - supplier_ids: Comma-separated list of supplier IDs
+    - supplier_names: Comma-separated list of supplier names (resolved to IDs server-side)
+    - category_ids: Comma-separated list of category IDs
+    - category_names: Comma-separated list of category names (resolved to IDs server-side)
+    - subcategories: Comma-separated list of subcategory names (strings)
+    - locations: Comma-separated list of location names (strings)
+    - years: Comma-separated list of fiscal years (integers)
+    - min_amount: Minimum transaction amount
+    - max_amount: Maximum transaction amount
+
+    Note: supplier_names and category_names are resolved to IDs server-side to avoid
+    frontend timing issues where the category/supplier list hasn't loaded yet.
+    If both IDs and names are provided, they are combined (union).
+
+    Returns:
+        dict or None: Filter dict if any filters provided, None otherwise
+    """
+    from apps.procurement.models import Supplier, Category
+
+    filters = {}
+
+    date_from = request.query_params.get('date_from')
+    if date_from:
+        filters['date_from'] = date_from
+
+    date_to = request.query_params.get('date_to')
+    if date_to:
+        filters['date_to'] = date_to
+
+    # Get organization for name->ID resolution
+    organization = get_target_organization(request)
+
+    # Supplier filtering - support both IDs and names
+    supplier_id_set = set()
+    supplier_ids = request.query_params.get('supplier_ids')
+    if supplier_ids:
+        try:
+            supplier_id_set.update(int(x.strip()) for x in supplier_ids.split(',') if x.strip())
+        except ValueError:
+            pass
+
+    supplier_names = request.query_params.get('supplier_names')
+    if supplier_names and organization:
+        names = [x.strip() for x in supplier_names.split(',') if x.strip()]
+        if names:
+            resolved_ids = Supplier.objects.filter(
+                organization=organization,
+                name__in=names
+            ).values_list('id', flat=True)
+            supplier_id_set.update(resolved_ids)
+
+    if supplier_id_set:
+        filters['supplier_ids'] = list(supplier_id_set)
+
+    # Category filtering - support both IDs and names
+    category_id_set = set()
+    category_ids = request.query_params.get('category_ids')
+    if category_ids:
+        try:
+            category_id_set.update(int(x.strip()) for x in category_ids.split(',') if x.strip())
+        except ValueError:
+            pass
+
+    category_names = request.query_params.get('category_names')
+    if category_names and organization:
+        names = [x.strip() for x in category_names.split(',') if x.strip()]
+        if names:
+            resolved_ids = Category.objects.filter(
+                organization=organization,
+                name__in=names
+            ).values_list('id', flat=True)
+            category_id_set.update(resolved_ids)
+
+    if category_id_set:
+        filters['category_ids'] = list(category_id_set)
+
+    subcategories = request.query_params.get('subcategories')
+    if subcategories:
+        filters['subcategories'] = [x.strip() for x in subcategories.split(',') if x.strip()]
+
+    locations = request.query_params.get('locations')
+    if locations:
+        filters['locations'] = [x.strip() for x in locations.split(',') if x.strip()]
+
+    years = request.query_params.get('years')
+    if years:
+        try:
+            filters['years'] = [int(x.strip()) for x in years.split(',') if x.strip()]
+        except ValueError:
+            pass
+
+    min_amount = request.query_params.get('min_amount')
+    if min_amount:
+        try:
+            filters['min_amount'] = float(min_amount)
+        except ValueError:
+            pass
+
+    max_amount = request.query_params.get('max_amount')
+    if max_amount:
+        try:
+            filters['max_amount'] = float(max_amount)
+        except ValueError:
+            pass
+
+    return filters if filters else None
+
+
 class ReadAPIThrottle(ScopedRateThrottle):
     """Throttle for read API endpoints."""
     scope = 'read_api'
@@ -88,14 +203,21 @@ def overview_stats(request):
     """
     Get overview statistics.
 
-    Query params (superusers only):
-    - organization_id: View data for a specific organization
+    Query params:
+    - date_from: Start date filter (YYYY-MM-DD)
+    - date_to: End date filter (YYYY-MM-DD)
+    - supplier_ids: Comma-separated supplier IDs
+    - category_ids: Comma-separated category IDs
+    - min_amount: Minimum transaction amount
+    - max_amount: Maximum transaction amount
+    - organization_id: View data for a specific organization (superusers only)
     """
     organization = get_target_organization(request)
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = AnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = AnalyticsService(organization, filters=filters)
     data = service.get_overview_stats()
 
     log_action(
@@ -116,14 +238,16 @@ def spend_by_category(request):
     """
     Get spend breakdown by category.
 
-    Query params (superusers only):
-    - organization_id: View data for a specific organization
+    Query params:
+    - date_from, date_to, supplier_ids, category_ids, min_amount, max_amount: Filters
+    - organization_id: View data for a specific organization (superusers only)
     """
     organization = get_target_organization(request)
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = AnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = AnalyticsService(organization, filters=filters)
     data = service.get_spend_by_category()
 
     return Response(data)
@@ -142,14 +266,16 @@ def detailed_category_stats(request):
     - Supplier counts and concentration metrics
     - Risk level assessment (high/medium/low)
 
-    Query params (superusers only):
-    - organization_id: View data for a specific organization
+    Query params:
+    - date_from, date_to, supplier_ids, category_ids, min_amount, max_amount: Filters
+    - organization_id: View data for a specific organization (superusers only)
     """
     organization = get_target_organization(request)
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = AnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = AnalyticsService(organization, filters=filters)
     data = service.get_detailed_category_analysis()
 
     return Response(data)
@@ -162,14 +288,16 @@ def spend_by_supplier(request):
     """
     Get spend breakdown by supplier.
 
-    Query params (superusers only):
-    - organization_id: View data for a specific organization
+    Query params:
+    - date_from, date_to, supplier_ids, category_ids, min_amount, max_amount: Filters
+    - organization_id: View data for a specific organization (superusers only)
     """
     organization = get_target_organization(request)
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = AnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = AnalyticsService(organization, filters=filters)
     data = service.get_spend_by_supplier()
 
     return Response(data)
@@ -186,14 +314,16 @@ def detailed_supplier_stats(request):
     - Summary: total suppliers, total spend, HHI score, concentration metrics
     - Per-supplier: spend, percentage, transaction count, avg transaction, category count, rank
 
-    Query params (superusers only):
-    - organization_id: View data for a specific organization
+    Query params:
+    - date_from, date_to, supplier_ids, category_ids, min_amount, max_amount: Filters
+    - organization_id: View data for a specific organization (superusers only)
     """
     organization = get_target_organization(request)
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = AnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = AnalyticsService(organization, filters=filters)
     data = service.get_detailed_supplier_analysis()
 
     return Response(data)
@@ -214,14 +344,16 @@ def supplier_drilldown(request, supplier_id):
     - Subcategory breakdown (top 10)
     - Location breakdown (top 10)
 
-    Query params (superusers only):
-    - organization_id: View data for a specific organization
+    Query params:
+    - date_from, date_to, supplier_ids, category_ids, min_amount, max_amount: Filters
+    - organization_id: View data for a specific organization (superusers only)
     """
     organization = get_target_organization(request)
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = AnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = AnalyticsService(organization, filters=filters)
     data = service.get_supplier_drilldown(supplier_id)
 
     if data is None:
@@ -239,6 +371,7 @@ def monthly_trend(request):
 
     Query params:
     - months: Number of months (default: 12)
+    - date_from, date_to, supplier_ids, category_ids, min_amount, max_amount: Filters
     - organization_id: View data for a specific organization (superusers only)
     """
     organization = get_target_organization(request)
@@ -246,7 +379,8 @@ def monthly_trend(request):
         return Response({'error': 'User profile not found'}, status=400)
 
     months = validate_int_param(request, 'months', 12, min_val=1, max_val=120)
-    service = AnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = AnalyticsService(organization, filters=filters)
     data = service.get_monthly_trend(months=months)
 
     return Response(data)
@@ -259,14 +393,16 @@ def pareto_analysis(request):
     """
     Get Pareto analysis.
 
-    Query params (superusers only):
-    - organization_id: View data for a specific organization
+    Query params:
+    - date_from, date_to, supplier_ids, category_ids, min_amount, max_amount: Filters
+    - organization_id: View data for a specific organization (superusers only)
     """
     organization = get_target_organization(request)
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = AnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = AnalyticsService(organization, filters=filters)
     data = service.get_pareto_analysis()
 
     return Response(data)
@@ -282,13 +418,18 @@ def tail_spend_analysis(request):
     Query params:
     - threshold: Percentage threshold (default: 20)
     - organization_id: View data for a specific organization (superusers only)
+    - date_from, date_to: Date range filter
+    - supplier_ids, supplier_names: Supplier filters
+    - category_ids, category_names: Category filters
+    - min_amount, max_amount: Amount range filter
     """
     organization = get_target_organization(request)
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
     threshold = validate_int_param(request, 'threshold', 20, min_val=1, max_val=100)
-    service = AnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = AnalyticsService(organization, filters=filters)
     data = service.get_tail_spend_analysis(threshold_percentage=threshold)
 
     return Response(data)
@@ -301,14 +442,19 @@ def spend_stratification(request):
     """
     Get spend stratification (Kraljic Matrix).
 
-    Query params (superusers only):
-    - organization_id: View data for a specific organization
+    Query params:
+    - organization_id: View data for a specific organization (superusers only)
+    - date_from, date_to: Date range filter
+    - supplier_ids, supplier_names: Supplier filters
+    - category_ids, category_names: Category filters
+    - min_amount, max_amount: Amount range filter
     """
     organization = get_target_organization(request)
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = AnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = AnalyticsService(organization, filters=filters)
     data = service.get_spend_stratification()
 
     return Response(data)
@@ -327,14 +473,16 @@ def detailed_stratification(request):
     - Segments (Strategic/Leverage/Routine/Tactical)
     - Recommendations
 
-    Query params (superusers only):
-    - organization_id: View data for a specific organization
+    Query params:
+    - date_from, date_to, supplier_ids, category_ids, min_amount, max_amount: Filters
+    - organization_id: View data for a specific organization (superusers only)
     """
     organization = get_target_organization(request)
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = AnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = AnalyticsService(organization, filters=filters)
     data = service.get_detailed_stratification()
 
     return Response(data)
@@ -355,14 +503,16 @@ def stratification_segment_drilldown(request, segment_name):
     - Top 10 subcategories
     - Top 10 locations
 
-    Query params (superusers only):
-    - organization_id: View data for a specific organization
+    Query params:
+    - date_from, date_to, supplier_ids, category_ids, min_amount, max_amount: Filters
+    - organization_id: View data for a specific organization (superusers only)
     """
     organization = get_target_organization(request)
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = AnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = AnalyticsService(organization, filters=filters)
     data = service.get_stratification_segment_drilldown(segment_name)
 
     if data is None:
@@ -386,14 +536,16 @@ def stratification_band_drilldown(request, band_name):
     - Top 10 subcategories
     - Top 10 locations
 
-    Query params (superusers only):
-    - organization_id: View data for a specific organization
+    Query params:
+    - date_from, date_to, supplier_ids, category_ids, min_amount, max_amount: Filters
+    - organization_id: View data for a specific organization (superusers only)
     """
     organization = get_target_organization(request)
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = AnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = AnalyticsService(organization, filters=filters)
     data = service.get_stratification_band_drilldown(band_name)
 
     if data is None:
@@ -411,14 +563,19 @@ def seasonality_analysis(request):
     """
     Get seasonality analysis.
 
-    Query params (superusers only):
-    - organization_id: View data for a specific organization
+    Query params:
+    - organization_id: View data for a specific organization (superusers only)
+    - date_from, date_to: Date range filter
+    - supplier_ids, supplier_names: Supplier filters
+    - category_ids, category_names: Category filters
+    - min_amount, max_amount: Amount range filter
     """
     organization = get_target_organization(request)
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = AnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = AnalyticsService(organization, filters=filters)
     data = service.get_seasonality_analysis()
 
     return Response(data)
@@ -434,6 +591,7 @@ def detailed_seasonality(request):
 
     Query params:
     - use_fiscal_year: Use fiscal year (Jul-Jun) instead of calendar year (default: true)
+    - date_from, date_to, supplier_ids, category_ids, min_amount, max_amount: Filters
     - organization_id (superusers only): View data for a specific organization
     """
     organization = get_target_organization(request)
@@ -444,7 +602,8 @@ def detailed_seasonality(request):
     use_fiscal_year_param = request.query_params.get('use_fiscal_year', 'true').lower()
     use_fiscal_year = use_fiscal_year_param not in ('false', '0', 'no')
 
-    service = AnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = AnalyticsService(organization, filters=filters)
     data = service.get_detailed_seasonality_analysis(use_fiscal_year=use_fiscal_year)
 
     return Response(data)
@@ -460,6 +619,7 @@ def seasonality_category_drilldown(request, category_id):
 
     Query params:
     - use_fiscal_year: Use fiscal year (Jul-Jun) instead of calendar year (default: true)
+    - date_from, date_to, supplier_ids, category_ids, min_amount, max_amount: Filters
     - organization_id (superusers only): View data for a specific organization
     """
     organization = get_target_organization(request)
@@ -470,7 +630,8 @@ def seasonality_category_drilldown(request, category_id):
     use_fiscal_year_param = request.query_params.get('use_fiscal_year', 'true').lower()
     use_fiscal_year = use_fiscal_year_param not in ('false', '0', 'no')
 
-    service = AnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = AnalyticsService(organization, filters=filters)
     data = service.get_seasonality_category_drilldown(category_id, use_fiscal_year=use_fiscal_year)
 
     if data is None:
@@ -486,14 +647,19 @@ def year_over_year(request):
     """
     Get year over year comparison.
 
-    Query params (superusers only):
-    - organization_id: View data for a specific organization
+    Query params:
+    - organization_id: View data for a specific organization (superusers only)
+    - date_from, date_to: Date range filter
+    - supplier_ids, supplier_names: Supplier filters
+    - category_ids, category_names: Category filters
+    - min_amount, max_amount: Amount range filter
     """
     organization = get_target_organization(request)
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = AnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = AnalyticsService(organization, filters=filters)
     data = service.get_year_over_year_comparison()
 
     return Response(data)
@@ -510,6 +676,7 @@ def detailed_year_over_year(request):
     - use_fiscal_year: Whether to use fiscal year (Jul-Jun) or calendar year (default: true)
     - year1: First fiscal year to compare (optional)
     - year2: Second fiscal year to compare (optional)
+    - date_from, date_to, supplier_ids, category_ids, min_amount, max_amount: Filters
     - organization_id: View data for a specific organization (superusers only)
     """
     organization = get_target_organization(request)
@@ -532,7 +699,8 @@ def detailed_year_over_year(request):
         except ValueError:
             year2 = None
 
-    service = AnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = AnalyticsService(organization, filters=filters)
     data = service.get_detailed_year_over_year(year1=year1, year2=year2, use_fiscal_year=use_fiscal_year)
 
     return Response(data)
@@ -549,6 +717,7 @@ def yoy_category_drilldown(request, category_id):
     - use_fiscal_year: Whether to use fiscal year (Jul-Jun) or calendar year (default: true)
     - year1: First fiscal year to compare (optional)
     - year2: Second fiscal year to compare (optional)
+    - date_from, date_to, supplier_ids, category_ids, min_amount, max_amount: Filters
     - organization_id: View data for a specific organization (superusers only)
     """
     organization = get_target_organization(request)
@@ -570,7 +739,8 @@ def yoy_category_drilldown(request, category_id):
         except ValueError:
             year2 = None
 
-    service = AnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = AnalyticsService(organization, filters=filters)
     data = service.get_yoy_category_drilldown(category_id, year1=year1, year2=year2, use_fiscal_year=use_fiscal_year)
 
     if data is None:
@@ -590,6 +760,7 @@ def yoy_supplier_drilldown(request, supplier_id):
     - use_fiscal_year: Whether to use fiscal year (Jul-Jun) or calendar year (default: true)
     - year1: First fiscal year to compare (optional)
     - year2: Second fiscal year to compare (optional)
+    - date_from, date_to, supplier_ids, category_ids, min_amount, max_amount: Filters
     - organization_id: View data for a specific organization (superusers only)
     """
     organization = get_target_organization(request)
@@ -611,7 +782,8 @@ def yoy_supplier_drilldown(request, supplier_id):
         except ValueError:
             year2 = None
 
-    service = AnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = AnalyticsService(organization, filters=filters)
     data = service.get_yoy_supplier_drilldown(supplier_id, year1=year1, year2=year2, use_fiscal_year=use_fiscal_year)
 
     if data is None:
@@ -627,14 +799,19 @@ def consolidation_opportunities(request):
     """
     Get supplier consolidation opportunities.
 
-    Query params (superusers only):
-    - organization_id: View data for a specific organization
+    Query params:
+    - organization_id: View data for a specific organization (superusers only)
+    - date_from, date_to: Date range filter
+    - supplier_ids, supplier_names: Supplier filters
+    - category_ids, category_names: Category filters
+    - min_amount, max_amount: Amount range filter
     """
     organization = get_target_organization(request)
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = AnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = AnalyticsService(organization, filters=filters)
     data = service.get_supplier_consolidation_opportunities()
 
     return Response(data)
@@ -657,6 +834,7 @@ def detailed_tail_spend(request):
 
     Query params:
     - threshold: Dollar threshold for tail classification (default: 50000, range: 1000-500000)
+    - date_from, date_to, supplier_ids, category_ids, min_amount, max_amount: Filters
     - organization_id: View data for a specific organization (superusers only)
     """
     organization = get_target_organization(request)
@@ -665,7 +843,8 @@ def detailed_tail_spend(request):
 
     threshold = validate_int_param(request, 'threshold', 50000, min_val=1000, max_val=500000)
 
-    service = AnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = AnalyticsService(organization, filters=filters)
     data = service.get_detailed_tail_spend(threshold=threshold)
 
     log_action(
@@ -689,6 +868,7 @@ def tail_spend_category_drilldown(request, category_id):
 
     Query params:
     - threshold: Dollar threshold for tail classification (default: 50000)
+    - date_from, date_to, supplier_ids, category_ids, min_amount, max_amount: Filters
     - organization_id: View data for a specific organization (superusers only)
     """
     organization = get_target_organization(request)
@@ -697,7 +877,8 @@ def tail_spend_category_drilldown(request, category_id):
 
     threshold = validate_int_param(request, 'threshold', 50000, min_val=1000, max_val=500000)
 
-    service = AnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = AnalyticsService(organization, filters=filters)
     data = service.get_tail_spend_category_drilldown(category_id, threshold=threshold)
 
     if data is None:
@@ -716,6 +897,7 @@ def tail_spend_vendor_drilldown(request, supplier_id):
 
     Query params:
     - threshold: Dollar threshold for tail classification (default: 50000)
+    - date_from, date_to, supplier_ids, category_ids, min_amount, max_amount: Filters
     - organization_id: View data for a specific organization (superusers only)
     """
     organization = get_target_organization(request)
@@ -724,7 +906,8 @@ def tail_spend_vendor_drilldown(request, supplier_id):
 
     threshold = validate_int_param(request, 'threshold', 50000, min_val=1000, max_val=500000)
 
-    service = AnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = AnalyticsService(organization, filters=filters)
     data = service.get_tail_spend_vendor_drilldown(supplier_id, threshold=threshold)
 
     if data is None:
@@ -737,13 +920,14 @@ def tail_spend_vendor_drilldown(request, supplier_id):
 # AI Insights Endpoints
 # ============================================================================
 
-def _get_ai_service(request, organization=None):
+def _get_ai_service(request, organization=None, filters=None):
     """
     Helper to create AI Insights Service with user preferences.
 
     Args:
         request: HTTP request object
         organization: Optional organization override (for superuser org switching)
+        filters: Optional dict of filter parameters from parse_filter_params()
     """
     profile = request.user.profile
     ai_settings = getattr(profile, 'ai_settings', {}) or {}
@@ -753,6 +937,7 @@ def _get_ai_service(request, organization=None):
 
     return AIInsightsService(
         organization=target_org,
+        filters=filters,
         use_external_ai=ai_settings.get('use_external_ai', False),
         ai_provider=ai_settings.get('ai_provider', 'anthropic'),
         api_key=ai_settings.get('ai_api_key', None)
@@ -774,6 +959,10 @@ def ai_insights(request):
 
     Query params:
     - refresh: Set to 'true' to bypass cache and regenerate AI enhancement
+    - date_from, date_to: Date range filter
+    - supplier_ids, category_ids: Entity filters
+    - subcategories, locations, years: Additional filters
+    - min_amount, max_amount: Amount range filters
 
     Query params (superusers only):
     - organization_id: View data for a specific organization
@@ -782,9 +971,10 @@ def ai_insights(request):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
+    filters = parse_filter_params(request)
     force_refresh = request.query_params.get('refresh', 'false').lower() == 'true'
 
-    service = _get_ai_service(request, organization)
+    service = _get_ai_service(request, organization, filters=filters)
     data = service.get_all_insights(force_refresh=force_refresh)
 
     log_details = {
@@ -815,6 +1005,12 @@ def ai_insights_cost(request):
 
     Identifies price variance across suppliers and potential savings.
 
+    Query params:
+    - date_from, date_to: Date range filter
+    - supplier_ids, category_ids: Entity filters
+    - subcategories, locations, years: Additional filters
+    - min_amount, max_amount: Amount range filters
+
     Query params (superusers only):
     - organization_id: View data for a specific organization
     """
@@ -822,7 +1018,8 @@ def ai_insights_cost(request):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = _get_ai_service(request, organization)
+    filters = parse_filter_params(request)
+    service = _get_ai_service(request, organization, filters=filters)
     insights = service.get_cost_optimization_insights()
 
     return Response({
@@ -840,6 +1037,12 @@ def ai_insights_risk(request):
 
     Identifies supplier concentration and dependency risks.
 
+    Query params:
+    - date_from, date_to: Date range filter
+    - supplier_ids, category_ids: Entity filters
+    - subcategories, locations, years: Additional filters
+    - min_amount, max_amount: Amount range filters
+
     Query params (superusers only):
     - organization_id: View data for a specific organization
     """
@@ -847,7 +1050,8 @@ def ai_insights_risk(request):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = _get_ai_service(request, organization)
+    filters = parse_filter_params(request)
+    service = _get_ai_service(request, organization, filters=filters)
     insights = service.get_supplier_risk_insights()
 
     return Response({
@@ -867,7 +1071,13 @@ def ai_insights_anomalies(request):
 
     Query params:
     - sensitivity: Z-score threshold (default: 2.0, range: 1.0-5.0)
-    - organization_id: View data for a specific organization (superusers only)
+    - date_from, date_to: Date range filter
+    - supplier_ids, category_ids: Entity filters
+    - subcategories, locations, years: Additional filters
+    - min_amount, max_amount: Amount range filters
+
+    Query params (superusers only):
+    - organization_id: View data for a specific organization
     """
     organization = get_target_organization(request)
     if organization is None:
@@ -880,7 +1090,8 @@ def ai_insights_anomalies(request):
     except (ValueError, TypeError):
         sensitivity = 2.0
 
-    service = _get_ai_service(request, organization)
+    filters = parse_filter_params(request)
+    service = _get_ai_service(request, organization, filters=filters)
     insights = service.get_anomaly_insights(sensitivity=sensitivity)
 
     return Response({

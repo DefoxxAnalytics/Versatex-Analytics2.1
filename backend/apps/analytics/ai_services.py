@@ -283,6 +283,7 @@ class AIInsightsService:
     def __init__(
         self,
         organization,
+        filters: Optional[Dict] = None,
         use_external_ai: bool = False,
         ai_provider: str = 'anthropic',
         api_key: Optional[str] = None,
@@ -294,6 +295,9 @@ class AIInsightsService:
 
         Args:
             organization: Organization object for data scoping
+            filters: Optional dict with filter parameters (date_from, date_to,
+                     supplier_ids, category_ids, subcategories, locations, years,
+                     min_amount, max_amount)
             use_external_ai: Whether to enhance insights with external AI
             ai_provider: Primary AI provider ('anthropic' or 'openai')
             api_key: API key for primary provider (legacy, use api_keys for multi-provider)
@@ -301,12 +305,23 @@ class AIInsightsService:
             enable_fallback: Whether to enable automatic failover between providers
         """
         self.organization = organization
-        self.transactions = Transaction.objects.filter(organization=organization)
-        self.analytics = AnalyticsService(organization)
+        self.filters = filters or {}
+        self.transactions = self._build_filtered_queryset()
+        self.analytics = AnalyticsService(organization, filters)
         self.use_external_ai = use_external_ai
         self.ai_provider = ai_provider
         self.api_key = api_key
         self.enable_fallback = enable_fallback
+
+        # Load configurable savings rates from organization
+        savings_config = organization.get_savings_config()
+        self.consolidation_rate = savings_config.get('consolidation_rate', 0.03)
+        self.anomaly_rate = savings_config.get('anomaly_recovery_rate', 0.008)
+        self.variance_capture = savings_config.get('price_variance_capture', 0.40)
+        self.enabled_insights = savings_config.get(
+            'enabled_insights',
+            ['consolidation', 'anomaly', 'cost_optimization', 'risk']
+        )
 
         # Build api_keys dict from legacy api_key if not provided
         if api_keys:
@@ -325,6 +340,49 @@ class AIInsightsService:
                 enable_fallback=enable_fallback
             )
 
+    def _build_filtered_queryset(self):
+        """Build transaction queryset with applied filters."""
+        from datetime import datetime as dt
+        qs = Transaction.objects.filter(organization=self.organization)
+
+        if date_from := self.filters.get('date_from'):
+            if isinstance(date_from, str):
+                date_from = dt.strptime(date_from, '%Y-%m-%d').date()
+            qs = qs.filter(date__gte=date_from)
+
+        if date_to := self.filters.get('date_to'):
+            if isinstance(date_to, str):
+                date_to = dt.strptime(date_to, '%Y-%m-%d').date()
+            qs = qs.filter(date__lte=date_to)
+
+        if supplier_ids := self.filters.get('supplier_ids'):
+            if isinstance(supplier_ids, list) and supplier_ids:
+                qs = qs.filter(supplier_id__in=supplier_ids)
+
+        if category_ids := self.filters.get('category_ids'):
+            if isinstance(category_ids, list) and category_ids:
+                qs = qs.filter(category_id__in=category_ids)
+
+        if subcategories := self.filters.get('subcategories'):
+            if isinstance(subcategories, list) and subcategories:
+                qs = qs.filter(subcategory__in=subcategories)
+
+        if locations := self.filters.get('locations'):
+            if isinstance(locations, list) and locations:
+                qs = qs.filter(location__in=locations)
+
+        if years := self.filters.get('years'):
+            if isinstance(years, list) and years:
+                qs = qs.filter(fiscal_year__in=years)
+
+        if min_amount := self.filters.get('min_amount'):
+            qs = qs.filter(amount__gte=min_amount)
+
+        if max_amount := self.filters.get('max_amount'):
+            qs = qs.filter(amount__lte=max_amount)
+
+        return qs
+
     def get_all_insights(self, force_refresh: bool = False) -> dict:
         """
         Get all AI insights combined with optional AI enhancement.
@@ -339,28 +397,45 @@ class AIInsightsService:
             - ai_enhancement: Structured AI recommendations (if enabled)
             - cache_hit: Whether AI enhancement was served from cache
         """
-        insights = []
-
+        # Collect raw insights from all generators
         cost_insights = self.get_cost_optimization_insights()
         risk_insights = self.get_supplier_risk_insights()
         anomaly_insights = self.get_anomaly_insights()
         consolidation_insights = self.get_consolidation_recommendations()
 
-        insights.extend(cost_insights)
-        insights.extend(risk_insights)
-        insights.extend(anomaly_insights)
-        insights.extend(consolidation_insights)
+        all_insights = cost_insights + risk_insights + anomaly_insights + consolidation_insights
 
+        # Apply deduplication to prevent double-counting savings
+        deduplicated_insights, adjusted_total = self.deduplicate_savings(all_insights)
+
+        # Sort by severity, then by adjusted savings
         severity_order = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
-        insights.sort(key=lambda x: (
+        deduplicated_insights.sort(key=lambda x: (
             severity_order.get(x['severity'], 4),
             -(x.get('potential_savings', 0) or 0)
         ))
 
+        # Calculate total spend for capping
+        total_spend = float(
+            self.transactions.aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        )
+
+        # Cap at total spend (safety net)
+        savings_capped = adjusted_total > total_spend
+        final_savings = min(adjusted_total, total_spend) if total_spend > 0 else adjusted_total
+
+        # Calculate overlap summary
+        overlap_summary = self._calculate_overlap_summary(deduplicated_insights)
+
         summary = {
-            'total_insights': len(insights),
-            'high_priority': len([i for i in insights if i['severity'] in ['critical', 'high']]),
-            'total_potential_savings': sum(i.get('potential_savings', 0) or 0 for i in insights),
+            'total_insights': len(deduplicated_insights),
+            'high_priority': len([i for i in deduplicated_insights if i['severity'] in ['critical', 'high']]),
+            'total_potential_savings': round(final_savings, 2),
+            'total_potential_savings_raw': round(adjusted_total, 2),
+            'savings_capped': savings_capped,
+            'total_spend': round(total_spend, 2),
+            'deduplication_applied': True,
+            'overlap_summary': overlap_summary,
             'by_type': {
                 'cost_optimization': len(cost_insights),
                 'risk': len(risk_insights),
@@ -369,8 +444,14 @@ class AIInsightsService:
             }
         }
 
+        # Strip internal _attribution before returning (don't expose to API)
+        clean_insights = [
+            {k: v for k, v in i.items() if not k.startswith('_')}
+            for i in deduplicated_insights
+        ]
+
         result = {
-            'insights': insights,
+            'insights': clean_insights,
             'summary': summary
         }
 
@@ -381,16 +462,16 @@ class AIInsightsService:
             if not force_refresh:
                 ai_enhancement = AIInsightsCache.get_cached_enhancement(
                     self.organization.id,
-                    insights
+                    clean_insights
                 )
                 cache_hit = ai_enhancement is not None
 
             if not ai_enhancement:
-                ai_enhancement = self._enhance_with_external_ai(insights)
+                ai_enhancement = self._enhance_with_external_ai(clean_insights)
                 if ai_enhancement:
                     AIInsightsCache.cache_enhancement(
                         self.organization.id,
-                        insights,
+                        clean_insights,
                         ai_enhancement
                     )
 
@@ -405,7 +486,7 @@ class AIInsightsService:
                 api_keys=self.api_keys,
                 enable_fallback=self.enable_fallback
             )
-            result['insights'] = per_insight_enhancer.enhance_insights(insights)
+            result['insights'] = per_insight_enhancer.enhance_insights(clean_insights)
 
         return result
 
@@ -417,28 +498,34 @@ class AIInsightsService:
         """
         insights = []
 
-        # Get spend by category and supplier to find variance
+        # Get spend by category, subcategory, and supplier to find variance
+        # Group by subcategory for apples-to-apples comparison
         category_supplier_spend = self.transactions.values(
             'category__name',
             'category__uuid',
+            'subcategory',
             'supplier__name',
             'supplier__uuid'
         ).annotate(
             total_amount=Sum('amount'),
             transaction_count=Count('id'),
             avg_transaction=Avg('amount')
-        ).order_by('category__name', '-total_amount')
+        ).order_by('category__name', 'subcategory', '-total_amount')
 
-        # Group by category
+        # Group by (category, subcategory) for apples-to-apples comparison
         category_data = {}
         for item in category_supplier_spend:
             cat_name = item['category__name']
-            if cat_name not in category_data:
-                category_data[cat_name] = {
+            subcategory = item['subcategory'] or 'Unspecified'
+            group_key = (cat_name, subcategory)
+            if group_key not in category_data:
+                category_data[group_key] = {
+                    'category': cat_name,
+                    'subcategory': subcategory,
                     'uuid': str(item['category__uuid']),
                     'suppliers': []
                 }
-            category_data[cat_name]['suppliers'].append({
+            category_data[group_key]['suppliers'].append({
                 'name': item['supplier__name'],
                 'uuid': str(item['supplier__uuid']),
                 'total': float(item['total_amount']),
@@ -446,8 +533,8 @@ class AIInsightsService:
                 'count': item['transaction_count']
             })
 
-        # Analyze each category for price variance
-        for cat_name, data in category_data.items():
+        # Analyze each (category, subcategory) group for price variance
+        for group_key, data in category_data.items():
             if len(data['suppliers']) < 2:
                 continue
 
@@ -461,21 +548,27 @@ class AIInsightsService:
             if price_variance > self.PRICE_VARIANCE_THRESHOLD:
                 total_category_spend = sum(s['total'] for s in data['suppliers'])
                 # Potential savings = difference × transactions from expensive suppliers
+                # Apply configurable variance capture rate (not 100% realizable)
                 expensive_suppliers = [s for s in data['suppliers']
                                        if s['avg_transaction'] > min(avg_prices) * 1.1]
-                potential_savings = sum(
+                raw_savings = sum(
                     (s['avg_transaction'] - min(avg_prices)) * s['count']
                     for s in expensive_suppliers
                 )
+                potential_savings = raw_savings * self.variance_capture
 
                 severity = 'high' if price_variance > 0.30 else 'medium'
+
+                cat_name = data['category']
+                subcategory = data['subcategory']
+                display_name = f"{cat_name} > {subcategory}" if subcategory != 'Unspecified' else cat_name
 
                 insights.append({
                     'id': str(uuid.uuid4()),
                     'type': 'cost_optimization',
                     'severity': severity,
                     'confidence': min(0.95, 0.70 + (price_variance * 0.5)),
-                    'title': f'Price variance detected in {cat_name}',
+                    'title': f'Price variance detected in {display_name}',
                     'description': (
                         f'Found {len(data["suppliers"])} suppliers with '
                         f'{round(price_variance * 100, 1)}% price variance. '
@@ -483,12 +576,17 @@ class AIInsightsService:
                         f'${max(avg_prices):,.2f}.'
                     ),
                     'potential_savings': round(potential_savings, 2),
-                    'affected_entities': [cat_name] + [s['name'] for s in expensive_suppliers],
+                    'affected_entities': [display_name] + [s['name'] for s in expensive_suppliers],
                     'recommended_actions': [
                         f'Review pricing from {data["suppliers"][-1]["name"]} (lowest avg: ${min(avg_prices):,.2f})',
                         'Negotiate better rates with higher-priced suppliers',
                         'Consider consolidating purchases to preferred supplier'
                     ],
+                    '_attribution': {
+                        'subcategory_keys': [(cat_name, subcategory)],
+                        'supplier_ids': [s['uuid'] for s in data['suppliers']],
+                        'spend_basis': total_category_spend,
+                    },
                     'created_at': datetime.now().isoformat()
                 })
 
@@ -589,8 +687,9 @@ class AIInsightsService:
             )[:10]  # Limit to top 10
 
             if anomalies:
-                high_anomalies = [a for a in anomalies if float(a['amount']) > upper_threshold]
-                low_anomalies = [a for a in anomalies if float(a['amount']) < lower_threshold]
+                anomalies_list = list(anomalies)
+                high_anomalies = [a for a in anomalies_list if float(a['amount']) > upper_threshold]
+                low_anomalies = [a for a in anomalies_list if float(a['amount']) < lower_threshold]
 
                 total_anomaly_spend = sum(float(a['amount']) for a in high_anomalies)
 
@@ -603,25 +702,30 @@ class AIInsightsService:
                     'confidence': 0.75,
                     'title': f'Unusual transactions in {cat_stat["category__name"]}',
                     'description': (
-                        f'Found {len(list(anomalies))} transactions outside normal range. '
+                        f'Found {len(anomalies_list)} transactions outside normal range. '
                         f'Average for category: ${avg:,.2f}, Threshold: ±${sensitivity * std:,.2f}. '
                         f'{len(high_anomalies)} unusually high, {len(low_anomalies)} unusually low.'
                     ),
-                    'potential_savings': round(total_anomaly_spend * 0.20, 2) if high_anomalies else None,
-                    'affected_entities': [f"{a['supplier__name']} (${float(a['amount']):,.2f})" for a in anomalies],
+                    'potential_savings': round(total_anomaly_spend * self.anomaly_rate, 2) if high_anomalies else None,
+                    'affected_entities': [f"{a['supplier__name']} (${float(a['amount']):,.2f})" for a in anomalies_list],
                     'recommended_actions': [
                         'Review flagged transactions for accuracy',
                         'Verify pricing and quantities',
                         'Check for duplicate or erroneous entries',
                         'Investigate supplier invoicing practices'
                     ],
+                    '_attribution': {
+                        'category_ids': [str(cat_stat['category__uuid'])],
+                        'transaction_ids': [str(a['uuid']) for a in anomalies_list],
+                        'spend_basis': total_anomaly_spend,
+                    },
                     'details': {
                         'category': cat_stat['category__name'],
                         'average': avg,
                         'std_deviation': std,
                         'threshold_upper': upper_threshold,
                         'threshold_lower': lower_threshold,
-                        'anomaly_count': len(list(anomalies)),
+                        'anomaly_count': len(anomalies_list),
                         'sample_anomalies': [
                             {
                                 'uuid': str(a['uuid']),
@@ -629,7 +733,7 @@ class AIInsightsService:
                                 'date': str(a['date']),
                                 'supplier': a['supplier__name']
                             }
-                            for a in list(anomalies)[:5]
+                            for a in anomalies_list[:5]
                         ]
                     },
                     'created_at': datetime.now().isoformat()
@@ -641,24 +745,36 @@ class AIInsightsService:
         """
         Identify supplier consolidation opportunities.
 
-        Finds categories with many suppliers that could benefit from consolidation.
+        Finds (category, subcategory) groups with many suppliers that could benefit
+        from consolidation. Groups by subcategory for apples-to-apples comparison.
         """
         insights = []
 
-        # Get categories with multiple suppliers
-        categories = self.transactions.values(
+        # Get (category, subcategory) groups with multiple suppliers
+        category_subcategory_groups = self.transactions.values(
             'category__name',
-            'category__uuid'
+            'category__uuid',
+            'subcategory'
         ).annotate(
             supplier_count=Count('supplier', distinct=True),
             total_spend=Sum('amount'),
             transaction_count=Count('id')
         ).filter(supplier_count__gte=self.CONSOLIDATION_MIN_SUPPLIERS).order_by('-supplier_count')
 
-        for cat in categories:
-            # Get suppliers in this category
+        for group in category_subcategory_groups:
+            cat_name = group['category__name']
+            subcategory = group['subcategory'] or 'Unspecified'
+            display_name = f"{cat_name} > {subcategory}" if subcategory != 'Unspecified' else cat_name
+
+            # Get suppliers in this (category, subcategory) group
+            suppliers_filter = {'category__name': cat_name}
+            if subcategory != 'Unspecified':
+                suppliers_filter['subcategory'] = group['subcategory']
+            else:
+                suppliers_filter['subcategory__isnull'] = True
+
             suppliers = self.transactions.filter(
-                category__name=cat['category__name']
+                **suppliers_filter
             ).values(
                 'supplier__name',
                 'supplier__uuid'
@@ -670,46 +786,52 @@ class AIInsightsService:
             supplier_list = list(suppliers)
             top_supplier = supplier_list[0] if supplier_list else None
             top_supplier_share = (
-                float(top_supplier['spend']) / float(cat['total_spend'])
-                if top_supplier and cat['total_spend']
+                float(top_supplier['spend']) / float(group['total_spend'])
+                if top_supplier and group['total_spend']
                 else 0
             )
 
-            # Potential savings: estimate 10-15% through consolidation
-            potential_savings = float(cat['total_spend']) * 0.10
+            # Potential savings: apply configurable consolidation rate (industry benchmark)
+            potential_savings = float(group['total_spend']) * self.consolidation_rate
 
-            severity = 'high' if cat['supplier_count'] >= 5 else 'medium'
+            severity = 'high' if group['supplier_count'] >= 5 else 'medium'
 
             insights.append({
                 'id': str(uuid.uuid4()),
                 'type': 'consolidation',
                 'severity': severity,
                 'confidence': 0.80,
-                'title': f'Consolidation opportunity: {cat["category__name"]}',
+                'title': f'Consolidation opportunity: {display_name}',
                 'description': (
-                    f'{cat["supplier_count"]} suppliers for {cat["category__name"]} '
-                    f'(${float(cat["total_spend"]):,.2f} total). '
+                    f'{group["supplier_count"]} suppliers for {display_name} '
+                    f'(${float(group["total_spend"]):,.2f} total). '
                     f'Top supplier ({top_supplier["supplier__name"] if top_supplier else "N/A"}) '
                     f'has {round(top_supplier_share * 100, 1)}% share. '
                     f'Consider consolidating to reduce costs and complexity.'
                 ),
                 'potential_savings': round(potential_savings, 2),
-                'affected_entities': [cat['category__name']] + [s['supplier__name'] for s in supplier_list],
+                'affected_entities': [display_name] + [s['supplier__name'] for s in supplier_list],
                 'recommended_actions': [
                     f'Evaluate {top_supplier["supplier__name"] if top_supplier else "primary supplier"} as preferred vendor',
                     'Request volume discount proposals',
                     'Review supplier performance metrics',
                     'Develop preferred supplier program'
                 ],
+                '_attribution': {
+                    'subcategory_keys': [(cat_name, subcategory)],
+                    'supplier_ids': [str(s['supplier__uuid']) for s in supplier_list],
+                    'spend_basis': float(group['total_spend']),
+                },
                 'details': {
-                    'category': cat['category__name'],
-                    'supplier_count': cat['supplier_count'],
-                    'total_spend': float(cat['total_spend']),
+                    'category': cat_name,
+                    'subcategory': subcategory,
+                    'supplier_count': group['supplier_count'],
+                    'total_spend': float(group['total_spend']),
                     'suppliers': [
                         {
                             'name': s['supplier__name'],
                             'spend': float(s['spend']),
-                            'share': round(float(s['spend']) / float(cat['total_spend']) * 100, 1)
+                            'share': round(float(s['spend']) / float(group['total_spend']) * 100, 1)
                         }
                         for s in supplier_list[:5]
                     ]
@@ -718,6 +840,128 @@ class AIInsightsService:
             })
 
         return insights
+
+    def _get_entity_keys(self, attribution: dict) -> list:
+        """
+        Extract entity keys from insight attribution for deduplication.
+
+        Returns a list of hashable keys representing the entities this insight
+        is based on.
+        """
+        keys = []
+
+        # Primary key: subcategory_keys (most specific for grouping)
+        if subcategory_keys := attribution.get('subcategory_keys'):
+            for key in subcategory_keys:
+                if isinstance(key, (list, tuple)) and len(key) == 2:
+                    keys.append(('subcat', key[0], key[1]))
+
+        # Secondary: category_ids (for anomaly insights)
+        if category_ids := attribution.get('category_ids'):
+            for cat_id in category_ids:
+                keys.append(('cat', cat_id))
+
+        # Tertiary: supplier_ids (for overlap detection)
+        if supplier_ids := attribution.get('supplier_ids'):
+            for sup_id in supplier_ids:
+                keys.append(('sup', sup_id))
+
+        return keys
+
+    def deduplicate_savings(self, insights: list) -> tuple:
+        """
+        Deduplicate overlapping savings across insight types.
+
+        Strategy:
+        1. Process insights in priority order (anomaly > cost_optimization > consolidation)
+        2. Track which entities have been claimed by higher-priority insights
+        3. Apply diminishing returns for lower-priority insights on same entities
+
+        Returns:
+            tuple: (deduplicated_insights, adjusted_total_savings)
+        """
+        # Priority order (lower number = higher priority)
+        priority = {
+            'anomaly': 1,
+            'cost_optimization': 2,
+            'consolidation': 3,
+            'risk': 4,
+        }
+
+        # Sort by priority, then by potential_savings descending
+        sorted_insights = sorted(
+            insights,
+            key=lambda i: (priority.get(i['type'], 5), -(i.get('potential_savings') or 0))
+        )
+
+        # Track claimed entities and their savings
+        claimed_by_entity = {}  # entity_key -> {'type': str, 'savings': float}
+
+        adjusted_insights = []
+        for insight in sorted_insights:
+            attribution = insight.get('_attribution', {})
+            entity_keys = self._get_entity_keys(attribution)
+
+            original_savings = insight.get('potential_savings') or 0
+
+            # Skip deduplication for risk insights (no savings) or missing attribution
+            if insight['type'] == 'risk' or not entity_keys:
+                adjusted_insight = {**insight}
+                adjusted_insight['_original_savings'] = original_savings
+                adjusted_insight['_overlap_reduction'] = 0
+                adjusted_insights.append(adjusted_insight)
+                continue
+
+            # Calculate overlap with already-claimed entities
+            overlap_savings = 0
+            overlapping_types = set()
+            for key in entity_keys:
+                if key in claimed_by_entity:
+                    overlap_savings += claimed_by_entity[key]['savings']
+                    overlapping_types.add(claimed_by_entity[key]['type'])
+
+            # Reduce savings by overlap
+            adjusted_savings = max(0, original_savings - overlap_savings)
+
+            # Apply diminishing returns if there's overlap with different insight types
+            if overlap_savings > 0 and adjusted_savings > 0:
+                adjusted_savings *= 0.30  # 30% of remaining is achievable
+
+            # Update insight
+            adjusted_insight = {**insight}
+            adjusted_insight['potential_savings'] = round(adjusted_savings, 2)
+            adjusted_insight['_original_savings'] = original_savings
+            adjusted_insight['_overlap_reduction'] = round(overlap_savings, 2)
+            adjusted_insights.append(adjusted_insight)
+
+            # Mark entities as claimed (distribute savings proportionally)
+            if entity_keys and adjusted_savings > 0:
+                savings_per_key = adjusted_savings / len(entity_keys)
+                for key in entity_keys:
+                    if key not in claimed_by_entity:
+                        claimed_by_entity[key] = {
+                            'type': insight['type'],
+                            'savings': savings_per_key,
+                        }
+
+        total_savings = sum(i.get('potential_savings') or 0 for i in adjusted_insights)
+        return adjusted_insights, total_savings
+
+    def _calculate_overlap_summary(self, insights: list) -> dict:
+        """Calculate summary of overlap adjustments."""
+        total_original = sum(i.get('_original_savings') or 0 for i in insights)
+        total_adjusted = sum(i.get('potential_savings') or 0 for i in insights)
+        total_reduction = sum(i.get('_overlap_reduction') or 0 for i in insights)
+
+        insights_with_overlap = len([i for i in insights if i.get('_overlap_reduction', 0) > 0])
+
+        return {
+            'total_original_savings': round(total_original, 2),
+            'total_adjusted_savings': round(total_adjusted, 2),
+            'total_overlap_reduction': round(total_reduction, 2),
+            'insights_with_overlap': insights_with_overlap,
+            'deduplication_percentage': round((total_reduction / total_original * 100) if total_original > 0 else 0, 1),
+        }
 
     def _build_comprehensive_context(self, insights: list) -> dict:
         """

@@ -94,6 +94,10 @@ vi.mock("@/lib/api", () => ({
   getOrganizationParam: vi.fn(),
 }));
 
+vi.mock("../useAnalytics", () => ({
+  useAnalyticsFilters: vi.fn(() => undefined),
+}));
+
 function createWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -186,7 +190,7 @@ describe("useP2PAnalytics Hooks", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(api.p2pAnalyticsAPI.getCycleTrends).toHaveBeenCalledWith(12);
+      expect(api.p2pAnalyticsAPI.getCycleTrends).toHaveBeenCalledWith(12, undefined);
     });
 
     it("should fetch cycle trends with custom months", async () => {
@@ -203,7 +207,7 @@ describe("useP2PAnalytics Hooks", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(api.p2pAnalyticsAPI.getCycleTrends).toHaveBeenCalledWith(6);
+      expect(api.p2pAnalyticsAPI.getCycleTrends).toHaveBeenCalledWith(6, undefined);
     });
 
     it("should fetch bottlenecks", async () => {
@@ -237,7 +241,7 @@ describe("useP2PAnalytics Hooks", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(api.p2pAnalyticsAPI.getProcessFunnel).toHaveBeenCalledWith(12);
+      expect(api.p2pAnalyticsAPI.getProcessFunnel).toHaveBeenCalledWith(12, undefined);
     });
 
     it("should fetch stage drilldown when stage provided", async () => {
@@ -256,6 +260,7 @@ describe("useP2PAnalytics Hooks", () => {
 
       expect(api.p2pAnalyticsAPI.getStageDrilldown).toHaveBeenCalledWith(
         "approval",
+        undefined,
       );
     });
 
@@ -307,9 +312,10 @@ describe("useP2PAnalytics Hooks", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(api.p2pAnalyticsAPI.getMatchingExceptions).toHaveBeenCalledWith({
-        status: "open",
-      });
+      expect(api.p2pAnalyticsAPI.getMatchingExceptions).toHaveBeenCalledWith(
+        { status: "open" },
+        undefined,
+      );
     });
 
     it("should fetch exceptions by type", async () => {
@@ -396,7 +402,7 @@ describe("useP2PAnalytics Hooks", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(api.p2pAnalyticsAPI.getInvoiceMatchDetail).toHaveBeenCalledWith(1);
+      expect(api.p2pAnalyticsAPI.getInvoiceMatchDetail).toHaveBeenCalledWith(1, undefined);
     });
 
     it("should not fetch invoice match detail when ID is null", () => {
@@ -523,7 +529,7 @@ describe("useP2PAnalytics Hooks", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(api.p2pAnalyticsAPI.getDPOTrends).toHaveBeenCalledWith(6);
+      expect(api.p2pAnalyticsAPI.getDPOTrends).toHaveBeenCalledWith(6, undefined);
     });
 
     it("should fetch cash flow forecast", async () => {
@@ -540,7 +546,7 @@ describe("useP2PAnalytics Hooks", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(api.p2pAnalyticsAPI.getCashFlowForecast).toHaveBeenCalledWith(8);
+      expect(api.p2pAnalyticsAPI.getCashFlowForecast).toHaveBeenCalledWith(8, undefined);
     });
   });
 
@@ -613,7 +619,7 @@ describe("useP2PAnalytics Hooks", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(api.p2pAnalyticsAPI.getPRPending).toHaveBeenCalledWith(25);
+      expect(api.p2pAnalyticsAPI.getPRPending).toHaveBeenCalledWith(25, undefined);
     });
 
     it("should fetch PR detail when ID provided", async () => {
@@ -630,7 +636,7 @@ describe("useP2PAnalytics Hooks", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(api.p2pAnalyticsAPI.getPRDetail).toHaveBeenCalledWith(1);
+      expect(api.p2pAnalyticsAPI.getPRDetail).toHaveBeenCalledWith(1, undefined);
     });
 
     it("should not fetch PR detail when ID is null", () => {
@@ -728,7 +734,7 @@ describe("useP2PAnalytics Hooks", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(api.p2pAnalyticsAPI.getPODetail).toHaveBeenCalledWith(1);
+      expect(api.p2pAnalyticsAPI.getPODetail).toHaveBeenCalledWith(1, undefined);
     });
 
     it("should not fetch PO detail when ID is null", () => {
@@ -779,7 +785,7 @@ describe("useP2PAnalytics Hooks", () => {
 
       expect(
         api.p2pAnalyticsAPI.getSupplierPaymentsScorecard,
-      ).toHaveBeenCalledWith(25);
+      ).toHaveBeenCalledWith(25, undefined);
     });
 
     it("should fetch supplier payment detail when ID provided", async () => {
@@ -798,6 +804,7 @@ describe("useP2PAnalytics Hooks", () => {
 
       expect(api.p2pAnalyticsAPI.getSupplierPaymentDetail).toHaveBeenCalledWith(
         1,
+        undefined,
       );
     });
 
@@ -825,7 +832,7 @@ describe("useP2PAnalytics Hooks", () => {
 
       expect(
         api.p2pAnalyticsAPI.getSupplierPaymentHistory,
-      ).toHaveBeenCalledWith(1, 6);
+      ).toHaveBeenCalledWith(1, 6, undefined);
     });
 
     it("should not fetch supplier payment history when ID is null", () => {

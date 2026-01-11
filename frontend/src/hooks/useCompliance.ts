@@ -3,9 +3,15 @@
  *
  * All hooks include organization_id in query keys to properly
  * invalidate cache when switching organizations (superuser feature).
+ *
+ * Filter support: Compliance hooks now accept filters from the FilterPane
+ * via the useAnalyticsFilters() hook. Filters are passed to backend APIs
+ * and included in query keys for proper cache invalidation.
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { analyticsAPI, getOrganizationParam } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
+import { useAnalyticsFilters } from "./useAnalytics";
 import type { ViolationType, ViolationSeverity, RiskLevel } from "@/lib/api";
 
 /**
@@ -22,10 +28,11 @@ function getOrgKeyPart(): number | undefined {
  */
 export function useComplianceOverview() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["compliance-overview", { orgId }],
+    queryKey: queryKeys.compliance.overview(orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getComplianceOverview();
+      const response = await analyticsAPI.getComplianceOverview(filters);
       return response.data;
     },
     staleTime: 5 * 60 * 1000,
@@ -38,10 +45,11 @@ export function useComplianceOverview() {
  */
 export function useMaverickSpendAnalysis() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["maverick-spend-analysis", { orgId }],
+    queryKey: queryKeys.compliance.maverick(orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getMaverickSpendAnalysis();
+      const response = await analyticsAPI.getMaverickSpendAnalysis(filters);
       return response.data;
     },
     staleTime: 5 * 60 * 1000,
@@ -57,10 +65,11 @@ export function usePolicyViolations(params?: {
   limit?: number;
 }) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["policy-violations", params, { orgId }],
+    queryKey: queryKeys.compliance.violations(params, orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getPolicyViolations(params);
+      const response = await analyticsAPI.getPolicyViolations(params, filters);
       return response.data;
     },
     staleTime: 2 * 60 * 1000, // Shorter stale time for violations
@@ -72,10 +81,11 @@ export function usePolicyViolations(params?: {
  */
 export function useViolationTrends(months: number = 12) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["violation-trends", months, { orgId }],
+    queryKey: queryKeys.compliance.violationTrends(months, orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getViolationTrends(months);
+      const response = await analyticsAPI.getViolationTrends(months, filters);
       return response.data;
     },
     staleTime: 5 * 60 * 1000,
@@ -87,10 +97,11 @@ export function useViolationTrends(months: number = 12) {
  */
 export function useSupplierComplianceScores() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["supplier-compliance-scores", { orgId }],
+    queryKey: queryKeys.compliance.supplierScores(orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getSupplierComplianceScores();
+      const response = await analyticsAPI.getSupplierComplianceScores(filters);
       return response.data;
     },
     staleTime: 5 * 60 * 1000,
@@ -102,10 +113,11 @@ export function useSupplierComplianceScores() {
  */
 export function useSpendingPolicies() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["spending-policies", { orgId }],
+    queryKey: queryKeys.compliance.policies(orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getSpendingPolicies();
+      const response = await analyticsAPI.getSpendingPolicies(filters);
       return response.data;
     },
     staleTime: 5 * 60 * 1000,

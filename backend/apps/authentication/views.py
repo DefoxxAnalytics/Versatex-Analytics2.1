@@ -715,3 +715,270 @@ class UserOrganizationMembershipViewSet(viewsets.ModelViewSet):
                 'target_id': serializer.instance.user_id,
             }
         )
+
+
+# =============================================================================
+# Organization Savings Configuration Endpoint
+# =============================================================================
+
+@extend_schema_view(
+    get=extend_schema(
+        tags=['Authentication'],
+        summary='Get organization savings configuration',
+        description='Get the savings rates configuration for AI Insights. Based on FY2025 Procurement Savings Initiative benchmarks.',
+    ),
+    patch=extend_schema(
+        tags=['Authentication'],
+        summary='Update organization savings configuration',
+        description='Update savings rates for AI Insights. Admin only.',
+    ),
+)
+class OrganizationSavingsConfigView(generics.GenericAPIView):
+    """
+    View and update organization savings configuration.
+
+    Savings rates are based on industry benchmarks from the
+    FY2025 Procurement Savings Initiative:
+    - Vendor Consolidation: Deloitte 2024 (1-8%)
+    - Invoice Accuracy: Aberdeen Group (0.5-1.5%)
+    - Specification Standardization: McKinsey 2024 (2-4%)
+    - Payment Terms: Hackett Group (0.5-1.2%)
+    - Process Automation: APQC ($25-50/txn)
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        from .serializers import SavingsConfigSerializer
+        return SavingsConfigSerializer
+
+    def get(self, request, org_id):
+        """Get savings configuration for an organization."""
+        from django.shortcuts import get_object_or_404
+        from .organization_utils import user_can_access_org
+
+        org = get_object_or_404(Organization, pk=org_id)
+
+        if not user_can_access_org(request.user, org_id):
+            return Response(
+                {'error': 'You do not have access to this organization'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        return Response({
+            'savings_config': org.savings_config or {},
+            'effective_config': org.get_savings_config(),
+            'available_profiles': Organization.BENCHMARK_PROFILES,
+        })
+
+    def patch(self, request, org_id):
+        """Update savings configuration. Admin only."""
+        from django.shortcuts import get_object_or_404
+        from .organization_utils import user_can_access_org
+
+        org = get_object_or_404(Organization, pk=org_id)
+
+        if not user_can_access_org(request.user, org_id):
+            return Response(
+                {'error': 'You do not have access to this organization'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if not hasattr(request.user, 'profile'):
+            return Response(
+                {'error': 'User profile not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        role = request.user.profile.get_role_for_org(org)
+        if role != 'admin' and not request.user.is_superuser:
+            return Response(
+                {'error': 'Only admins can update savings configuration'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        serializer = self.get_serializer_class()(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        current_config = org.savings_config or {}
+        current_config.update(serializer.validated_data)
+        org.savings_config = current_config
+        org.save(update_fields=['savings_config', 'updated_at'])
+
+        log_action(
+            user=request.user,
+            action='update',
+            resource='savings_config',
+            resource_id=str(org.id),
+            request=request,
+            details={'organization_id': org.id}
+        )
+
+        return Response({
+            'savings_config': org.savings_config,
+            'effective_config': org.get_savings_config(),
+        })
+
+
+@extend_schema(
+    tags=['Authentication'],
+    summary='Export savings configuration as PDF',
+    description='Generate a PDF summary of savings benchmark configuration for stakeholder presentations.',
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_savings_config_pdf(request, org_id):
+    """
+    Generate PDF summary of savings configuration for stakeholder presentations.
+
+    Returns a downloadable PDF with:
+    - Organization name and profile
+    - Current effective rates
+    - Industry benchmark ranges
+    - Source citations
+    """
+    from django.shortcuts import get_object_or_404
+    from django.http import HttpResponse
+    from .organization_utils import user_can_access_org
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from io import BytesIO
+    from datetime import datetime
+
+    org = get_object_or_404(Organization, pk=org_id)
+
+    if not user_can_access_org(request.user, org_id):
+        return Response({'error': 'Access denied'}, status=status.HTTP_403_FORBIDDEN)
+
+    config = org.get_savings_config()
+    profile = config.get('benchmark_profile', 'moderate')
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        rightMargin=0.75 * inch,
+        leftMargin=0.75 * inch,
+        topMargin=0.75 * inch,
+        bottomMargin=0.75 * inch
+    )
+    styles = getSampleStyleSheet()
+    elements = []
+
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Title'],
+        fontSize=18,
+        spaceAfter=20,
+        textColor=colors.HexColor('#1e3a8a')
+    )
+    heading_style = ParagraphStyle(
+        'CustomHeading',
+        parent=styles['Heading2'],
+        fontSize=14,
+        spaceBefore=15,
+        spaceAfter=10,
+        textColor=colors.HexColor('#1e3a8a')
+    )
+
+    elements.append(Paragraph(f"{org.name} - Savings Benchmark Configuration", title_style))
+    elements.append(Spacer(1, 10))
+
+    elements.append(Paragraph(f"Selected Profile: {profile.title()}", heading_style))
+
+    realization = config.get('confidence_range', 'N/A')
+    elements.append(Paragraph(f"Expected Realization: {realization}", styles['Normal']))
+    elements.append(Spacer(1, 15))
+
+    elements.append(Paragraph("Current Effective Rates", heading_style))
+
+    data = [
+        ['Savings Category', 'Current Rate', 'Industry Range', 'Source'],
+        [
+            'Vendor Consolidation',
+            f"{config.get('consolidation_rate', 0.03) * 100:.1f}%",
+            '1.0% - 8.0%',
+            'Deloitte 2024'
+        ],
+        [
+            'Anomaly Recovery',
+            f"{config.get('anomaly_recovery_rate', 0.008) * 100:.1f}%",
+            '0.5% - 1.5%',
+            'Aberdeen Group'
+        ],
+        [
+            'Price Variance Capture',
+            f"{config.get('price_variance_capture', 0.4) * 100:.0f}%",
+            '20% - 80%',
+            'Industry Standard'
+        ],
+        [
+            'Specification Standardization',
+            f"{config.get('specification_rate', 0.03) * 100:.1f}%",
+            '2.0% - 4.0%',
+            'McKinsey 2024'
+        ],
+        [
+            'Payment Terms',
+            f"{config.get('payment_terms_rate', 0.008) * 100:.1f}%",
+            '0.5% - 1.2%',
+            'Hackett Group'
+        ],
+        [
+            'Process Savings',
+            f"${config.get('process_savings_per_txn', 35)}/txn",
+            '$25 - $50',
+            'APQC 2024'
+        ],
+    ]
+
+    table = Table(data, colWidths=[2.2 * inch, 1.2 * inch, 1.2 * inch, 1.5 * inch])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e3a8a')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('TOPPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8fafc')),
+        ('TEXTCOLOR', (0, 1), (-1, -1), colors.HexColor('#334155')),
+        ('FONTSIZE', (0, 1), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
+        ('TOPPADDING', (0, 1), (-1, -1), 8),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e2e8f0')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#f8fafc'), colors.white]),
+    ]))
+    elements.append(table)
+
+    elements.append(Spacer(1, 25))
+
+    footer_text = (
+        f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')} | "
+        f"Based on FY2025 Procurement Savings Initiative Benchmarks"
+    )
+    elements.append(Paragraph(footer_text, styles['Normal']))
+
+    if org.website:
+        elements.append(Paragraph(f"Organization Website: {org.website}", styles['Normal']))
+
+    doc.build(elements)
+    buffer.seek(0)
+
+    response = HttpResponse(buffer, content_type='application/pdf')
+    filename = f"{org.slug or 'organization'}-benchmark-summary.pdf"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    log_action(
+        user=request.user,
+        action='export',
+        resource='savings_config',
+        resource_id=str(org.id),
+        request=request,
+        details={'format': 'pdf'}
+    )
+
+    return response

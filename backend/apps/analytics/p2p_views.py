@@ -22,7 +22,7 @@ from apps.authentication.permissions import (
     CanApprovePR,
 )
 from apps.procurement.models import Invoice
-from .views import get_target_organization, validate_int_param
+from .views import get_target_organization, validate_int_param, parse_filter_params
 from .p2p_services import P2PAnalyticsService
 
 
@@ -108,7 +108,8 @@ def p2p_cycle_overview(request):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_p2p_cycle_overview()
 
     log_action(
@@ -148,7 +149,8 @@ def p2p_cycle_by_category(request):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_cycle_time_by_category()
 
     return Response(data)
@@ -180,7 +182,8 @@ def p2p_cycle_by_supplier(request):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_cycle_time_by_supplier()
 
     return Response(data)
@@ -210,7 +213,8 @@ def p2p_cycle_trends(request):
 
     months = validate_int_param(request, 'months', 12, min_val=1, max_val=36)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_cycle_time_trends(months=months)
 
     return Response(data)
@@ -242,7 +246,8 @@ def p2p_bottlenecks(request):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_bottleneck_analysis()
 
     log_action(
@@ -283,7 +288,8 @@ def p2p_process_funnel(request):
 
     months = validate_int_param(request, 'months', 12, min_val=1, max_val=36)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_process_funnel(months=months)
 
     return Response(data)
@@ -330,7 +336,8 @@ def p2p_stage_drilldown(request, stage):
             'error': f"Invalid stage: {stage}. Must be one of: {', '.join(valid_stages)}"
         }, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_stage_drilldown(stage)
 
     return Response(data)
@@ -377,7 +384,8 @@ def matching_overview(request):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_matching_overview()
 
     log_action(
@@ -452,7 +460,8 @@ def matching_exceptions(request):
 
     limit = validate_int_param(request, 'limit', 100, min_val=1, max_val=500)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_matching_exceptions(
         status=status_filter,
         exception_type=exception_type,
@@ -497,7 +506,8 @@ def exceptions_by_type(request):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_exceptions_by_type()
 
     return Response(data)
@@ -530,7 +540,8 @@ def exceptions_by_supplier(request):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_exceptions_by_supplier()
 
     return Response(data)
@@ -562,7 +573,8 @@ def price_variance_analysis(request):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_price_variance_analysis()
 
     return Response(data)
@@ -594,7 +606,8 @@ def quantity_variance_analysis(request):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_quantity_variance_analysis()
 
     return Response(data)
@@ -635,7 +648,8 @@ def invoice_match_detail(request, invoice_id):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_invoice_match_detail(invoice_id)
 
     if data is None:
@@ -698,7 +712,8 @@ def resolve_exception(request, invoice_id):
     if len(resolution_notes) > 2000:
         return Response({'error': 'resolution_notes must be 2000 characters or less'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.resolve_exception(
         invoice_id=invoice_id,
         user=request.user,
@@ -792,7 +807,8 @@ def bulk_resolve_exceptions(request):
     except (ValueError, TypeError):
         return Response({'error': 'All invoice_ids must be integers'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.bulk_resolve_exceptions(
         invoice_ids=invoice_ids,
         user=request.user,
@@ -860,7 +876,8 @@ def aging_overview(request):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_aging_overview()
 
     log_action(
@@ -901,7 +918,8 @@ def aging_by_supplier(request):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_aging_by_supplier()
 
     return Response(data)
@@ -936,7 +954,8 @@ def payment_terms_compliance(request):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_payment_terms_compliance()
 
     return Response(data)
@@ -966,7 +985,8 @@ def dpo_trends(request):
 
     months = validate_int_param(request, 'months', 12, min_val=1, max_val=36)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_dpo_trends(months=months)
 
     return Response(data)
@@ -1007,7 +1027,8 @@ def cash_flow_forecast(request):
 
     weeks = validate_int_param(request, 'weeks', 4, min_val=1, max_val=12)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_cash_flow_forecast(weeks=weeks)
 
     log_action(
@@ -1063,7 +1084,8 @@ def pr_overview(request):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_pr_overview()
 
     log_action(
@@ -1104,7 +1126,8 @@ def pr_approval_analysis(request):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_pr_approval_analysis()
 
     return Response(data)
@@ -1136,7 +1159,8 @@ def pr_by_department(request):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_pr_by_department()
 
     return Response(data)
@@ -1168,7 +1192,8 @@ def pr_pending(request):
 
     limit = validate_int_param(request, 'limit', 50, min_val=1, max_val=200)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_pr_pending(limit=limit)
 
     return Response({
@@ -1206,7 +1231,8 @@ def pr_detail(request, pr_id):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_pr_detail(pr_id)
 
     if data is None:
@@ -1254,7 +1280,8 @@ def po_overview(request):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_po_overview()
 
     log_action(
@@ -1295,7 +1322,8 @@ def po_leakage(request):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_po_leakage()
 
     log_action(
@@ -1336,7 +1364,8 @@ def po_amendments(request):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_po_amendment_analysis()
 
     return Response(data)
@@ -1369,7 +1398,8 @@ def po_by_supplier(request):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_po_by_supplier()
 
     return Response(data)
@@ -1410,7 +1440,8 @@ def po_detail(request, po_id):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_po_detail(po_id)
 
     if data is None:
@@ -1460,7 +1491,8 @@ def supplier_payments_overview(request):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_supplier_payments_overview()
 
     log_action(
@@ -1516,7 +1548,8 @@ def supplier_payments_scorecard(request):
 
     limit = validate_int_param(request, 'limit', 50, min_val=1, max_val=200)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_supplier_payments_scorecard(limit=limit)
 
     return Response({
@@ -1562,7 +1595,8 @@ def supplier_payment_detail(request, supplier_id):
     if organization is None:
         return Response({'error': 'User profile not found'}, status=400)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_supplier_payment_detail(supplier_id)
 
     if data is None:
@@ -1611,7 +1645,8 @@ def supplier_payment_history(request, supplier_id):
 
     months = validate_int_param(request, 'months', 12, min_val=1, max_val=36)
 
-    service = P2PAnalyticsService(organization)
+    filters = parse_filter_params(request)
+    service = P2PAnalyticsService(organization, filters=filters)
     data = service.get_supplier_payment_history(supplier_id, months=months)
 
     if data is None:

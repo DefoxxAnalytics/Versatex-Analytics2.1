@@ -47,6 +47,57 @@ class Organization(models.Model):
         help_text='Organization website URL'
     )
 
+    # AI Insights Savings Configuration
+    savings_config = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Configurable savings rates for AI Insights (industry benchmarks)'
+    )
+
+    ALLOWED_SAVINGS_CONFIG_KEYS = {
+        'benchmark_profile',
+        'consolidation_rate',
+        'anomaly_recovery_rate',
+        'price_variance_capture',
+        'specification_rate',
+        'payment_terms_rate',
+        'process_savings_per_txn',
+        'enabled_insights',
+    }
+
+    BENCHMARK_PROFILES = {
+        'conservative': {
+            'consolidation_rate': 0.01,
+            'anomaly_recovery_rate': 0.005,
+            'price_variance_capture': 0.30,
+            'specification_rate': 0.02,
+            'payment_terms_rate': 0.005,
+            'process_savings_per_txn': 25,
+            'realization_probability': 0.90,
+            'confidence_range': '85-95%',
+        },
+        'moderate': {
+            'consolidation_rate': 0.03,
+            'anomaly_recovery_rate': 0.008,
+            'price_variance_capture': 0.40,
+            'specification_rate': 0.03,
+            'payment_terms_rate': 0.008,
+            'process_savings_per_txn': 35,
+            'realization_probability': 0.75,
+            'confidence_range': '70-85%',
+        },
+        'aggressive': {
+            'consolidation_rate': 0.05,
+            'anomaly_recovery_rate': 0.015,
+            'price_variance_capture': 0.60,
+            'specification_rate': 0.04,
+            'payment_terms_rate': 0.012,
+            'process_savings_per_txn': 50,
+            'realization_probability': 0.55,
+            'confidence_range': '50-70%',
+        },
+    }
+
     class Meta:
         ordering = ['name']
         verbose_name = 'Organization'
@@ -65,6 +116,33 @@ class Organization(models.Model):
             'footer': self.report_footer,
             'website': self.website,
         }
+
+    def get_savings_config(self) -> dict:
+        """
+        Get effective savings configuration with defaults.
+
+        Returns merged config with benchmark profile defaults as base,
+        overridden by any custom values in savings_config.
+
+        Industry benchmark sources (FY2025 Procurement Savings Initiative):
+        - Vendor Consolidation: Deloitte 2024 (1-8%)
+        - Invoice Accuracy: Aberdeen Group (0.5-1.5%)
+        - Specification Standardization: McKinsey 2024 (2-4%)
+        - Payment Terms: Hackett Group (0.5-1.2%)
+        - Process Automation: APQC ($25-50/txn)
+        """
+        config = self.savings_config or {}
+        profile = config.get('benchmark_profile', 'moderate')
+
+        if profile in self.BENCHMARK_PROFILES:
+            base_config = self.BENCHMARK_PROFILES[profile].copy()
+        else:
+            base_config = self.BENCHMARK_PROFILES['moderate'].copy()
+
+        base_config.update({k: v for k, v in config.items() if k != 'benchmark_profile'})
+        base_config['benchmark_profile'] = profile
+
+        return base_config
 
 
 class UserProfile(models.Model):

@@ -4,6 +4,10 @@
  * All hooks include organization_id in query keys to properly
  * invalidate cache when switching organizations (superuser feature).
  *
+ * Filter support: AI Insights hooks now accept filters from the FilterPane
+ * via the useAnalyticsFilters() hook. Filters are passed to backend APIs
+ * and included in query keys for proper cache invalidation.
+ *
  * Features:
  * - Structured AI enhancement from tool calling
  * - Redis caching with cache_hit indicator
@@ -11,6 +15,8 @@
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { analyticsAPI, getOrganizationParam } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
+import { useAnalyticsFilters } from "./useAnalytics";
 import type {
   AIInsight,
   AIInsightType,
@@ -40,10 +46,11 @@ function getOrgKeyPart(): number | undefined {
  */
 export function useAIInsights() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["ai-insights", { orgId }],
+    queryKey: queryKeys.ai.insights(orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getAIInsights(false);
+      const response = await analyticsAPI.getAIInsights(false, filters);
       return response.data;
     },
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes (expensive computation)
@@ -57,14 +64,15 @@ export function useAIInsights() {
 export function useRefreshAIInsights() {
   const queryClient = useQueryClient();
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
 
   return useMutation({
     mutationFn: async () => {
-      const response = await analyticsAPI.getAIInsights(true);
+      const response = await analyticsAPI.getAIInsights(true, filters);
       return response.data;
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(["ai-insights", { orgId }], data);
+      queryClient.setQueryData(queryKeys.ai.insights(orgId, filters), data);
     },
   });
 }
@@ -74,10 +82,11 @@ export function useRefreshAIInsights() {
  */
 export function useAIInsightsCost() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["ai-insights-cost", { orgId }],
+    queryKey: queryKeys.ai.insightsCost(orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getAIInsightsCost();
+      const response = await analyticsAPI.getAIInsightsCost(filters);
       return response.data;
     },
     staleTime: 5 * 60 * 1000,
@@ -89,10 +98,11 @@ export function useAIInsightsCost() {
  */
 export function useAIInsightsRisk() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["ai-insights-risk", { orgId }],
+    queryKey: queryKeys.ai.insightsRisk(orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getAIInsightsRisk();
+      const response = await analyticsAPI.getAIInsightsRisk(filters);
       return response.data;
     },
     staleTime: 5 * 60 * 1000,
@@ -104,10 +114,11 @@ export function useAIInsightsRisk() {
  */
 export function useAIInsightsAnomalies(sensitivity: number = 2.0) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["ai-insights-anomalies", sensitivity, { orgId }],
+    queryKey: queryKeys.ai.insightsAnomalies(sensitivity, orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getAIInsightsAnomalies(sensitivity);
+      const response = await analyticsAPI.getAIInsightsAnomalies(sensitivity, filters);
       return response.data;
     },
     staleTime: 5 * 60 * 1000,
@@ -258,10 +269,10 @@ export function useRecordInsightFeedback() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["insight-feedback", { orgId }],
+        queryKey: queryKeys.ai.insightFeedback(undefined, orgId),
       });
       queryClient.invalidateQueries({
-        queryKey: ["insight-effectiveness", { orgId }],
+        queryKey: queryKeys.ai.insightEffectiveness(orgId),
       });
     },
   });
@@ -290,10 +301,10 @@ export function useUpdateInsightOutcome() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["insight-feedback", { orgId }],
+        queryKey: queryKeys.ai.insightFeedback(undefined, orgId),
       });
       queryClient.invalidateQueries({
-        queryKey: ["insight-effectiveness", { orgId }],
+        queryKey: queryKeys.ai.insightEffectiveness(orgId),
       });
     },
   });
@@ -314,10 +325,10 @@ export function useDeleteInsightFeedback() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["insight-feedback", { orgId }],
+        queryKey: queryKeys.ai.insightFeedback(undefined, orgId),
       });
       queryClient.invalidateQueries({
-        queryKey: ["insight-effectiveness", { orgId }],
+        queryKey: queryKeys.ai.insightEffectiveness(orgId),
       });
     },
   });
@@ -329,7 +340,7 @@ export function useDeleteInsightFeedback() {
 export function useInsightEffectiveness() {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ["insight-effectiveness", { orgId }],
+    queryKey: queryKeys.ai.insightEffectiveness(orgId),
     queryFn: async () => {
       const response = await analyticsAPI.getInsightEffectiveness();
       return response.data;
@@ -350,7 +361,7 @@ export function useInsightFeedbackList(params?: {
 }) {
   const orgId = getOrgKeyPart();
   return useQuery({
-    queryKey: ["insight-feedback", params, { orgId }],
+    queryKey: queryKeys.ai.insightFeedback(params, orgId),
     queryFn: async () => {
       const response = await analyticsAPI.listInsightFeedback(params);
       return response.data;
@@ -433,7 +444,7 @@ export function useRequestAsyncEnhancement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["async-enhancement-status", { orgId }],
+        queryKey: queryKeys.ai.asyncEnhancementStatus(orgId),
       });
     },
   });
@@ -452,7 +463,7 @@ export function useAsyncEnhancementStatus(
   const orgId = getOrgKeyPart();
 
   return useQuery({
-    queryKey: ["async-enhancement-status", { orgId }],
+    queryKey: queryKeys.ai.asyncEnhancementStatus(orgId),
     queryFn: async () => {
       const response = await analyticsAPI.getAsyncEnhancementStatus();
       return response.data;
@@ -479,6 +490,7 @@ export function useAsyncEnhancementStatus(
  */
 export function useRequestDeepAnalysis() {
   const queryClient = useQueryClient();
+  const orgId = getOrgKeyPart();
 
   return useMutation({
     mutationFn: async (insight: AIInsight) => {
@@ -487,7 +499,7 @@ export function useRequestDeepAnalysis() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({
-        queryKey: ["deep-analysis-status", data.insight_id],
+        queryKey: queryKeys.ai.deepAnalysisStatus(data.insight_id, orgId),
       });
     },
   });
@@ -508,7 +520,7 @@ export function useDeepAnalysisStatus(
   const orgId = getOrgKeyPart();
 
   return useQuery({
-    queryKey: ["deep-analysis-status", insightId, { orgId }],
+    queryKey: queryKeys.ai.deepAnalysisStatus(insightId, orgId),
     queryFn: async () => {
       if (!insightId) throw new Error("Insight ID required");
       const response = await analyticsAPI.getDeepAnalysisStatus(insightId);

@@ -7,7 +7,8 @@ from .views import (
     RegisterView, LoginView, LogoutView, CookieTokenRefreshView,
     CurrentUserView, ChangePasswordView, UserPreferencesView,
     OrganizationViewSet, UserProfileViewSet, AuditLogViewSet,
-    UserOrganizationMembershipViewSet, user_organizations, switch_organization
+    UserOrganizationMembershipViewSet, user_organizations, switch_organization,
+    OrganizationSavingsConfigView, export_savings_config_pdf
 )
 
 router = DefaultRouter()
@@ -31,6 +32,10 @@ urlpatterns = [
     # Multi-organization support
     path('user/organizations/', user_organizations, name='user-organizations'),
     path('user/organizations/<int:org_id>/switch/', switch_organization, name='switch-organization'),
+
+    # Organization settings
+    path('organizations/<int:org_id>/savings-config/', OrganizationSavingsConfigView.as_view(), name='savings-config'),
+    path('organizations/<int:org_id>/savings-config/export/', export_savings_config_pdf, name='savings-config-export'),
 
     # Router URLs
     path('', include(router.urls)),

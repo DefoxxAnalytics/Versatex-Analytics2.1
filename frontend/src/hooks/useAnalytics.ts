@@ -3,10 +3,21 @@
  *
  * All hooks include organization_id in query keys to properly
  * invalidate cache when switching organizations (superuser feature).
+ *
+ * Filter support: Core analytics hooks now accept filters from the FilterPane
+ * via the useAnalyticsFilters() hook. Filters are passed to backend APIs
+ * and included in query keys for proper cache invalidation.
  */
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { analyticsAPI, procurementAPI, getOrganizationParam } from "@/lib/api";
+import {
+  analyticsAPI,
+  procurementAPI,
+  getOrganizationParam,
+  type AnalyticsFilters,
+} from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
+import { useFilters } from "./useFilters";
 
 /**
  * Get the current organization ID for query key inclusion.
@@ -18,14 +29,143 @@ function getOrgKeyPart(): number | undefined {
 }
 
 /**
+ * Build name→ID lookup maps for suppliers and categories.
+ * Used to convert filter names (from FilterPane) to IDs (for API).
+ */
+function useFilterMapping() {
+  const { data: suppliers } = useSuppliersInternal();
+  const { data: categories } = useCategoriesInternal();
+
+  const supplierNameToId = useMemo(() => {
+    const map = new Map<string, number>();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (suppliers as any)?.results?.forEach((s: { name: string; id: number }) =>
+      map.set(s.name, s.id)
+    );
+    return map;
+  }, [suppliers]);
+
+  const categoryNameToId = useMemo(() => {
+    const map = new Map<string, number>();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (categories as any)?.results?.forEach((c: { name: string; id: number }) =>
+      map.set(c.name, c.id)
+    );
+    return map;
+  }, [categories]);
+
+  return { supplierNameToId, categoryNameToId };
+}
+
+// Internal hooks for filter mapping (to avoid circular dependency)
+function useSuppliersInternal() {
+  const orgId = getOrgKeyPart();
+  return useQuery({
+    queryKey: queryKeys.procurement.suppliers.list(undefined, orgId),
+    queryFn: async () => {
+      const response = await procurementAPI.getSuppliers();
+      return response.data;
+    },
+  });
+}
+
+function useCategoriesInternal() {
+  const orgId = getOrgKeyPart();
+  return useQuery({
+    queryKey: queryKeys.procurement.categories.list(undefined, orgId),
+    queryFn: async () => {
+      const response = await procurementAPI.getCategories();
+      return response.data;
+    },
+  });
+}
+
+/**
+ * Convert frontend filter state (from FilterPane) to backend API format.
+ * Returns undefined if no filters are active.
+ *
+ * Handles:
+ * - Date range (start/end)
+ * - Suppliers (sends both IDs when available, and names for server-side resolution)
+ * - Categories (sends both IDs when available, and names for server-side resolution)
+ * - Subcategories (passed as-is, strings)
+ * - Locations (passed as-is, strings)
+ * - Years (converts string years to numbers)
+ * - Amount range (min/max)
+ *
+ * Note: Both IDs and names are sent to ensure filtering works even if the
+ * categories/suppliers queries haven't loaded yet. The backend will resolve
+ * names to IDs server-side and combine with any provided IDs.
+ */
+export function useAnalyticsFilters(): AnalyticsFilters | undefined {
+  const { data: filters } = useFilters();
+  const { supplierNameToId, categoryNameToId } = useFilterMapping();
+
+  return useMemo(() => {
+    if (!filters) return undefined;
+
+    const apiFilters: AnalyticsFilters = {};
+
+    if (filters.dateRange.start) apiFilters.date_from = filters.dateRange.start;
+    if (filters.dateRange.end) apiFilters.date_to = filters.dateRange.end;
+
+    if (filters.suppliers.length > 0) {
+      // Always send names for server-side resolution
+      apiFilters.supplier_names = filters.suppliers;
+
+      // Also send IDs if we have them (for efficiency)
+      const ids = filters.suppliers
+        .map((name) => supplierNameToId.get(name))
+        .filter((id): id is number => id !== undefined);
+      if (ids.length > 0) apiFilters.supplier_ids = ids;
+    }
+
+    if (filters.categories.length > 0) {
+      // Always send names for server-side resolution
+      apiFilters.category_names = filters.categories;
+
+      // Also send IDs if we have them (for efficiency)
+      const ids = filters.categories
+        .map((name) => categoryNameToId.get(name))
+        .filter((id): id is number => id !== undefined);
+      if (ids.length > 0) apiFilters.category_ids = ids;
+    }
+
+    if (filters.subcategories.length > 0) {
+      apiFilters.subcategories = filters.subcategories;
+    }
+
+    if (filters.locations.length > 0) {
+      apiFilters.locations = filters.locations;
+    }
+
+    if (filters.years.length > 0) {
+      const yearNumbers = filters.years
+        .map((y) => parseInt(y, 10))
+        .filter((y) => !isNaN(y));
+      if (yearNumbers.length > 0) apiFilters.years = yearNumbers;
+    }
+
+    if (filters.amountRange.min !== null)
+      apiFilters.min_amount = filters.amountRange.min;
+    if (filters.amountRange.max !== null)
+      apiFilters.max_amount = filters.amountRange.max;
+
+    return Object.keys(apiFilters).length > 0 ? apiFilters : undefined;
+  }, [filters, supplierNameToId, categoryNameToId]);
+}
+
+/**
  * Get overview statistics (total spend, supplier count, category count, etc.)
+ * Supports filtering by date range, suppliers, categories, and amount range.
  */
 export function useOverviewStats() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: queryKeys.analytics.overview(orgId),
+    queryKey: queryKeys.analytics.overview(orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getOverview();
+      const response = await analyticsAPI.getOverview(filters);
       return response.data;
     },
   });
@@ -33,13 +173,15 @@ export function useOverviewStats() {
 
 /**
  * Get spend by category
+ * Supports filtering by date range, suppliers, categories, and amount range.
  */
 export function useSpendByCategory() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: queryKeys.analytics.spendByCategory(orgId),
+    queryKey: queryKeys.analytics.spendByCategory(orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getSpendByCategory();
+      const response = await analyticsAPI.getSpendByCategory(filters);
       return response.data;
     },
   });
@@ -47,14 +189,16 @@ export function useSpendByCategory() {
 
 /**
  * Get detailed category analysis (includes subcategories, suppliers, risk levels)
- * Use this for the Categories dashboard page
+ * Use this for the Categories dashboard page.
+ * Supports filtering by date range, suppliers, categories, and amount range.
  */
 export function useCategoryDetails() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: queryKeys.analytics.categoryDetails(orgId),
+    queryKey: queryKeys.analytics.categoryDetails(orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getCategoryDetails();
+      const response = await analyticsAPI.getCategoryDetails(filters);
       return response.data;
     },
   });
@@ -62,13 +206,15 @@ export function useCategoryDetails() {
 
 /**
  * Get spend by supplier
+ * Supports filtering by date range, suppliers, categories, and amount range.
  */
 export function useSpendBySupplier() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: queryKeys.analytics.spendBySupplier(orgId),
+    queryKey: queryKeys.analytics.spendBySupplier(orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getSpendBySupplier();
+      const response = await analyticsAPI.getSpendBySupplier(filters);
       return response.data;
     },
   });
@@ -76,14 +222,16 @@ export function useSpendBySupplier() {
 
 /**
  * Get detailed supplier analysis (includes HHI score, concentration metrics, category diversity)
- * Use this for the Suppliers dashboard page
+ * Use this for the Suppliers dashboard page.
+ * Supports filtering by date range, suppliers, categories, and amount range.
  */
 export function useSupplierDetails() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: queryKeys.analytics.supplierDetails(orgId),
+    queryKey: queryKeys.analytics.supplierDetails(orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getSupplierDetails();
+      const response = await analyticsAPI.getSupplierDetails(filters);
       return response.data;
     },
   });
@@ -91,13 +239,15 @@ export function useSupplierDetails() {
 
 /**
  * Get monthly trend
+ * Supports filtering by date range, suppliers, categories, and amount range.
  */
 export function useMonthlyTrend(months: number = 12) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: queryKeys.analytics.monthlyTrend(months, orgId),
+    queryKey: queryKeys.analytics.monthlyTrend(months, orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getMonthlyTrend(months);
+      const response = await analyticsAPI.getMonthlyTrend(months, filters);
       return response.data;
     },
   });
@@ -105,13 +255,15 @@ export function useMonthlyTrend(months: number = 12) {
 
 /**
  * Get Pareto analysis
+ * Supports filtering by date range, suppliers, categories, and amount range.
  */
 export function useParetoAnalysis() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: queryKeys.analytics.pareto(orgId),
+    queryKey: queryKeys.analytics.pareto(orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getParetoAnalysis();
+      const response = await analyticsAPI.getParetoAnalysis(filters);
       return response.data;
     },
   });
@@ -120,29 +272,33 @@ export function useParetoAnalysis() {
 /**
  * Get supplier drill-down data for Pareto Analysis modal
  * Fetches on-demand when a supplier is selected
+ * Supports filtering by date range, suppliers, categories, and amount range.
  */
 export function useSupplierDrilldown(supplierId: number | null) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: queryKeys.analytics.supplierDrilldown(supplierId!, orgId),
+    queryKey: queryKeys.analytics.supplierDrilldown(supplierId!, orgId, filters),
     queryFn: async () => {
       if (!supplierId) return null;
-      const response = await analyticsAPI.getSupplierDrilldown(supplierId);
+      const response = await analyticsAPI.getSupplierDrilldown(supplierId, filters);
       return response.data;
     },
-    enabled: !!supplierId, // Only fetch when supplierId is provided
+    enabled: !!supplierId,
   });
 }
 
 /**
  * Get tail spend analysis
+ * Supports filtering by date range, suppliers, categories, and amount range.
  */
 export function useTailSpend(threshold: number = 20) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: queryKeys.analytics.tailSpend(threshold, orgId),
+    queryKey: queryKeys.analytics.tailSpend(threshold, orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getTailSpend(threshold);
+      const response = await analyticsAPI.getTailSpend(threshold, filters);
       return response.data;
     },
   });
@@ -151,15 +307,17 @@ export function useTailSpend(threshold: number = 20) {
 /**
  * Get detailed tail spend analysis with dollar threshold.
  * Use this for the TailSpend dashboard page.
+ * Supports filtering by date range, suppliers, categories, and amount range.
  *
  * @param threshold - Dollar threshold for tail classification (default $50,000)
  */
 export function useDetailedTailSpend(threshold: number = 50000) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: queryKeys.analytics.tailSpendDetailed(threshold, orgId),
+    queryKey: queryKeys.analytics.tailSpendDetailed(threshold, orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getDetailedTailSpend(threshold);
+      const response = await analyticsAPI.getDetailedTailSpend(threshold, filters);
       return response.data;
     },
   });
@@ -168,66 +326,76 @@ export function useDetailedTailSpend(threshold: number = 50000) {
 /**
  * Get tail spend category drill-down data for TailSpend page modal.
  * Fetches vendor-level breakdown on-demand when a category is selected.
+ * Supports filtering by date range, suppliers, categories, and amount range.
  */
 export function useTailSpendCategoryDrilldown(
   categoryId: number | null,
   threshold: number = 50000,
 ) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
     queryKey: queryKeys.analytics.tailSpendCategoryDrilldown(
       categoryId!,
       threshold,
       orgId,
+      filters,
     ),
     queryFn: async () => {
       if (!categoryId) return null;
       const response = await analyticsAPI.getTailSpendCategoryDrilldown(
         categoryId,
         threshold,
+        filters,
       );
       return response.data;
     },
-    enabled: !!categoryId, // Only fetch when categoryId is provided
+    enabled: !!categoryId,
   });
 }
 
 /**
  * Get tail spend vendor drill-down data for TailSpend page modal.
  * Fetches category breakdown, locations, and monthly spend.
+ * Supports filtering by date range, suppliers, categories, and amount range.
  */
 export function useTailSpendVendorDrilldown(
   supplierId: number | null,
   threshold: number = 50000,
 ) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
     queryKey: queryKeys.analytics.tailSpendVendorDrilldown(
       supplierId!,
       threshold,
       orgId,
+      filters,
     ),
     queryFn: async () => {
       if (!supplierId) return null;
       const response = await analyticsAPI.getTailSpendVendorDrilldown(
         supplierId,
         threshold,
+        filters,
       );
       return response.data;
     },
-    enabled: !!supplierId, // Only fetch when supplierId is provided
+    enabled: !!supplierId,
   });
 }
 
 /**
  * Get spend stratification
+ * Supports filtering by date range, suppliers, categories, and amount range.
  */
 export function useStratification() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: queryKeys.analytics.stratification(orgId),
+    queryKey: queryKeys.analytics.stratification(orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getStratification();
+      const response = await analyticsAPI.getStratification(filters);
       return response.data;
     },
   });
@@ -236,13 +404,15 @@ export function useStratification() {
 /**
  * Get detailed spend stratification (by spend bands)
  * Use this for the SpendStratification dashboard page
+ * Supports filtering by date range, suppliers, categories, and amount range.
  */
 export function useDetailedStratification() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: queryKeys.analytics.stratificationDetailed(orgId),
+    queryKey: queryKeys.analytics.stratificationDetailed(orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getDetailedStratification();
+      const response = await analyticsAPI.getDetailedStratification(filters);
       return response.data;
     },
   });
@@ -251,46 +421,52 @@ export function useDetailedStratification() {
 /**
  * Get segment drill-down data for SpendStratification modal
  * Fetches on-demand when a segment is selected
+ * Supports filtering by date range, suppliers, categories, and amount range.
  */
 export function useSegmentDrilldown(segmentName: string | null) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: queryKeys.analytics.segmentDrilldown(segmentName!, orgId),
+    queryKey: queryKeys.analytics.segmentDrilldown(segmentName!, orgId, filters),
     queryFn: async () => {
       if (!segmentName) return null;
-      const response = await analyticsAPI.getSegmentDrilldown(segmentName);
+      const response = await analyticsAPI.getSegmentDrilldown(segmentName, filters);
       return response.data;
     },
-    enabled: !!segmentName, // Only fetch when segmentName is provided
+    enabled: !!segmentName,
   });
 }
 
 /**
  * Get spend band drill-down data for SpendStratification modal
  * Fetches on-demand when a spend band is selected
+ * Supports filtering by date range, suppliers, categories, and amount range.
  */
 export function useBandDrilldown(bandName: string | null) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: queryKeys.analytics.bandDrilldown(bandName!, orgId),
+    queryKey: queryKeys.analytics.bandDrilldown(bandName!, orgId, filters),
     queryFn: async () => {
       if (!bandName) return null;
-      const response = await analyticsAPI.getBandDrilldown(bandName);
+      const response = await analyticsAPI.getBandDrilldown(bandName, filters);
       return response.data;
     },
-    enabled: !!bandName, // Only fetch when bandName is provided
+    enabled: !!bandName,
   });
 }
 
 /**
  * Get seasonality analysis
+ * Supports filtering by date range, suppliers, categories, and amount range.
  */
 export function useSeasonality() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: queryKeys.analytics.seasonality(false, orgId),
+    queryKey: queryKeys.analytics.seasonality(false, orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getSeasonality();
+      const response = await analyticsAPI.getSeasonality(filters);
       return response.data;
     },
   });
@@ -300,13 +476,15 @@ export function useSeasonality() {
  * Get detailed seasonality analysis with fiscal year support, category breakdowns,
  * seasonal indices, and savings potential calculations.
  * Use this for the Seasonality dashboard page.
+ * Supports filtering by date range, suppliers, categories, and amount range.
  */
 export function useDetailedSeasonality(useFiscalYear: boolean = true) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: queryKeys.analytics.seasonalityDetailed(useFiscalYear, orgId),
+    queryKey: queryKeys.analytics.seasonalityDetailed(useFiscalYear, orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getDetailedSeasonality(useFiscalYear);
+      const response = await analyticsAPI.getDetailedSeasonality(useFiscalYear, filters);
       return response.data;
     },
   });
@@ -315,39 +493,45 @@ export function useDetailedSeasonality(useFiscalYear: boolean = true) {
 /**
  * Get seasonality category drill-down data for Seasonality page modal.
  * Fetches supplier-level seasonal patterns on-demand when a category is selected.
+ * Supports filtering by date range, suppliers, categories, and amount range.
  */
 export function useSeasonalityCategoryDrilldown(
   categoryId: number | null,
   useFiscalYear: boolean = true,
 ) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
     queryKey: queryKeys.analytics.seasonalityCategoryDrilldown(
       categoryId!,
       useFiscalYear,
       orgId,
+      filters,
     ),
     queryFn: async () => {
       if (!categoryId) return null;
       const response = await analyticsAPI.getSeasonalityCategoryDrilldown(
         categoryId,
         useFiscalYear,
+        filters,
       );
       return response.data;
     },
-    enabled: !!categoryId, // Only fetch when categoryId is provided
+    enabled: !!categoryId,
   });
 }
 
 /**
  * Get year over year comparison
+ * Supports filtering by date range, suppliers, categories, and amount range.
  */
 export function useYearOverYear() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: queryKeys.analytics.yearOverYear(false, 0, 0, orgId),
+    queryKey: queryKeys.analytics.yearOverYear(false, 0, 0, orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getYearOverYear();
+      const response = await analyticsAPI.getYearOverYear(filters);
       return response.data;
     },
   });
@@ -357,6 +541,7 @@ export function useYearOverYear() {
  * Get detailed year over year comparison with fiscal year support,
  * category/supplier comparisons, monthly trends, and top gainers/decliners.
  * Use this for the YearOverYear dashboard page.
+ * Supports filtering by date range, suppliers, categories, and amount range.
  */
 export function useDetailedYearOverYear(
   useFiscalYear: boolean = true,
@@ -364,18 +549,21 @@ export function useDetailedYearOverYear(
   year2?: number,
 ) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
     queryKey: queryKeys.analytics.yoyDetailed(
       useFiscalYear,
       year1 ?? 0,
       year2 ?? 0,
       orgId,
+      filters,
     ),
     queryFn: async () => {
       const response = await analyticsAPI.getDetailedYearOverYear(
         useFiscalYear,
         year1,
         year2,
+        filters,
       );
       return response.data;
     },
@@ -385,6 +573,7 @@ export function useDetailedYearOverYear(
 /**
  * Get YoY category drill-down data for YearOverYear page modal.
  * Fetches supplier-level YoY breakdown on-demand when a category is selected.
+ * Supports filtering by date range, suppliers, categories, and amount range.
  */
 export function useYoYCategoryDrilldown(
   categoryId: number | null,
@@ -393,6 +582,7 @@ export function useYoYCategoryDrilldown(
   year2?: number,
 ) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
     queryKey: queryKeys.analytics.yoyCategoryDrilldown(
       categoryId!,
@@ -400,6 +590,7 @@ export function useYoYCategoryDrilldown(
       year1 ?? 0,
       year2 ?? 0,
       orgId,
+      filters,
     ),
     queryFn: async () => {
       if (!categoryId) return null;
@@ -408,16 +599,18 @@ export function useYoYCategoryDrilldown(
         useFiscalYear,
         year1,
         year2,
+        filters,
       );
       return response.data;
     },
-    enabled: !!categoryId, // Only fetch when categoryId is provided
+    enabled: !!categoryId,
   });
 }
 
 /**
  * Get YoY supplier drill-down data for YearOverYear page modal.
  * Fetches category-level YoY breakdown on-demand when a supplier is selected.
+ * Supports filtering by date range, suppliers, categories, and amount range.
  */
 export function useYoYSupplierDrilldown(
   supplierId: number | null,
@@ -426,6 +619,7 @@ export function useYoYSupplierDrilldown(
   year2?: number,
 ) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
     queryKey: queryKeys.analytics.yoySupplierDrilldown(
       supplierId!,
@@ -433,6 +627,7 @@ export function useYoYSupplierDrilldown(
       year1 ?? 0,
       year2 ?? 0,
       orgId,
+      filters,
     ),
     queryFn: async () => {
       if (!supplierId) return null;
@@ -441,22 +636,25 @@ export function useYoYSupplierDrilldown(
         useFiscalYear,
         year1,
         year2,
+        filters,
       );
       return response.data;
     },
-    enabled: !!supplierId, // Only fetch when supplierId is provided
+    enabled: !!supplierId,
   });
 }
 
 /**
  * Get consolidation opportunities
+ * Supports filtering by date range, suppliers, categories, and amount range.
  */
 export function useConsolidation() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: queryKeys.analytics.consolidation(orgId),
+    queryKey: queryKeys.analytics.consolidation(orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getConsolidation();
+      const response = await analyticsAPI.getConsolidation(filters);
       return response.data;
     },
   });

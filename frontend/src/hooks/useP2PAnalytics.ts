@@ -1,8 +1,8 @@
 /**
  * Custom hooks for P2P (Procure-to-Pay) Analytics data from Django API
  *
- * All hooks include organization_id in query keys to properly
- * invalidate cache when switching organizations (superuser feature).
+ * All hooks include organization_id and filters in query keys to properly
+ * invalidate cache when switching organizations or filter values change.
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -10,6 +10,8 @@ import {
   getOrganizationParam,
   ExceptionType,
 } from "@/lib/api";
+import { useAnalyticsFilters } from "./useAnalytics";
+import { queryKeys } from "@/lib/queryKeys";
 
 /**
  * Get the current organization ID for query key inclusion.
@@ -29,10 +31,11 @@ function getOrgKeyPart(): number | undefined {
  */
 export function useP2PCycleOverview() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["p2p-cycle-overview", { orgId }],
+    queryKey: queryKeys.p2p.cycleOverview(orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getCycleOverview();
+      const response = await p2pAnalyticsAPI.getCycleOverview(filters);
       return response.data;
     },
   });
@@ -43,10 +46,11 @@ export function useP2PCycleOverview() {
  */
 export function useP2PCycleByCategory() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["p2p-cycle-by-category", { orgId }],
+    queryKey: queryKeys.p2p.cycleByCategory(orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getCycleByCategory();
+      const response = await p2pAnalyticsAPI.getCycleByCategory(filters);
       return response.data;
     },
   });
@@ -57,10 +61,11 @@ export function useP2PCycleByCategory() {
  */
 export function useP2PCycleBySupplier() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["p2p-cycle-by-supplier", { orgId }],
+    queryKey: queryKeys.p2p.cycleBySupplier(orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getCycleBySupplier();
+      const response = await p2pAnalyticsAPI.getCycleBySupplier(filters);
       return response.data;
     },
   });
@@ -71,10 +76,11 @@ export function useP2PCycleBySupplier() {
  */
 export function useP2PCycleTrends(months: number = 12) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["p2p-cycle-trends", months, { orgId }],
+    queryKey: queryKeys.p2p.cycleTrends(months, orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getCycleTrends(months);
+      const response = await p2pAnalyticsAPI.getCycleTrends(months, filters);
       return response.data;
     },
   });
@@ -85,10 +91,11 @@ export function useP2PCycleTrends(months: number = 12) {
  */
 export function useP2PBottlenecks() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["p2p-bottlenecks", { orgId }],
+    queryKey: queryKeys.p2p.bottlenecks(orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getBottlenecks();
+      const response = await p2pAnalyticsAPI.getBottlenecks(filters);
       return response.data;
     },
   });
@@ -99,10 +106,11 @@ export function useP2PBottlenecks() {
  */
 export function useP2PProcessFunnel(months: number = 12) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["p2p-process-funnel", months, { orgId }],
+    queryKey: queryKeys.p2p.processFunnel(orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getProcessFunnel(months);
+      const response = await p2pAnalyticsAPI.getProcessFunnel(months, filters);
       return response.data;
     },
   });
@@ -113,11 +121,12 @@ export function useP2PProcessFunnel(months: number = 12) {
  */
 export function useP2PStageDrilldown(stage: string | null) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["p2p-stage-drilldown", stage, { orgId }],
+    queryKey: queryKeys.p2p.stageDrilldown(stage || "", orgId, filters),
     queryFn: async () => {
       if (!stage) return null;
-      const response = await p2pAnalyticsAPI.getStageDrilldown(stage);
+      const response = await p2pAnalyticsAPI.getStageDrilldown(stage, filters);
       return response.data;
     },
     enabled: !!stage,
@@ -133,10 +142,11 @@ export function useP2PStageDrilldown(stage: string | null) {
  */
 export function useMatchingOverview() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["matching-overview", { orgId }],
+    queryKey: queryKeys.p2p.matchingOverview(orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getMatchingOverview();
+      const response = await p2pAnalyticsAPI.getMatchingOverview(filters);
       return response.data;
     },
   });
@@ -151,10 +161,11 @@ export function useMatchingExceptions(params?: {
   limit?: number;
 }) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["matching-exceptions", params, { orgId }],
+    queryKey: queryKeys.p2p.matchingExceptions(orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getMatchingExceptions(params);
+      const response = await p2pAnalyticsAPI.getMatchingExceptions(params, filters);
       return response.data;
     },
   });
@@ -165,10 +176,11 @@ export function useMatchingExceptions(params?: {
  */
 export function useExceptionsByType() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["exceptions-by-type", { orgId }],
+    queryKey: queryKeys.p2p.exceptionsByType(orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getExceptionsByType();
+      const response = await p2pAnalyticsAPI.getExceptionsByType(filters);
       return response.data;
     },
   });
@@ -179,10 +191,11 @@ export function useExceptionsByType() {
  */
 export function useExceptionsBySupplier() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["exceptions-by-supplier", { orgId }],
+    queryKey: queryKeys.p2p.exceptionsBySupplier(orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getExceptionsBySupplier();
+      const response = await p2pAnalyticsAPI.getExceptionsBySupplier(filters);
       return response.data;
     },
   });
@@ -193,10 +206,11 @@ export function useExceptionsBySupplier() {
  */
 export function usePriceVarianceAnalysis() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["price-variance-analysis", { orgId }],
+    queryKey: queryKeys.p2p.priceVariance(orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getPriceVarianceAnalysis();
+      const response = await p2pAnalyticsAPI.getPriceVarianceAnalysis(filters);
       return response.data;
     },
   });
@@ -207,10 +221,11 @@ export function usePriceVarianceAnalysis() {
  */
 export function useQuantityVarianceAnalysis() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["quantity-variance-analysis", { orgId }],
+    queryKey: queryKeys.p2p.quantityVariance(orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getQuantityVarianceAnalysis();
+      const response = await p2pAnalyticsAPI.getQuantityVarianceAnalysis(filters);
       return response.data;
     },
   });
@@ -221,11 +236,12 @@ export function useQuantityVarianceAnalysis() {
  */
 export function useInvoiceMatchDetail(invoiceId: number | null) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["invoice-match-detail", invoiceId, { orgId }],
+    queryKey: queryKeys.p2p.invoiceMatchDetail(invoiceId || 0, orgId, filters),
     queryFn: async () => {
       if (!invoiceId) return null;
-      const response = await p2pAnalyticsAPI.getInvoiceMatchDetail(invoiceId);
+      const response = await p2pAnalyticsAPI.getInvoiceMatchDetail(invoiceId, filters);
       return response.data;
     },
     enabled: !!invoiceId,
@@ -256,14 +272,14 @@ export function useResolveException() {
     onSuccess: () => {
       // Invalidate matching-related queries
       queryClient.invalidateQueries({
-        queryKey: ["matching-overview", { orgId }],
+        queryKey: queryKeys.p2p.matchingOverview(orgId),
       });
-      queryClient.invalidateQueries({ queryKey: ["matching-exceptions"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.p2p.matchingExceptions(orgId) });
       queryClient.invalidateQueries({
-        queryKey: ["exceptions-by-type", { orgId }],
+        queryKey: queryKeys.p2p.exceptionsByType(orgId),
       });
       queryClient.invalidateQueries({
-        queryKey: ["exceptions-by-supplier", { orgId }],
+        queryKey: queryKeys.p2p.exceptionsBySupplier(orgId),
       });
     },
   });
@@ -293,14 +309,14 @@ export function useBulkResolveExceptions() {
     onSuccess: () => {
       // Invalidate matching-related queries
       queryClient.invalidateQueries({
-        queryKey: ["matching-overview", { orgId }],
+        queryKey: queryKeys.p2p.matchingOverview(orgId),
       });
-      queryClient.invalidateQueries({ queryKey: ["matching-exceptions"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.p2p.matchingExceptions(orgId) });
       queryClient.invalidateQueries({
-        queryKey: ["exceptions-by-type", { orgId }],
+        queryKey: queryKeys.p2p.exceptionsByType(orgId),
       });
       queryClient.invalidateQueries({
-        queryKey: ["exceptions-by-supplier", { orgId }],
+        queryKey: queryKeys.p2p.exceptionsBySupplier(orgId),
       });
     },
   });
@@ -315,10 +331,11 @@ export function useBulkResolveExceptions() {
  */
 export function useAgingOverview() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["aging-overview", { orgId }],
+    queryKey: queryKeys.p2p.agingOverview(orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getAgingOverview();
+      const response = await p2pAnalyticsAPI.getAgingOverview(filters);
       return response.data;
     },
   });
@@ -329,10 +346,11 @@ export function useAgingOverview() {
  */
 export function useAgingBySupplier() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["aging-by-supplier", { orgId }],
+    queryKey: queryKeys.p2p.agingBySupplier(orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getAgingBySupplier();
+      const response = await p2pAnalyticsAPI.getAgingBySupplier(filters);
       return response.data;
     },
   });
@@ -343,10 +361,11 @@ export function useAgingBySupplier() {
  */
 export function usePaymentTermsCompliance() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["payment-terms-compliance", { orgId }],
+    queryKey: queryKeys.p2p.paymentTermsCompliance(orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getPaymentTermsCompliance();
+      const response = await p2pAnalyticsAPI.getPaymentTermsCompliance(filters);
       return response.data;
     },
   });
@@ -357,10 +376,11 @@ export function usePaymentTermsCompliance() {
  */
 export function useDPOTrends(months: number = 12) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["dpo-trends", months, { orgId }],
+    queryKey: queryKeys.p2p.dpoTrends(months, orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getDPOTrends(months);
+      const response = await p2pAnalyticsAPI.getDPOTrends(months, filters);
       return response.data;
     },
   });
@@ -371,10 +391,11 @@ export function useDPOTrends(months: number = 12) {
  */
 export function useCashFlowForecast(weeks: number = 4) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["cash-flow-forecast", weeks, { orgId }],
+    queryKey: queryKeys.p2p.cashForecast(weeks, orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getCashFlowForecast(weeks);
+      const response = await p2pAnalyticsAPI.getCashFlowForecast(weeks, filters);
       return response.data;
     },
   });
@@ -389,10 +410,11 @@ export function useCashFlowForecast(weeks: number = 4) {
  */
 export function usePROverview() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["pr-overview", { orgId }],
+    queryKey: queryKeys.p2p.prOverview(orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getPROverview();
+      const response = await p2pAnalyticsAPI.getPROverview(filters);
       return response.data;
     },
   });
@@ -403,10 +425,11 @@ export function usePROverview() {
  */
 export function usePRApprovalAnalysis() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["pr-approval-analysis", { orgId }],
+    queryKey: queryKeys.p2p.prApprovalAnalysis(orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getPRApprovalAnalysis();
+      const response = await p2pAnalyticsAPI.getPRApprovalAnalysis(filters);
       return response.data;
     },
   });
@@ -417,10 +440,11 @@ export function usePRApprovalAnalysis() {
  */
 export function usePRByDepartment() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["pr-by-department", { orgId }],
+    queryKey: queryKeys.p2p.prByDepartment(orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getPRByDepartment();
+      const response = await p2pAnalyticsAPI.getPRByDepartment(filters);
       return response.data;
     },
   });
@@ -431,10 +455,11 @@ export function usePRByDepartment() {
  */
 export function usePRPending(limit: number = 50) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["pr-pending", limit, { orgId }],
+    queryKey: queryKeys.p2p.prPending(orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getPRPending(limit);
+      const response = await p2pAnalyticsAPI.getPRPending(limit, filters);
       return response.data;
     },
   });
@@ -445,11 +470,12 @@ export function usePRPending(limit: number = 50) {
  */
 export function usePRDetail(prId: number | null) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["pr-detail", prId, { orgId }],
+    queryKey: queryKeys.p2p.prDetail(prId ?? 0, orgId, filters),
     queryFn: async () => {
       if (!prId) return null;
-      const response = await p2pAnalyticsAPI.getPRDetail(prId);
+      const response = await p2pAnalyticsAPI.getPRDetail(prId, filters);
       return response.data;
     },
     enabled: !!prId,
@@ -465,10 +491,11 @@ export function usePRDetail(prId: number | null) {
  */
 export function usePOOverview() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["po-overview", { orgId }],
+    queryKey: queryKeys.p2p.poOverview(orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getPOOverview();
+      const response = await p2pAnalyticsAPI.getPOOverview(filters);
       return response.data;
     },
   });
@@ -479,10 +506,11 @@ export function usePOOverview() {
  */
 export function usePOLeakage() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["po-leakage", { orgId }],
+    queryKey: queryKeys.p2p.poLeakage(orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getPOLeakage();
+      const response = await p2pAnalyticsAPI.getPOLeakage(filters);
       return response.data;
     },
   });
@@ -493,10 +521,11 @@ export function usePOLeakage() {
  */
 export function usePOAmendments() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["po-amendments", { orgId }],
+    queryKey: queryKeys.p2p.poAmendments(orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getPOAmendments();
+      const response = await p2pAnalyticsAPI.getPOAmendments(filters);
       return response.data;
     },
   });
@@ -507,10 +536,11 @@ export function usePOAmendments() {
  */
 export function usePOBySupplier() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["po-by-supplier", { orgId }],
+    queryKey: queryKeys.p2p.poBySupplier(orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getPOBySupplier();
+      const response = await p2pAnalyticsAPI.getPOBySupplier(filters);
       return response.data;
     },
   });
@@ -521,11 +551,12 @@ export function usePOBySupplier() {
  */
 export function usePODetail(poId: number | null) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["po-detail", poId, { orgId }],
+    queryKey: queryKeys.p2p.poDetail(poId ?? 0, orgId, filters),
     queryFn: async () => {
       if (!poId) return null;
-      const response = await p2pAnalyticsAPI.getPODetail(poId);
+      const response = await p2pAnalyticsAPI.getPODetail(poId, filters);
       return response.data;
     },
     enabled: !!poId,
@@ -541,10 +572,11 @@ export function usePODetail(poId: number | null) {
  */
 export function useSupplierPaymentsOverview() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["supplier-payments-overview", { orgId }],
+    queryKey: queryKeys.p2p.supplierPaymentsOverview(orgId, filters),
     queryFn: async () => {
-      const response = await p2pAnalyticsAPI.getSupplierPaymentsOverview();
+      const response = await p2pAnalyticsAPI.getSupplierPaymentsOverview(filters);
       return response.data;
     },
   });
@@ -555,11 +587,14 @@ export function useSupplierPaymentsOverview() {
  */
 export function useSupplierPaymentsScorecard(limit: number = 50) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["supplier-payments-scorecard", limit, { orgId }],
+    queryKey: queryKeys.p2p.supplierPaymentsScorecard(orgId, filters),
     queryFn: async () => {
-      const response =
-        await p2pAnalyticsAPI.getSupplierPaymentsScorecard(limit);
+      const response = await p2pAnalyticsAPI.getSupplierPaymentsScorecard(
+        limit,
+        filters,
+      );
       return response.data;
     },
   });
@@ -570,12 +605,15 @@ export function useSupplierPaymentsScorecard(limit: number = 50) {
  */
 export function useSupplierPaymentDetail(supplierId: number | null) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["supplier-payment-detail", supplierId, { orgId }],
+    queryKey: queryKeys.p2p.supplierPaymentDetail(supplierId ?? 0, orgId, filters),
     queryFn: async () => {
       if (!supplierId) return null;
-      const response =
-        await p2pAnalyticsAPI.getSupplierPaymentDetail(supplierId);
+      const response = await p2pAnalyticsAPI.getSupplierPaymentDetail(
+        supplierId,
+        filters,
+      );
       return response.data;
     },
     enabled: !!supplierId,
@@ -590,13 +628,15 @@ export function useSupplierPaymentHistory(
   months: number = 12,
 ) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["supplier-payment-history", supplierId, months, { orgId }],
+    queryKey: queryKeys.p2p.supplierPaymentHistory(supplierId ?? 0, orgId, filters),
     queryFn: async () => {
       if (!supplierId) return null;
       const response = await p2pAnalyticsAPI.getSupplierPaymentHistory(
         supplierId,
         months,
+        filters,
       );
       return response.data;
     },

@@ -55,6 +55,9 @@ class AnalyticsService:
                 - date_to: End date (str 'YYYY-MM-DD' or date)
                 - supplier_ids: List of supplier IDs to include
                 - category_ids: List of category IDs to include
+                - subcategories: List of subcategory names to include
+                - locations: List of location names to include
+                - years: List of fiscal years to include
                 - min_amount: Minimum transaction amount
                 - max_amount: Maximum transaction amount
         """

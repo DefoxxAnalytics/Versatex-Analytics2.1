@@ -48,11 +48,13 @@ class TestCostOptimizationInsights:
         supplier_expensive = SupplierFactory(organization=organization, name='Expensive Supplier')
 
         # Create transactions - cheap supplier has lower avg transaction
+        # Use same subcategory for apples-to-apples comparison
         for i in range(3):
             TransactionFactory(
                 organization=organization,
                 supplier=supplier_cheap,
                 category=category,
+                subcategory='Laptops',
                 uploaded_by=admin_user,
                 amount=Decimal('100.00'),
                 invoice_number=f'CHEAP-{i}'
@@ -64,6 +66,7 @@ class TestCostOptimizationInsights:
                 organization=organization,
                 supplier=supplier_expensive,
                 category=category,
+                subcategory='Laptops',
                 uploaded_by=admin_user,
                 amount=Decimal('200.00'),
                 invoice_number=f'EXPENSIVE-{i}'
@@ -325,13 +328,14 @@ class TestConsolidationInsights:
         """Test consolidation recommendation for category with many suppliers."""
         category = CategoryFactory(organization=organization, name='Consolidation Category')
 
-        # Create 5 suppliers in same category
+        # Create 5 suppliers in same category and subcategory for apples-to-apples comparison
         for i in range(5):
             supplier = SupplierFactory(organization=organization, name=f'Consol Supplier {i}')
             TransactionFactory(
                 organization=organization,
                 supplier=supplier,
                 category=category,
+                subcategory='Office Supplies',
                 uploaded_by=admin_user,
                 amount=Decimal(str(1000 * (i + 1))),
                 invoice_number=f'CONSOL-{i}'
@@ -526,3 +530,266 @@ class TestOrganizationScoping:
             if 'title' in insight:
                 assert 'Other Category' not in insight['title']
                 assert 'Other Supplier' not in insight['title']
+
+
+@pytest.mark.django_db
+class TestDeduplicateSavings:
+    """Tests for savings deduplication logic."""
+
+    def test_deduplication_no_overlap(self, organization):
+        """Test deduplication with no overlapping insights."""
+        service = AIInsightsService(organization)
+
+        insights = [
+            {
+                'id': 'insight-1',
+                'type': 'cost_optimization',
+                'severity': 'high',
+                'potential_savings': 1000,
+                '_attribution': {
+                    'subcategory_keys': [('Category A', 'Subcategory 1')],
+                    'supplier_ids': ['sup-1', 'sup-2'],
+                    'spend_basis': 5000,
+                }
+            },
+            {
+                'id': 'insight-2',
+                'type': 'consolidation',
+                'severity': 'medium',
+                'potential_savings': 500,
+                '_attribution': {
+                    'subcategory_keys': [('Category B', 'Subcategory 2')],
+                    'supplier_ids': ['sup-3', 'sup-4'],
+                    'spend_basis': 5000,
+                }
+            }
+        ]
+
+        deduplicated, total = service.deduplicate_savings(insights)
+
+        # No overlap, savings should remain unchanged
+        assert total == 1500
+        assert len(deduplicated) == 2
+
+    def test_deduplication_with_overlap(self, organization):
+        """Test deduplication when insights share entities."""
+        service = AIInsightsService(organization)
+
+        # Same subcategory key in both insights
+        insights = [
+            {
+                'id': 'insight-1',
+                'type': 'cost_optimization',
+                'severity': 'high',
+                'potential_savings': 1000,
+                '_attribution': {
+                    'subcategory_keys': [('Category A', 'Subcategory 1')],
+                    'supplier_ids': ['sup-1', 'sup-2'],
+                    'spend_basis': 5000,
+                }
+            },
+            {
+                'id': 'insight-2',
+                'type': 'consolidation',
+                'severity': 'medium',
+                'potential_savings': 800,
+                '_attribution': {
+                    'subcategory_keys': [('Category A', 'Subcategory 1')],  # Same as above
+                    'supplier_ids': ['sup-1', 'sup-2', 'sup-3'],  # Overlapping suppliers
+                    'spend_basis': 5000,
+                }
+            }
+        ]
+
+        deduplicated, total = service.deduplicate_savings(insights)
+
+        # Consolidation should be reduced due to overlap
+        cost_opt = next(i for i in deduplicated if i['type'] == 'cost_optimization')
+        consolidation = next(i for i in deduplicated if i['type'] == 'consolidation')
+
+        # Cost optimization (higher priority) keeps full savings
+        assert cost_opt['potential_savings'] == 1000
+
+        # Consolidation should be reduced (overlap with cost_optimization)
+        assert consolidation['potential_savings'] < 800
+
+        # Total should be less than sum of original
+        assert total < 1800
+
+    def test_deduplication_priority_order(self, organization):
+        """Test that higher priority insights get processed first."""
+        service = AIInsightsService(organization)
+
+        insights = [
+            {
+                'id': 'consolidation',
+                'type': 'consolidation',  # Priority 3
+                'severity': 'medium',
+                'potential_savings': 1000,
+                '_attribution': {
+                    'subcategory_keys': [('Cat', 'Sub')],
+                    'supplier_ids': ['sup-1'],
+                    'spend_basis': 10000,
+                }
+            },
+            {
+                'id': 'cost_opt',
+                'type': 'cost_optimization',  # Priority 2
+                'severity': 'high',
+                'potential_savings': 500,
+                '_attribution': {
+                    'subcategory_keys': [('Cat', 'Sub')],
+                    'supplier_ids': ['sup-1'],
+                    'spend_basis': 5000,
+                }
+            },
+            {
+                'id': 'anomaly',
+                'type': 'anomaly',  # Priority 1 (highest)
+                'severity': 'high',
+                'potential_savings': 200,
+                '_attribution': {
+                    'category_ids': ['cat-1'],
+                    'transaction_ids': ['tx-1'],
+                    'spend_basis': 1000,
+                }
+            }
+        ]
+
+        deduplicated, total = service.deduplicate_savings(insights)
+
+        # Anomaly (highest priority) should keep full savings
+        anomaly = next(i for i in deduplicated if i['type'] == 'anomaly')
+        assert anomaly['potential_savings'] == 200
+
+    def test_deduplication_risk_insights_unchanged(self, organization):
+        """Test that risk insights (no savings) pass through unchanged."""
+        service = AIInsightsService(organization)
+
+        insights = [
+            {
+                'id': 'risk-1',
+                'type': 'risk',
+                'severity': 'high',
+                'potential_savings': None,
+            }
+        ]
+
+        deduplicated, total = service.deduplicate_savings(insights)
+
+        assert len(deduplicated) == 1
+        assert total == 0
+        risk = deduplicated[0]
+        # _original_savings is 0 because None is converted to 0 in calculation
+        assert risk['_original_savings'] == 0
+
+    def test_deduplication_no_attribution(self, organization):
+        """Test handling of insights without attribution."""
+        service = AIInsightsService(organization)
+
+        insights = [
+            {
+                'id': 'no-attr',
+                'type': 'cost_optimization',
+                'severity': 'high',
+                'potential_savings': 1000,
+                # No _attribution field
+            }
+        ]
+
+        deduplicated, total = service.deduplicate_savings(insights)
+
+        assert len(deduplicated) == 1
+        assert deduplicated[0]['potential_savings'] == 1000
+        assert deduplicated[0]['_overlap_reduction'] == 0
+
+    def test_get_entity_keys(self, organization):
+        """Test entity key extraction from attribution."""
+        service = AIInsightsService(organization)
+
+        attribution = {
+            'subcategory_keys': [('Category A', 'Subcategory 1')],
+            'category_ids': ['cat-uuid-1'],
+            'supplier_ids': ['sup-1', 'sup-2'],
+        }
+
+        keys = service._get_entity_keys(attribution)
+
+        # Should include all key types
+        assert ('subcat', 'Category A', 'Subcategory 1') in keys
+        assert ('cat', 'cat-uuid-1') in keys
+        assert ('sup', 'sup-1') in keys
+        assert ('sup', 'sup-2') in keys
+
+    def test_calculate_overlap_summary(self, organization):
+        """Test overlap summary calculation."""
+        service = AIInsightsService(organization)
+
+        insights = [
+            {
+                'potential_savings': 800,
+                '_original_savings': 1000,
+                '_overlap_reduction': 200,
+            },
+            {
+                'potential_savings': 500,
+                '_original_savings': 500,
+                '_overlap_reduction': 0,
+            }
+        ]
+
+        summary = service._calculate_overlap_summary(insights)
+
+        assert summary['total_original_savings'] == 1500
+        assert summary['total_adjusted_savings'] == 1300
+        assert summary['total_overlap_reduction'] == 200
+        assert summary['insights_with_overlap'] == 1
+        assert summary['deduplication_percentage'] > 0
+
+    def test_all_insights_includes_deduplication_summary(self, organization, admin_user):
+        """Test that get_all_insights includes deduplication metadata."""
+        category = CategoryFactory(organization=organization, name='Dedup Category')
+
+        # Create data that generates both cost optimization and consolidation
+        for i in range(5):
+            supplier = SupplierFactory(organization=organization, name=f'Dedup Supplier {i}')
+            TransactionFactory(
+                organization=organization,
+                supplier=supplier,
+                category=category,
+                subcategory='Same Subcategory',
+                uploaded_by=admin_user,
+                amount=Decimal(str(1000 * (i + 1))),
+                invoice_number=f'DEDUP-{i}'
+            )
+
+        service = AIInsightsService(organization)
+        result = service.get_all_insights()
+
+        # Summary should include deduplication info
+        assert 'deduplication_applied' in result['summary']
+        assert result['summary']['deduplication_applied'] is True
+        assert 'overlap_summary' in result['summary']
+
+    def test_all_insights_strips_internal_fields(self, organization, admin_user):
+        """Test that internal _attribution fields are stripped from response."""
+        category = CategoryFactory(organization=organization, name='Strip Category')
+        supplier = SupplierFactory(organization=organization, name='Strip Supplier')
+
+        for i in range(6):
+            TransactionFactory(
+                organization=organization,
+                supplier=supplier,
+                category=category,
+                uploaded_by=admin_user,
+                amount=Decimal('1000.00'),
+                invoice_number=f'STRIP-{i}'
+            )
+
+        service = AIInsightsService(organization)
+        result = service.get_all_insights()
+
+        # No insight should have _attribution or other underscore-prefixed keys
+        for insight in result['insights']:
+            for key in insight.keys():
+                assert not key.startswith('_'), f"Found internal field: {key}"

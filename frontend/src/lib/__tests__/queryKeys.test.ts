@@ -769,20 +769,41 @@ describe("Query Keys Factory", () => {
       expect(queryKeys.ai.all).toEqual(["ai"]);
     });
 
-    it("should generate insights key with params", () => {
-      const params = { type: "cost_optimization" };
-      const key = queryKeys.ai.insights(params, 1);
-      expect(key).toEqual(["ai", "insights", params, { orgId: 1 }]);
+    it("should generate insights key with orgId and filters", () => {
+      const filters = { category_ids: [1, 2] };
+      const key = queryKeys.ai.insights(1, filters);
+      expect(key).toEqual(["ai", "insights", { orgId: 1, filters }]);
     });
 
-    it("should generate predictions key with months", () => {
-      const key = queryKeys.ai.predictions(6, 1);
-      expect(key).toEqual(["ai", "predictions", 6, { orgId: 1 }]);
+    it("should generate insightsCost key with filters", () => {
+      const filters = { date_from: "2024-01-01" };
+      const key = queryKeys.ai.insightsCost(1, filters);
+      expect(key).toEqual(["ai", "insights-cost", { orgId: 1, filters }]);
     });
 
-    it("should generate anomalies key", () => {
-      const key = queryKeys.ai.anomalies(1);
-      expect(key).toEqual(["ai", "anomalies", { orgId: 1 }]);
+    it("should generate insightsAnomalies key with sensitivity", () => {
+      const key = queryKeys.ai.insightsAnomalies(0.5, 1, undefined);
+      expect(key).toEqual(["ai", "insights-anomalies", 0.5, { orgId: 1, filters: undefined }]);
+    });
+  });
+
+  // =====================
+  // Predictions Keys
+  // =====================
+  describe("predictions", () => {
+    it('should have correct "all" key', () => {
+      expect(queryKeys.predictions.all).toEqual(["predictions"]);
+    });
+
+    it("should generate spendingForecast key with months and filters", () => {
+      const filters = { supplier_ids: [1, 2] };
+      const key = queryKeys.predictions.spendingForecast(6, 1, filters);
+      expect(key).toEqual(["predictions", "spending-forecast", 6, { orgId: 1, filters }]);
+    });
+
+    it("should generate trendAnalysis key with filters", () => {
+      const key = queryKeys.predictions.trendAnalysis(1, undefined);
+      expect(key).toEqual(["predictions", "trend-analysis", { orgId: 1, filters: undefined }]);
     });
   });
 

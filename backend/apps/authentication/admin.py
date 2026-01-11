@@ -195,6 +195,30 @@ class OrganizationAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ['created_at', 'updated_at']
 
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'slug', 'description', 'is_active')
+        }),
+        ('Branding', {
+            'fields': ('logo', 'primary_color', 'secondary_color', 'website', 'report_footer'),
+            'classes': ('collapse',)
+        }),
+        ('AI Settings', {
+            'fields': ('ai_settings',),
+            'classes': ('collapse',)
+        }),
+        ('Savings Configuration', {
+            'fields': ('savings_config',),
+            'classes': ('collapse',),
+            'description': 'Configure industry-benchmark savings rates for AI Insights. '
+                          'Use benchmark_profile (conservative/moderate/aggressive) or set custom rates.'
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         # Annotate member count to avoid N+1

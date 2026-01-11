@@ -50,12 +50,14 @@ import {
   type Filters,
 } from "@/hooks/useFilters";
 import { useProcurementData } from "@/hooks/useProcurementData";
+import { useCategoryDetails } from "@/hooks/useAnalytics";
 import { useFilterPresets, type FilterPreset } from "@/hooks/useFilterPresets";
 import { toast } from "sonner";
 
 export function FilterPane() {
   const { data: filters } = useFilters() as { data: Filters | undefined };
   const { data: procurementData = [] } = useProcurementData();
+  const { data: categoryDetails = [] } = useCategoryDetails();
   const updateFilters = useUpdateFilters();
   const resetFilters = useResetFilters();
   const { presets, savePreset, deletePreset, nameExists } = useFilterPresets();
@@ -74,35 +76,26 @@ export function FilterPane() {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [presetName, setPresetName] = useState("");
 
-  // Get unique categories, suppliers, locations, and years from data
+  // Get unique suppliers, locations, years from procurement data
   const {
-    uniqueCategories,
-    uniqueSubcategories,
     uniqueSuppliers,
     uniqueLocations,
     uniqueYears,
   } = useMemo(() => {
-    const categories = new Set<string>();
-    const subcategories = new Set<string>();
     const suppliers = new Set<string>();
     const locations = new Set<string>();
     const years = new Set<string>();
 
     procurementData.forEach(
       (item: {
-        category?: string;
-        subcategory?: string;
         supplier?: string;
         location?: string;
         date?: string;
         year?: number;
       }) => {
-        if (item.category) categories.add(item.category);
-        if (item.subcategory) subcategories.add(item.subcategory);
         if (item.supplier) suppliers.add(item.supplier);
         if (item.location) locations.add(item.location);
 
-        // Use year field if available, otherwise extract from date
         if (item.year) {
           years.add(item.year.toString());
         } else if (item.date) {
@@ -113,13 +106,90 @@ export function FilterPane() {
     );
 
     return {
-      uniqueCategories: Array.from(categories).sort(),
-      uniqueSubcategories: Array.from(subcategories).sort(),
       uniqueSuppliers: Array.from(suppliers).sort(),
       uniqueLocations: Array.from(locations).sort(),
-      uniqueYears: Array.from(years).sort((a, b) => parseInt(b) - parseInt(a)), // Sort years descending
+      uniqueYears: Array.from(years).sort((a, b) => parseInt(b) - parseInt(a)),
     };
   }, [procurementData]);
+
+  // Get categories and subcategories from backend category details (proper hierarchy)
+  const {
+    uniqueCategories,
+    uniqueSubcategories,
+    categorySubcategoryMap,
+  } = useMemo(() => {
+    const categories: string[] = [];
+    const subcategories = new Set<string>();
+    const catSubMap = new Map<string, Set<string>>();
+
+    categoryDetails.forEach((cat: { category: string; subcategories?: Array<{ name: string }> }) => {
+      categories.push(cat.category);
+
+      if (cat.subcategories && cat.subcategories.length > 0) {
+        const subSet = new Set<string>();
+        cat.subcategories.forEach((sub) => {
+          subSet.add(sub.name);
+          subcategories.add(sub.name);
+        });
+        catSubMap.set(cat.category, subSet);
+      }
+    });
+
+    return {
+      uniqueCategories: categories.sort(),
+      uniqueSubcategories: Array.from(subcategories).sort(),
+      categorySubcategoryMap: catSubMap,
+    };
+  }, [categoryDetails]);
+
+  // Filter available subcategories based on selected categories
+  const availableSubcategories = useMemo(() => {
+    const selectedCategories = filters?.categories || [];
+
+    // If no categories selected, show all subcategories
+    if (selectedCategories.length === 0) {
+      return uniqueSubcategories;
+    }
+
+    // Otherwise, show only subcategories belonging to selected categories
+    const filteredSubcategories = new Set<string>();
+    selectedCategories.forEach((category) => {
+      const subs = categorySubcategoryMap.get(category);
+      if (subs) {
+        subs.forEach((sub) => filteredSubcategories.add(sub));
+      }
+    });
+
+    return Array.from(filteredSubcategories).sort();
+  }, [filters?.categories, categorySubcategoryMap, uniqueSubcategories]);
+
+  // Handle category change with automatic subcategory cleanup
+  const handleCategoryChange = (selected: string[]) => {
+    // First, update categories
+    updateFilters.mutate({ categories: selected });
+
+    // If categories were selected, check if current subcategories are still valid
+    if (selected.length > 0 && filters?.subcategories && filters.subcategories.length > 0) {
+      // Get all valid subcategories for the new category selection
+      const validSubcategories = new Set<string>();
+      selected.forEach((category) => {
+        const subs = categorySubcategoryMap.get(category);
+        if (subs) {
+          subs.forEach((sub) => validSubcategories.add(sub));
+        }
+      });
+
+      // Filter out any subcategories that are no longer valid
+      const validSelectedSubcategories = filters.subcategories.filter((sub) =>
+        validSubcategories.has(sub)
+      );
+
+      // If any subcategories were removed, update the filter
+      if (validSelectedSubcategories.length !== filters.subcategories.length) {
+        updateFilters.mutate({ subcategories: validSelectedSubcategories });
+      }
+    }
+  };
 
   // Count active filters
   const activeFilterCount = useMemo(() => {
@@ -550,9 +620,7 @@ export function FilterPane() {
           <MultiSelect
             options={uniqueCategories}
             selected={filters.categories}
-            onChange={(selected) =>
-              updateFilters.mutate({ categories: selected })
-            }
+            onChange={handleCategoryChange}
             placeholder="Select categories..."
             emptyMessage="No categories available"
           />
@@ -560,15 +628,30 @@ export function FilterPane() {
 
         {/* Subcategory Filter */}
         <div className="space-y-3">
-          <Label className="text-sm font-medium">Subcategories</Label>
+          <Label className="text-sm font-medium">
+            Subcategories
+            {filters.categories.length > 0 && (
+              <span className="text-xs text-muted-foreground ml-1">
+                (filtered by {filters.categories.length} {filters.categories.length === 1 ? "category" : "categories"})
+              </span>
+            )}
+          </Label>
           <MultiSelect
-            options={uniqueSubcategories}
+            options={availableSubcategories}
             selected={filters.subcategories}
             onChange={(selected) =>
               updateFilters.mutate({ subcategories: selected })
             }
-            placeholder="Select subcategories..."
-            emptyMessage="No subcategories available"
+            placeholder={
+              filters.categories.length > 0
+                ? "Select subcategories..."
+                : "Select categories first or choose any..."
+            }
+            emptyMessage={
+              filters.categories.length > 0
+                ? "No subcategories for selected categories"
+                : "No subcategories available"
+            }
           />
         </div>
 

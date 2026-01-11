@@ -275,3 +275,64 @@ class UpdateMembershipSerializer(serializers.Serializer):
     )
     is_primary = serializers.BooleanField(required=False)
     is_active = serializers.BooleanField(required=False)
+
+
+class SavingsConfigSerializer(serializers.Serializer):
+    """
+    Serializer for organization savings configuration.
+
+    Validates savings rate configuration based on industry benchmarks
+    (FY2025 Procurement Savings Initiative).
+    """
+    benchmark_profile = serializers.ChoiceField(
+        choices=['conservative', 'moderate', 'aggressive', 'custom'],
+        required=False
+    )
+    consolidation_rate = serializers.FloatField(
+        min_value=0.005,
+        max_value=0.15,
+        required=False,
+        help_text='Vendor consolidation rate (0.5-15%)'
+    )
+    anomaly_recovery_rate = serializers.FloatField(
+        min_value=0.001,
+        max_value=0.05,
+        required=False,
+        help_text='Anomaly/invoice error recovery rate (0.1-5%)'
+    )
+    price_variance_capture = serializers.FloatField(
+        min_value=0.10,
+        max_value=0.90,
+        required=False,
+        help_text='Price variance negotiation capture rate (10-90%)'
+    )
+    specification_rate = serializers.FloatField(
+        min_value=0.005,
+        max_value=0.10,
+        required=False,
+        help_text='Specification standardization rate (0.5-10%)'
+    )
+    payment_terms_rate = serializers.FloatField(
+        min_value=0.001,
+        max_value=0.03,
+        required=False,
+        help_text='Payment terms optimization rate (0.1-3%)'
+    )
+    process_savings_per_txn = serializers.FloatField(
+        min_value=10,
+        max_value=100,
+        required=False,
+        help_text='Process automation savings per transaction ($10-100)'
+    )
+    enabled_insights = serializers.ListField(
+        child=serializers.ChoiceField(
+            choices=['consolidation', 'anomaly', 'cost_optimization', 'risk']
+        ),
+        required=False,
+        help_text='List of enabled insight types'
+    )
+
+    def validate(self, attrs):
+        """Filter to only allowed keys."""
+        allowed_keys = Organization.ALLOWED_SAVINGS_CONFIG_KEYS
+        return {k: v for k, v in attrs.items() if k in allowed_keys}

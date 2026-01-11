@@ -3,9 +3,15 @@
  *
  * All hooks include organization_id in query keys to properly
  * invalidate cache when switching organizations (superuser feature).
+ *
+ * Filter support: Predictions hooks now accept filters from the FilterPane
+ * via the useAnalyticsFilters() hook. Filters are passed to backend APIs
+ * and included in query keys for proper cache invalidation.
  */
 import { useQuery } from "@tanstack/react-query";
 import { analyticsAPI, getOrganizationParam } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
+import { useAnalyticsFilters } from "./useAnalytics";
 import type { TrendDirection } from "@/lib/api";
 
 /**
@@ -22,10 +28,11 @@ function getOrgKeyPart(): number | undefined {
  */
 export function useSpendingForecast(months: number = 6) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["spending-forecast", months, { orgId }],
+    queryKey: queryKeys.predictions.spendingForecast(months, orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getSpendingForecast(months);
+      const response = await analyticsAPI.getSpendingForecast(months, filters);
       return response.data;
     },
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
@@ -38,12 +45,14 @@ export function useSpendingForecast(months: number = 6) {
  */
 export function useCategoryForecast(categoryId: number, months: number = 6) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["category-forecast", categoryId, months, { orgId }],
+    queryKey: queryKeys.predictions.categoryForecast(categoryId, months, orgId, filters),
     queryFn: async () => {
       const response = await analyticsAPI.getCategoryForecast(
         categoryId,
         months,
+        filters,
       );
       return response.data;
     },
@@ -57,12 +66,14 @@ export function useCategoryForecast(categoryId: number, months: number = 6) {
  */
 export function useSupplierForecast(supplierId: number, months: number = 6) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["supplier-forecast", supplierId, months, { orgId }],
+    queryKey: queryKeys.predictions.supplierForecast(supplierId, months, orgId, filters),
     queryFn: async () => {
       const response = await analyticsAPI.getSupplierForecast(
         supplierId,
         months,
+        filters,
       );
       return response.data;
     },
@@ -76,10 +87,11 @@ export function useSupplierForecast(supplierId: number, months: number = 6) {
  */
 export function useTrendAnalysis() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["trend-analysis", { orgId }],
+    queryKey: queryKeys.predictions.trendAnalysis(orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getTrendAnalysis();
+      const response = await analyticsAPI.getTrendAnalysis(filters);
       return response.data;
     },
     staleTime: 5 * 60 * 1000,
@@ -91,10 +103,11 @@ export function useTrendAnalysis() {
  */
 export function useBudgetProjection(annualBudget: number) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["budget-projection", annualBudget, { orgId }],
+    queryKey: queryKeys.predictions.budgetProjection(annualBudget, orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getBudgetProjection(annualBudget);
+      const response = await analyticsAPI.getBudgetProjection(annualBudget, filters);
       return response.data;
     },
     staleTime: 5 * 60 * 1000,

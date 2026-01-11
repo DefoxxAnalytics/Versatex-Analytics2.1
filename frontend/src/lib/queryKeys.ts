@@ -28,6 +28,21 @@
  * @module queryKeys
  */
 
+// Type for analytics filter parameters in query keys
+export type FilterParams = {
+  date_from?: string;
+  date_to?: string;
+  supplier_ids?: number[];
+  supplier_names?: string[];
+  category_ids?: number[];
+  category_names?: string[];
+  subcategories?: string[];
+  locations?: string[];
+  years?: number[];
+  min_amount?: number;
+  max_amount?: number;
+};
+
 export const queryKeys = {
   // =========================================================================
   // Procurement
@@ -78,63 +93,66 @@ export const queryKeys = {
   // =========================================================================
   analytics: {
     all: ["analytics"] as const,
-    overview: (orgId?: number) => ["analytics", "overview", { orgId }] as const,
-    spendByCategory: (orgId?: number) =>
-      ["analytics", "spend-by-category", { orgId }] as const,
-    spendBySupplier: (orgId?: number) =>
-      ["analytics", "spend-by-supplier", { orgId }] as const,
-    monthlyTrend: (months: number, orgId?: number) =>
-      ["analytics", "monthly-trend", months, { orgId }] as const,
+    overview: (orgId?: number, filters?: FilterParams) =>
+      ["analytics", "overview", { orgId, filters }] as const,
+    spendByCategory: (orgId?: number, filters?: FilterParams) =>
+      ["analytics", "spend-by-category", { orgId, filters }] as const,
+    spendBySupplier: (orgId?: number, filters?: FilterParams) =>
+      ["analytics", "spend-by-supplier", { orgId, filters }] as const,
+    monthlyTrend: (months: number, orgId?: number, filters?: FilterParams) =>
+      ["analytics", "monthly-trend", months, { orgId, filters }] as const,
 
     // Pareto Analysis
-    pareto: (orgId?: number) => ["analytics", "pareto", { orgId }] as const,
+    pareto: (orgId?: number, filters?: FilterParams) =>
+      ["analytics", "pareto", { orgId, filters }] as const,
     paretoDetailed: (orgId?: number) =>
       ["analytics", "pareto-detailed", { orgId }] as const,
     paretoDrilldown: (supplierId: number, orgId?: number) =>
       ["analytics", "pareto-drilldown", supplierId, { orgId }] as const,
 
     // Detailed views
-    categoryDetails: (orgId?: number) =>
-      ["analytics", "category-details", { orgId }] as const,
-    supplierDetails: (orgId?: number) =>
-      ["analytics", "supplier-details", { orgId }] as const,
+    categoryDetails: (orgId?: number, filters?: FilterParams) =>
+      ["analytics", "category-details", { orgId, filters }] as const,
+    supplierDetails: (orgId?: number, filters?: FilterParams) =>
+      ["analytics", "supplier-details", { orgId, filters }] as const,
 
     // Drilldowns
-    supplierDrilldown: (supplierId: number, orgId?: number) =>
-      ["analytics", "supplier-drilldown", supplierId, { orgId }] as const,
+    supplierDrilldown: (supplierId: number, orgId?: number, filters?: FilterParams) =>
+      ["analytics", "supplier-drilldown", supplierId, { orgId, filters }] as const,
     categoryDrilldown: (categoryId: number, orgId?: number) =>
       ["analytics", "category-drilldown", categoryId, { orgId }] as const,
-    segmentDrilldown: (segment: string, orgId?: number) =>
-      ["analytics", "segment-drilldown", segment, { orgId }] as const,
-    bandDrilldown: (band: string, orgId?: number) =>
-      ["analytics", "band-drilldown", band, { orgId }] as const,
+    segmentDrilldown: (segment: string, orgId?: number, filters?: FilterParams) =>
+      ["analytics", "segment-drilldown", segment, { orgId, filters }] as const,
+    bandDrilldown: (band: string, orgId?: number, filters?: FilterParams) =>
+      ["analytics", "band-drilldown", band, { orgId, filters }] as const,
 
     // Stratification
-    stratification: (orgId?: number) =>
-      ["analytics", "stratification", { orgId }] as const,
-    stratificationDetailed: (orgId?: number) =>
-      ["analytics", "stratification-detailed", { orgId }] as const,
+    stratification: (orgId?: number, filters?: FilterParams) =>
+      ["analytics", "stratification", { orgId, filters }] as const,
+    stratificationDetailed: (orgId?: number, filters?: FilterParams) =>
+      ["analytics", "stratification-detailed", { orgId, filters }] as const,
     stratificationSegment: (segment: string, orgId?: number) =>
       ["analytics", "stratification-segment", segment, { orgId }] as const,
     stratificationBand: (band: string, orgId?: number) =>
       ["analytics", "stratification-band", band, { orgId }] as const,
 
     // Seasonality
-    seasonality: (useFiscalYear: boolean, orgId?: number) =>
-      ["analytics", "seasonality", useFiscalYear, { orgId }] as const,
-    seasonalityDetailed: (useFiscalYear: boolean, orgId?: number) =>
-      ["analytics", "seasonality-detailed", useFiscalYear, { orgId }] as const,
+    seasonality: (useFiscalYear: boolean, orgId?: number, filters?: FilterParams) =>
+      ["analytics", "seasonality", useFiscalYear, { orgId, filters }] as const,
+    seasonalityDetailed: (useFiscalYear: boolean, orgId?: number, filters?: FilterParams) =>
+      ["analytics", "seasonality-detailed", useFiscalYear, { orgId, filters }] as const,
     seasonalityCategoryDrilldown: (
       categoryId: number,
       useFiscalYear: boolean,
       orgId?: number,
+      filters?: FilterParams,
     ) =>
       [
         "analytics",
         "seasonality-category",
         categoryId,
         useFiscalYear,
-        { orgId },
+        { orgId, filters },
       ] as const,
 
     // Year over Year
@@ -143,12 +161,14 @@ export const queryKeys = {
       year1: number,
       year2: number,
       orgId?: number,
-    ) => ["analytics", "yoy", useFiscalYear, year1, year2, { orgId }] as const,
+      filters?: FilterParams,
+    ) => ["analytics", "yoy", useFiscalYear, year1, year2, { orgId, filters }] as const,
     yoyDetailed: (
       useFiscalYear: boolean,
       year1: number,
       year2: number,
       orgId?: number,
+      filters?: FilterParams,
     ) =>
       [
         "analytics",
@@ -156,7 +176,7 @@ export const queryKeys = {
         useFiscalYear,
         year1,
         year2,
-        { orgId },
+        { orgId, filters },
       ] as const,
     yoyCategoryDrilldown: (
       categoryId: number,
@@ -164,6 +184,7 @@ export const queryKeys = {
       year1: number,
       year2: number,
       orgId?: number,
+      filters?: FilterParams,
     ) =>
       [
         "analytics",
@@ -172,7 +193,7 @@ export const queryKeys = {
         useFiscalYear,
         year1,
         year2,
-        { orgId },
+        { orgId, filters },
       ] as const,
     yoySupplierDrilldown: (
       supplierId: number,
@@ -180,6 +201,7 @@ export const queryKeys = {
       year1: number,
       year2: number,
       orgId?: number,
+      filters?: FilterParams,
     ) =>
       [
         "analytics",
@@ -188,42 +210,44 @@ export const queryKeys = {
         useFiscalYear,
         year1,
         year2,
-        { orgId },
+        { orgId, filters },
       ] as const,
 
     // Tail Spend
-    tailSpend: (threshold: number, orgId?: number) =>
-      ["analytics", "tail-spend", threshold, { orgId }] as const,
-    tailSpendDetailed: (threshold: number, orgId?: number) =>
-      ["analytics", "tail-spend-detailed", threshold, { orgId }] as const,
+    tailSpend: (threshold: number, orgId?: number, filters?: FilterParams) =>
+      ["analytics", "tail-spend", threshold, { orgId, filters }] as const,
+    tailSpendDetailed: (threshold: number, orgId?: number, filters?: FilterParams) =>
+      ["analytics", "tail-spend-detailed", threshold, { orgId, filters }] as const,
     tailSpendCategoryDrilldown: (
       categoryId: number,
       threshold: number,
       orgId?: number,
+      filters?: FilterParams,
     ) =>
       [
         "analytics",
         "tail-spend-category",
         categoryId,
         threshold,
-        { orgId },
+        { orgId, filters },
       ] as const,
     tailSpendVendorDrilldown: (
       vendorId: number,
       threshold: number,
       orgId?: number,
+      filters?: FilterParams,
     ) =>
       [
         "analytics",
         "tail-spend-vendor",
         vendorId,
         threshold,
-        { orgId },
+        { orgId, filters },
       ] as const,
 
     // Consolidation
-    consolidation: (orgId?: number) =>
-      ["analytics", "consolidation", { orgId }] as const,
+    consolidation: (orgId?: number, filters?: FilterParams) =>
+      ["analytics", "consolidation", { orgId, filters }] as const,
   },
 
   // =========================================================================
@@ -233,77 +257,82 @@ export const queryKeys = {
     all: ["p2p"] as const,
 
     // Cycle Time
-    cycleOverview: (orgId?: number) =>
-      ["p2p", "cycle-overview", { orgId }] as const,
-    cycleByCategory: (orgId?: number) =>
-      ["p2p", "cycle-by-category", { orgId }] as const,
-    cycleBySupplier: (orgId?: number) =>
-      ["p2p", "cycle-by-supplier", { orgId }] as const,
-    cycleTrends: (months: number, orgId?: number) =>
-      ["p2p", "cycle-trends", months, { orgId }] as const,
-    bottlenecks: (orgId?: number) => ["p2p", "bottlenecks", { orgId }] as const,
-    processFunnel: (orgId?: number) =>
-      ["p2p", "process-funnel", { orgId }] as const,
-    stageDrilldown: (stage: string, orgId?: number) =>
-      ["p2p", "stage-drilldown", stage, { orgId }] as const,
+    cycleOverview: (orgId?: number, filters?: FilterParams) =>
+      ["p2p", "cycle-overview", { orgId, filters }] as const,
+    cycleByCategory: (orgId?: number, filters?: FilterParams) =>
+      ["p2p", "cycle-by-category", { orgId, filters }] as const,
+    cycleBySupplier: (orgId?: number, filters?: FilterParams) =>
+      ["p2p", "cycle-by-supplier", { orgId, filters }] as const,
+    cycleTrends: (months: number, orgId?: number, filters?: FilterParams) =>
+      ["p2p", "cycle-trends", months, { orgId, filters }] as const,
+    bottlenecks: (orgId?: number, filters?: FilterParams) =>
+      ["p2p", "bottlenecks", { orgId, filters }] as const,
+    processFunnel: (orgId?: number, filters?: FilterParams) =>
+      ["p2p", "process-funnel", { orgId, filters }] as const,
+    stageDrilldown: (stage: string, orgId?: number, filters?: FilterParams) =>
+      ["p2p", "stage-drilldown", stage, { orgId, filters }] as const,
 
     // Matching
-    matchingOverview: (orgId?: number) =>
-      ["p2p", "matching-overview", { orgId }] as const,
-    matchingExceptions: (orgId?: number) =>
-      ["p2p", "matching-exceptions", { orgId }] as const,
-    exceptionsByType: (orgId?: number) =>
-      ["p2p", "exceptions-by-type", { orgId }] as const,
-    exceptionsBySupplier: (orgId?: number) =>
-      ["p2p", "exceptions-by-supplier", { orgId }] as const,
-    priceVariance: (orgId?: number) =>
-      ["p2p", "price-variance", { orgId }] as const,
-    quantityVariance: (orgId?: number) =>
-      ["p2p", "quantity-variance", { orgId }] as const,
-    invoiceMatchDetail: (invoiceId: number, orgId?: number) =>
-      ["p2p", "invoice-match", invoiceId, { orgId }] as const,
+    matchingOverview: (orgId?: number, filters?: FilterParams) =>
+      ["p2p", "matching-overview", { orgId, filters }] as const,
+    matchingExceptions: (orgId?: number, filters?: FilterParams) =>
+      ["p2p", "matching-exceptions", { orgId, filters }] as const,
+    exceptionsByType: (orgId?: number, filters?: FilterParams) =>
+      ["p2p", "exceptions-by-type", { orgId, filters }] as const,
+    exceptionsBySupplier: (orgId?: number, filters?: FilterParams) =>
+      ["p2p", "exceptions-by-supplier", { orgId, filters }] as const,
+    priceVariance: (orgId?: number, filters?: FilterParams) =>
+      ["p2p", "price-variance", { orgId, filters }] as const,
+    quantityVariance: (orgId?: number, filters?: FilterParams) =>
+      ["p2p", "quantity-variance", { orgId, filters }] as const,
+    invoiceMatchDetail: (invoiceId: number, orgId?: number, filters?: FilterParams) =>
+      ["p2p", "invoice-match", invoiceId, { orgId, filters }] as const,
 
     // Aging
-    agingOverview: (orgId?: number) =>
-      ["p2p", "aging-overview", { orgId }] as const,
-    agingBySupplier: (orgId?: number) =>
-      ["p2p", "aging-by-supplier", { orgId }] as const,
-    paymentTermsCompliance: (orgId?: number) =>
-      ["p2p", "payment-terms-compliance", { orgId }] as const,
-    dpoTrends: (months: number, orgId?: number) =>
-      ["p2p", "dpo-trends", months, { orgId }] as const,
-    cashForecast: (weeks: number, orgId?: number) =>
-      ["p2p", "cash-forecast", weeks, { orgId }] as const,
+    agingOverview: (orgId?: number, filters?: FilterParams) =>
+      ["p2p", "aging-overview", { orgId, filters }] as const,
+    agingBySupplier: (orgId?: number, filters?: FilterParams) =>
+      ["p2p", "aging-by-supplier", { orgId, filters }] as const,
+    paymentTermsCompliance: (orgId?: number, filters?: FilterParams) =>
+      ["p2p", "payment-terms-compliance", { orgId, filters }] as const,
+    dpoTrends: (months: number, orgId?: number, filters?: FilterParams) =>
+      ["p2p", "dpo-trends", months, { orgId, filters }] as const,
+    cashForecast: (weeks: number, orgId?: number, filters?: FilterParams) =>
+      ["p2p", "cash-forecast", weeks, { orgId, filters }] as const,
 
     // Requisitions
-    prOverview: (orgId?: number) => ["p2p", "pr-overview", { orgId }] as const,
-    prApprovalAnalysis: (orgId?: number) =>
-      ["p2p", "pr-approval-analysis", { orgId }] as const,
-    prByDepartment: (orgId?: number) =>
-      ["p2p", "pr-by-department", { orgId }] as const,
-    prPending: (orgId?: number) => ["p2p", "pr-pending", { orgId }] as const,
-    prDetail: (prId: number, orgId?: number) =>
-      ["p2p", "pr-detail", prId, { orgId }] as const,
+    prOverview: (orgId?: number, filters?: FilterParams) =>
+      ["p2p", "pr-overview", { orgId, filters }] as const,
+    prApprovalAnalysis: (orgId?: number, filters?: FilterParams) =>
+      ["p2p", "pr-approval-analysis", { orgId, filters }] as const,
+    prByDepartment: (orgId?: number, filters?: FilterParams) =>
+      ["p2p", "pr-by-department", { orgId, filters }] as const,
+    prPending: (orgId?: number, filters?: FilterParams) =>
+      ["p2p", "pr-pending", { orgId, filters }] as const,
+    prDetail: (prId: number, orgId?: number, filters?: FilterParams) =>
+      ["p2p", "pr-detail", prId, { orgId, filters }] as const,
 
     // Purchase Orders
-    poOverview: (orgId?: number) => ["p2p", "po-overview", { orgId }] as const,
-    poLeakage: (orgId?: number) => ["p2p", "po-leakage", { orgId }] as const,
-    poAmendments: (orgId?: number) =>
-      ["p2p", "po-amendments", { orgId }] as const,
-    poBySupplier: (orgId?: number) =>
-      ["p2p", "po-by-supplier", { orgId }] as const,
-    poDetail: (poId: number, orgId?: number) =>
-      ["p2p", "po-detail", poId, { orgId }] as const,
+    poOverview: (orgId?: number, filters?: FilterParams) =>
+      ["p2p", "po-overview", { orgId, filters }] as const,
+    poLeakage: (orgId?: number, filters?: FilterParams) =>
+      ["p2p", "po-leakage", { orgId, filters }] as const,
+    poAmendments: (orgId?: number, filters?: FilterParams) =>
+      ["p2p", "po-amendments", { orgId, filters }] as const,
+    poBySupplier: (orgId?: number, filters?: FilterParams) =>
+      ["p2p", "po-by-supplier", { orgId, filters }] as const,
+    poDetail: (poId: number, orgId?: number, filters?: FilterParams) =>
+      ["p2p", "po-detail", poId, { orgId, filters }] as const,
 
     // Supplier Payments
-    supplierPaymentsOverview: (orgId?: number) =>
-      ["p2p", "supplier-payments-overview", { orgId }] as const,
-    supplierPaymentsScorecard: (orgId?: number) =>
-      ["p2p", "supplier-payments-scorecard", { orgId }] as const,
-    supplierPaymentDetail: (supplierId: number, orgId?: number) =>
-      ["p2p", "supplier-payment-detail", supplierId, { orgId }] as const,
-    supplierPaymentHistory: (supplierId: number, orgId?: number) =>
-      ["p2p", "supplier-payment-history", supplierId, { orgId }] as const,
+    supplierPaymentsOverview: (orgId?: number, filters?: FilterParams) =>
+      ["p2p", "supplier-payments-overview", { orgId, filters }] as const,
+    supplierPaymentsScorecard: (orgId?: number, filters?: FilterParams) =>
+      ["p2p", "supplier-payments-scorecard", { orgId, filters }] as const,
+    supplierPaymentDetail: (supplierId: number, orgId?: number, filters?: FilterParams) =>
+      ["p2p", "supplier-payment-detail", supplierId, { orgId, filters }] as const,
+    supplierPaymentHistory: (supplierId: number, orgId?: number, filters?: FilterParams) =>
+      ["p2p", "supplier-payment-history", supplierId, { orgId, filters }] as const,
   },
 
   // =========================================================================
@@ -328,10 +357,22 @@ export const queryKeys = {
   // =========================================================================
   contracts: {
     all: ["contracts"] as const,
-    overview: (orgId?: number) => ["contracts", "overview", { orgId }] as const,
-    list: (orgId?: number) => ["contracts", "list", { orgId }] as const,
-    detail: (contractId: number, orgId?: number) =>
-      ["contracts", "detail", contractId, { orgId }] as const,
+    overview: (orgId?: number, filters?: FilterParams) =>
+      ["contracts", "overview", { orgId, filters }] as const,
+    list: (orgId?: number, filters?: FilterParams) =>
+      ["contracts", "list", { orgId, filters }] as const,
+    detail: (contractId: number, orgId?: number, filters?: FilterParams) =>
+      ["contracts", "detail", contractId, { orgId, filters }] as const,
+    expiring: (days: number, orgId?: number, filters?: FilterParams) =>
+      ["contracts", "expiring", days, { orgId, filters }] as const,
+    performance: (contractId: number, orgId?: number, filters?: FilterParams) =>
+      ["contracts", "performance", contractId, { orgId, filters }] as const,
+    savings: (orgId?: number, filters?: FilterParams) =>
+      ["contracts", "savings", { orgId, filters }] as const,
+    renewals: (orgId?: number, filters?: FilterParams) =>
+      ["contracts", "renewals", { orgId, filters }] as const,
+    vsActual: (contractId: number | undefined, orgId?: number, filters?: FilterParams) =>
+      ["contracts", "vs-actual", contractId, { orgId, filters }] as const,
   },
 
   // =========================================================================
@@ -339,24 +380,58 @@ export const queryKeys = {
   // =========================================================================
   compliance: {
     all: ["compliance"] as const,
-    overview: (orgId?: number) =>
-      ["compliance", "overview", { orgId }] as const,
-    violations: (params?: Record<string, unknown>, orgId?: number) =>
-      ["compliance", "violations", params, { orgId }] as const,
-    maverick: (orgId?: number) =>
-      ["compliance", "maverick", { orgId }] as const,
+    overview: (orgId?: number, filters?: FilterParams) =>
+      ["compliance", "overview", { orgId, filters }] as const,
+    violations: (params?: Record<string, unknown>, orgId?: number, filters?: FilterParams) =>
+      ["compliance", "violations", params, { orgId, filters }] as const,
+    maverick: (orgId?: number, filters?: FilterParams) =>
+      ["compliance", "maverick", { orgId, filters }] as const,
+    violationTrends: (months: number, orgId?: number, filters?: FilterParams) =>
+      ["compliance", "violation-trends", months, { orgId, filters }] as const,
+    supplierScores: (orgId?: number, filters?: FilterParams) =>
+      ["compliance", "supplier-scores", { orgId, filters }] as const,
+    policies: (orgId?: number, filters?: FilterParams) =>
+      ["compliance", "policies", { orgId, filters }] as const,
   },
 
   // =========================================================================
-  // AI & Predictive Analytics
+  // AI Insights
   // =========================================================================
   ai: {
     all: ["ai"] as const,
-    insights: (params?: Record<string, unknown>, orgId?: number) =>
-      ["ai", "insights", params, { orgId }] as const,
-    predictions: (months: number, orgId?: number) =>
-      ["ai", "predictions", months, { orgId }] as const,
-    anomalies: (orgId?: number) => ["ai", "anomalies", { orgId }] as const,
+    insights: (orgId?: number, filters?: FilterParams) =>
+      ["ai", "insights", { orgId, filters }] as const,
+    insightsCost: (orgId?: number, filters?: FilterParams) =>
+      ["ai", "insights-cost", { orgId, filters }] as const,
+    insightsRisk: (orgId?: number, filters?: FilterParams) =>
+      ["ai", "insights-risk", { orgId, filters }] as const,
+    insightsAnomalies: (sensitivity: number, orgId?: number, filters?: FilterParams) =>
+      ["ai", "insights-anomalies", sensitivity, { orgId, filters }] as const,
+    asyncEnhancementStatus: (orgId?: number) =>
+      ["ai", "async-enhancement-status", { orgId }] as const,
+    deepAnalysisStatus: (insightId: string | null, orgId?: number) =>
+      ["ai", "deep-analysis-status", insightId, { orgId }] as const,
+    insightFeedback: (params?: Record<string, unknown>, orgId?: number) =>
+      ["ai", "insight-feedback", params, { orgId }] as const,
+    insightEffectiveness: (orgId?: number) =>
+      ["ai", "insight-effectiveness", { orgId }] as const,
+  },
+
+  // =========================================================================
+  // Predictive Analytics
+  // =========================================================================
+  predictions: {
+    all: ["predictions"] as const,
+    spendingForecast: (months: number, orgId?: number, filters?: FilterParams) =>
+      ["predictions", "spending-forecast", months, { orgId, filters }] as const,
+    categoryForecast: (categoryId: number, months: number, orgId?: number, filters?: FilterParams) =>
+      ["predictions", "category-forecast", categoryId, months, { orgId, filters }] as const,
+    supplierForecast: (supplierId: number, months: number, orgId?: number, filters?: FilterParams) =>
+      ["predictions", "supplier-forecast", supplierId, months, { orgId, filters }] as const,
+    trendAnalysis: (orgId?: number, filters?: FilterParams) =>
+      ["predictions", "trend-analysis", { orgId, filters }] as const,
+    budgetProjection: (annualBudget: number, orgId?: number, filters?: FilterParams) =>
+      ["predictions", "budget-projection", annualBudget, { orgId, filters }] as const,
   },
 
   // =========================================================================
@@ -378,6 +453,15 @@ export const queryKeys = {
   },
 
   // =========================================================================
+  // Organization Settings (org-scoped, admin only)
+  // =========================================================================
+  orgSettings: {
+    all: ["orgSettings"] as const,
+    savingsConfig: (orgId: number) =>
+      ["orgSettings", "savingsConfig", { orgId }] as const,
+  },
+
+  // =========================================================================
   // Filters (not org-scoped, stored in localStorage)
   // =========================================================================
   filters: {
@@ -390,3 +474,8 @@ export type QueryKeys = typeof queryKeys;
 export type AnalyticsQueryKeys = typeof queryKeys.analytics;
 export type P2PQueryKeys = typeof queryKeys.p2p;
 export type ReportsQueryKeys = typeof queryKeys.reports;
+export type ContractsQueryKeys = typeof queryKeys.contracts;
+export type ComplianceQueryKeys = typeof queryKeys.compliance;
+export type AIQueryKeys = typeof queryKeys.ai;
+export type PredictionsQueryKeys = typeof queryKeys.predictions;
+export type OrgSettingsQueryKeys = typeof queryKeys.orgSettings;

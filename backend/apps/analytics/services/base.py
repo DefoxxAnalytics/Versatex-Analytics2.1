@@ -34,6 +34,9 @@ class BaseAnalyticsService:
                 - date_to: End date (str 'YYYY-MM-DD' or date)
                 - supplier_ids: List of supplier IDs to include
                 - category_ids: List of category IDs to include
+                - subcategories: List of subcategory names to include
+                - locations: List of location names to include
+                - years: List of fiscal years to include
                 - min_amount: Minimum transaction amount
                 - max_amount: Maximum transaction amount
         """
@@ -65,6 +68,21 @@ class BaseAnalyticsService:
         if category_ids := self.filters.get('category_ids'):
             if isinstance(category_ids, list) and category_ids:
                 qs = qs.filter(category_id__in=category_ids)
+
+        # Subcategory filter (string names)
+        if subcategories := self.filters.get('subcategories'):
+            if isinstance(subcategories, list) and subcategories:
+                qs = qs.filter(subcategory__in=subcategories)
+
+        # Location filter (string names)
+        if locations := self.filters.get('locations'):
+            if isinstance(locations, list) and locations:
+                qs = qs.filter(location__in=locations)
+
+        # Fiscal year filter
+        if years := self.filters.get('years'):
+            if isinstance(years, list) and years:
+                qs = qs.filter(fiscal_year__in=years)
 
         # Amount range filters
         if min_amount := self.filters.get('min_amount'):

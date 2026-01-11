@@ -3,9 +3,15 @@
  *
  * All hooks include organization_id in query keys to properly
  * invalidate cache when switching organizations (superuser feature).
+ *
+ * Filter support: Contracts hooks now accept filters from the FilterPane
+ * via the useAnalyticsFilters() hook. Filters are passed to backend APIs
+ * and included in query keys for proper cache invalidation.
  */
 import { useQuery } from "@tanstack/react-query";
 import { analyticsAPI, getOrganizationParam } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
+import { useAnalyticsFilters } from "./useAnalytics";
 import type { ContractStatus } from "@/lib/api";
 
 /**
@@ -22,10 +28,11 @@ function getOrgKeyPart(): number | undefined {
  */
 export function useContractOverview() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["contract-overview", { orgId }],
+    queryKey: queryKeys.contracts.overview(orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getContractOverview();
+      const response = await analyticsAPI.getContractOverview(filters);
       return response.data;
     },
     staleTime: 5 * 60 * 1000,
@@ -38,10 +45,11 @@ export function useContractOverview() {
  */
 export function useContracts() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["contracts-list", { orgId }],
+    queryKey: queryKeys.contracts.list(orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getContracts();
+      const response = await analyticsAPI.getContracts(filters);
       return response.data;
     },
     staleTime: 5 * 60 * 1000,
@@ -53,11 +61,12 @@ export function useContracts() {
  */
 export function useContractDetail(contractId: number | null) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["contract-detail", contractId, { orgId }],
+    queryKey: queryKeys.contracts.detail(contractId ?? 0, orgId, filters),
     queryFn: async () => {
       if (!contractId) return null;
-      const response = await analyticsAPI.getContractDetail(contractId);
+      const response = await analyticsAPI.getContractDetail(contractId, filters);
       return response.data;
     },
     staleTime: 5 * 60 * 1000,
@@ -70,10 +79,11 @@ export function useContractDetail(contractId: number | null) {
  */
 export function useExpiringContracts(days: number = 90) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["expiring-contracts", days, { orgId }],
+    queryKey: queryKeys.contracts.expiring(days, orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getExpiringContracts(days);
+      const response = await analyticsAPI.getExpiringContracts(days, filters);
       return response.data;
     },
     staleTime: 5 * 60 * 1000,
@@ -85,11 +95,12 @@ export function useExpiringContracts(days: number = 90) {
  */
 export function useContractPerformance(contractId: number | null) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["contract-performance", contractId, { orgId }],
+    queryKey: queryKeys.contracts.performance(contractId ?? 0, orgId, filters),
     queryFn: async () => {
       if (!contractId) return null;
-      const response = await analyticsAPI.getContractPerformance(contractId);
+      const response = await analyticsAPI.getContractPerformance(contractId, filters);
       return response.data;
     },
     staleTime: 5 * 60 * 1000,
@@ -102,10 +113,11 @@ export function useContractPerformance(contractId: number | null) {
  */
 export function useContractSavings() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["contract-savings", { orgId }],
+    queryKey: queryKeys.contracts.savings(orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getContractSavings();
+      const response = await analyticsAPI.getContractSavings(filters);
       return response.data;
     },
     staleTime: 5 * 60 * 1000,
@@ -117,10 +129,11 @@ export function useContractSavings() {
  */
 export function useContractRenewals() {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["contract-renewals", { orgId }],
+    queryKey: queryKeys.contracts.renewals(orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getContractRenewals();
+      const response = await analyticsAPI.getContractRenewals(filters);
       return response.data;
     },
     staleTime: 5 * 60 * 1000,
@@ -132,10 +145,11 @@ export function useContractRenewals() {
  */
 export function useContractVsActual(contractId?: number) {
   const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
   return useQuery({
-    queryKey: ["contract-vs-actual", contractId, { orgId }],
+    queryKey: queryKeys.contracts.vsActual(contractId, orgId, filters),
     queryFn: async () => {
-      const response = await analyticsAPI.getContractVsActual(contractId);
+      const response = await analyticsAPI.getContractVsActual(contractId, filters);
       return response.data;
     },
     staleTime: 5 * 60 * 1000,
