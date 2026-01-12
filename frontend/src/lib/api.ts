@@ -312,6 +312,7 @@ export interface OverviewStats {
 
 export interface SpendByCategory {
   category: string;
+  category_id: number;
   amount: number;
   count: number;
 }
@@ -343,6 +344,7 @@ export interface CategoryDetail {
 
 export interface SpendBySupplier {
   supplier: string;
+  supplier_id: number;
   amount: number;
   count: number;
 }
@@ -408,6 +410,39 @@ export interface SupplierDrilldown {
   categories: DrilldownBreakdownItem[];
   subcategories: DrilldownBreakdownItem[];
   locations: DrilldownBreakdownItem[];
+}
+
+export interface DrilldownSupplierItem {
+  id: number;
+  name: string;
+  spend: number;
+  transaction_count: number;
+  percent_of_total: number;
+}
+
+export interface DrilldownRecentTransaction {
+  id: number;
+  date: string | null;
+  amount: number;
+  supplier_name: string;
+  description: string;
+}
+
+export interface CategoryDrilldown {
+  category_id: number;
+  category_name: string;
+  total_spend: number;
+  transaction_count: number;
+  avg_transaction: number;
+  supplier_count: number;
+  date_range: {
+    min: string | null;
+    max: string | null;
+  };
+  suppliers: DrilldownSupplierItem[];
+  subcategories: DrilldownBreakdownItem[];
+  locations: DrilldownBreakdownItem[];
+  recent_transactions: DrilldownRecentTransaction[];
 }
 
 export interface TailSpendSupplier {
@@ -2066,6 +2101,14 @@ export const analyticsAPI = {
     filters?: AnalyticsFilters,
   ): Promise<AxiosResponse<SupplierDrilldown>> =>
     api.get(`/analytics/pareto/supplier/${supplierId}/`, {
+      params: { ...getOrganizationParam(), ...buildFilterParams(filters) },
+    }),
+
+  getCategoryDrilldown: (
+    categoryId: number,
+    filters?: AnalyticsFilters,
+  ): Promise<AxiosResponse<CategoryDrilldown>> =>
+    api.get(`/analytics/category/${categoryId}/drilldown/`, {
       params: { ...getOrganizationParam(), ...buildFilterParams(filters) },
     }),
 

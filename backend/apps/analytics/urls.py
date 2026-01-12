@@ -14,6 +14,7 @@ urlpatterns = [
     path('monthly-trend/', views.monthly_trend, name='monthly-trend'),
     path('pareto/', views.pareto_analysis, name='pareto-analysis'),
     path('pareto/supplier/<int:supplier_id>/', views.supplier_drilldown, name='supplier-drilldown'),
+    path('category/<int:category_id>/drilldown/', views.category_drilldown, name='category-drilldown'),
     path('tail-spend/', views.tail_spend_analysis, name='tail-spend'),
     path('tail-spend/detailed/', views.detailed_tail_spend, name='detailed-tail-spend'),
     path('tail-spend/category/<int:category_id>/', views.tail_spend_category_drilldown, name='tail-spend-category-drilldown'),

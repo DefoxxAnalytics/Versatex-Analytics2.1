@@ -289,6 +289,25 @@ export function useSupplierDrilldown(supplierId: number | null) {
 }
 
 /**
+ * Get category drill-down data for Overview page modal
+ * Fetches on-demand when a category is selected in charts
+ * Supports filtering by date range, suppliers, categories, and amount range.
+ */
+export function useCategoryDrilldown(categoryId: number | null) {
+  const orgId = getOrgKeyPart();
+  const filters = useAnalyticsFilters();
+  return useQuery({
+    queryKey: queryKeys.analytics.categoryDrilldown(categoryId!, orgId, filters),
+    queryFn: async () => {
+      if (!categoryId) return null;
+      const response = await analyticsAPI.getCategoryDrilldown(categoryId, filters);
+      return response.data;
+    },
+    enabled: !!categoryId,
+  });
+}
+
+/**
  * Get tail spend analysis
  * Supports filtering by date range, suppliers, categories, and amount range.
  */

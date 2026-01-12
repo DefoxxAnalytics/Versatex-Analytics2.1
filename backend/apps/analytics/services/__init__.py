@@ -109,6 +109,10 @@ class AnalyticsService:
         """Get supplier drill-down data."""
         return self._spend.get_supplier_drilldown(supplier_id)
 
+    def get_category_drilldown(self, category_id):
+        """Get category drill-down data for Overview page."""
+        return self._spend.get_category_drilldown(category_id)
+
     # =========================================================================
     # Pareto and Tail Spend methods (delegated to ParetoTailAnalyticsService)
     # =========================================================================

@@ -5,7 +5,7 @@ Provides category and supplier spend analysis including breakdowns,
 HHI calculations, and supplier drilldowns.
 """
 from django.db.models import Sum, Count, Min, Max
-from apps.procurement.models import Supplier
+from apps.procurement.models import Supplier, Category
 from .base import BaseAnalyticsService
 
 
@@ -26,10 +26,11 @@ class SpendAnalyticsService(BaseAnalyticsService):
         Get spend breakdown by category.
 
         Returns:
-            list: Category spend data with amount and count
+            list: Category spend data with amount, count, and category_id
         """
         data = self.transactions.values(
-            'category__name'
+            'category__name',
+            'category_id'
         ).annotate(
             total=Sum('amount'),
             count=Count('id')
@@ -38,6 +39,7 @@ class SpendAnalyticsService(BaseAnalyticsService):
         return [
             {
                 'category': item['category__name'],
+                'category_id': item['category_id'],
                 'amount': float(item['total']),
                 'count': item['count']
             }
@@ -49,10 +51,11 @@ class SpendAnalyticsService(BaseAnalyticsService):
         Get spend breakdown by supplier.
 
         Returns:
-            list: Supplier spend data with amount and count
+            list: Supplier spend data with amount, count, and supplier_id
         """
         data = self.transactions.values(
-            'supplier__name'
+            'supplier__name',
+            'supplier_id'
         ).annotate(
             total=Sum('amount'),
             count=Count('id')
@@ -61,6 +64,7 @@ class SpendAnalyticsService(BaseAnalyticsService):
         return [
             {
                 'supplier': item['supplier__name'],
+                'supplier_id': item['supplier_id'],
                 'amount': float(item['total']),
                 'count': item['count']
             }
@@ -349,4 +353,132 @@ class SpendAnalyticsService(BaseAnalyticsService):
             'categories': category_data,
             'subcategories': subcategory_data,
             'locations': location_data
+        }
+
+    def get_category_drilldown(self, category_id):
+        """
+        Get detailed drill-down data for a specific category.
+        Used by Overview page when user clicks on a category in charts.
+        Returns supplier/subcategory/location breakdowns with full aggregation.
+
+        Args:
+            category_id: ID of the category to drill into
+
+        Returns:
+            dict: Category details with supplier, subcategory, and location breakdowns
+            None: If category not found
+        """
+        try:
+            category = Category.objects.get(id=category_id, organization=self.organization)
+            category_name = category.name
+        except Category.DoesNotExist:
+            return None
+
+        category_transactions = self.transactions.filter(category_id=category_id)
+
+        if not category_transactions.exists():
+            return {
+                'category_id': category_id,
+                'category_name': category_name,
+                'total_spend': 0,
+                'transaction_count': 0,
+                'avg_transaction': 0,
+                'supplier_count': 0,
+                'date_range': {'min': None, 'max': None},
+                'suppliers': [],
+                'subcategories': [],
+                'locations': [],
+                'recent_transactions': []
+            }
+
+        total_spend = float(category_transactions.aggregate(total=Sum('amount'))['total'] or 0)
+        transaction_count = category_transactions.count()
+        avg_transaction = total_spend / transaction_count if transaction_count > 0 else 0
+        supplier_count = category_transactions.values('supplier_id').distinct().count()
+
+        date_agg = category_transactions.aggregate(
+            min_date=Min('date'),
+            max_date=Max('date')
+        )
+
+        suppliers = list(category_transactions.values(
+            'supplier__name',
+            'supplier_id'
+        ).annotate(
+            spend=Sum('amount'),
+            transaction_count=Count('id')
+        ).order_by('-spend')[:10])
+
+        supplier_data = [
+            {
+                'id': sup['supplier_id'],
+                'name': sup['supplier__name'] or 'Unspecified',
+                'spend': float(sup['spend'] or 0),
+                'transaction_count': sup['transaction_count'] or 0,
+                'percent_of_total': round((float(sup['spend'] or 0) / total_spend * 100) if total_spend > 0 else 0, 2)
+            }
+            for sup in suppliers
+        ]
+
+        subcategories = list(category_transactions.values(
+            'subcategory'
+        ).annotate(
+            spend=Sum('amount'),
+            transaction_count=Count('id')
+        ).order_by('-spend'))
+
+        subcategory_data = [
+            {
+                'name': sub['subcategory'] or 'Unspecified',
+                'spend': float(sub['spend'] or 0),
+                'transaction_count': sub['transaction_count'] or 0,
+                'percent_of_total': round((float(sub['spend'] or 0) / total_spend * 100) if total_spend > 0 else 0, 2)
+            }
+            for sub in subcategories
+        ]
+
+        locations = list(category_transactions.values(
+            'location'
+        ).annotate(
+            spend=Sum('amount'),
+            transaction_count=Count('id')
+        ).order_by('-spend')[:10])
+
+        location_data = [
+            {
+                'name': loc['location'] or 'Unspecified',
+                'spend': float(loc['spend'] or 0),
+                'transaction_count': loc['transaction_count'] or 0,
+                'percent_of_total': round((float(loc['spend'] or 0) / total_spend * 100) if total_spend > 0 else 0, 2)
+            }
+            for loc in locations
+        ]
+
+        recent_txns = list(category_transactions.select_related('supplier').order_by('-date')[:10])
+        recent_transactions = [
+            {
+                'id': txn.id,
+                'date': txn.date.isoformat() if txn.date else None,
+                'amount': float(txn.amount),
+                'supplier_name': txn.supplier.name if txn.supplier else 'Unknown',
+                'description': txn.description or ''
+            }
+            for txn in recent_txns
+        ]
+
+        return {
+            'category_id': category_id,
+            'category_name': category_name,
+            'total_spend': total_spend,
+            'transaction_count': transaction_count,
+            'avg_transaction': round(avg_transaction, 2),
+            'supplier_count': supplier_count,
+            'date_range': {
+                'min': date_agg['min_date'].isoformat() if date_agg['min_date'] else None,
+                'max': date_agg['max_date'].isoformat() if date_agg['max_date'] else None
+            },
+            'suppliers': supplier_data,
+            'subcategories': subcategory_data,
+            'locations': location_data,
+            'recent_transactions': recent_transactions
         }

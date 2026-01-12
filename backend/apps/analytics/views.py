@@ -365,6 +365,40 @@ def supplier_drilldown(request, supplier_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 @throttle_classes([ReadAPIThrottle])
+def category_drilldown(request, category_id):
+    """
+    Get detailed drill-down data for a specific category.
+    Used by Overview page when user clicks on a category in charts.
+
+    Returns:
+    - Basic metrics: total spend, transaction count, avg transaction, supplier count
+    - Date range: min and max dates
+    - Supplier breakdown with spend and percentage (top 10)
+    - Subcategory breakdown
+    - Location breakdown (top 10)
+    - Recent transactions (last 10)
+
+    Query params:
+    - date_from, date_to, supplier_ids, category_ids, min_amount, max_amount: Filters
+    - organization_id: View data for a specific organization (superusers only)
+    """
+    organization = get_target_organization(request)
+    if organization is None:
+        return Response({'error': 'User profile not found'}, status=400)
+
+    filters = parse_filter_params(request)
+    service = AnalyticsService(organization, filters=filters)
+    data = service.get_category_drilldown(category_id)
+
+    if data is None:
+        return Response({'error': 'Category not found'}, status=404)
+
+    return Response(data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@throttle_classes([ReadAPIThrottle])
 def monthly_trend(request):
     """
     Get monthly spend trend.

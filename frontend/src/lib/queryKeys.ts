@@ -119,8 +119,8 @@ export const queryKeys = {
     // Drilldowns
     supplierDrilldown: (supplierId: number, orgId?: number, filters?: FilterParams) =>
       ["analytics", "supplier-drilldown", supplierId, { orgId, filters }] as const,
-    categoryDrilldown: (categoryId: number, orgId?: number) =>
-      ["analytics", "category-drilldown", categoryId, { orgId }] as const,
+    categoryDrilldown: (categoryId: number, orgId?: number, filters?: FilterParams) =>
+      ["analytics", "category-drilldown", categoryId, { orgId, filters }] as const,
     segmentDrilldown: (segment: string, orgId?: number, filters?: FilterParams) =>
       ["analytics", "segment-drilldown", segment, { orgId, filters }] as const,
     bandDrilldown: (band: string, orgId?: number, filters?: FilterParams) =>
