@@ -16,7 +16,7 @@ from .models import DataUpload, Transaction, Supplier, Category
 
 
 @shared_task(bind=True, soft_time_limit=600, max_retries=3, retry_backoff=True)
-def process_csv_upload(self, upload_id, mapping, skip_invalid=True):
+def process_csv_upload(self, upload_id, mapping, skip_invalid=True, skip_duplicates=False, strict_duplicates=False):
     """
     Background task for processing large CSV files.
 
@@ -24,6 +24,8 @@ def process_csv_upload(self, upload_id, mapping, skip_invalid=True):
         upload_id: ID of the DataUpload record
         mapping: Dict mapping CSV columns to target fields
         skip_invalid: Whether to skip invalid rows or abort
+        skip_duplicates: If True, skip all duplicate checking
+        strict_duplicates: If True, use all mapped fields for duplicate detection
 
     Returns:
         Dict with processing results
@@ -105,8 +107,8 @@ def process_csv_upload(self, upload_id, mapping, skip_invalid=True):
                             failed += 1
                             continue
 
-                        # Check for duplicates
-                        if _is_duplicate_row(row, mapping, organization):
+                        # Check for duplicates (unless skip_duplicates is enabled)
+                        if not skip_duplicates and _is_duplicate_row(row, mapping, organization, strict_mode=strict_duplicates):
                             duplicates += 1
                             continue
 
@@ -151,7 +153,6 @@ def process_csv_upload(self, upload_id, mapping, skip_invalid=True):
                             uploaded_by=user,
                             upload_batch=upload.batch_id
                         )
-
                         successful += 1
 
                     except Exception as e:
@@ -303,8 +304,16 @@ def _parse_date(date_str):
     return None
 
 
-def _is_duplicate_row(row, mapping, organization):
-    """Check if a row would create a duplicate transaction."""
+def _is_duplicate_row(row, mapping, organization, strict_mode=False):
+    """Check if a row would create a duplicate transaction.
+
+    Args:
+        row: The CSV row data
+        mapping: Column to field mapping
+        organization: Target organization
+        strict_mode: If True, use all mapped fields for duplicate detection.
+                    If False (default), use only core fields.
+    """
     supplier_col = next((k for k, v in mapping.items() if v == 'supplier'), None)
     category_col = next((k for k, v in mapping.items() if v == 'category'), None)
     amount_col = next((k for k, v in mapping.items() if v == 'amount'), None)
@@ -337,6 +346,40 @@ def _is_duplicate_row(row, mapping, organization):
 
         if invoice_number:
             query = query.filter(invoice_number=invoice_number)
+
+        # In strict mode, also check all other mapped fields
+        if strict_mode:
+            description_col = next((k for k, v in mapping.items() if v == 'description'), None)
+            fiscal_year_col = next((k for k, v in mapping.items() if v == 'fiscal_year'), None)
+            subcategory_col = next((k for k, v in mapping.items() if v == 'subcategory'), None)
+            location_col = next((k for k, v in mapping.items() if v == 'location'), None)
+            spend_band_col = next((k for k, v in mapping.items() if v == 'spend_band'), None)
+            payment_method_col = next((k for k, v in mapping.items() if v == 'payment_method'), None)
+
+            if description_col:
+                description = row.get(description_col, '').strip()
+                query = query.filter(description=description)
+
+            if fiscal_year_col:
+                fiscal_year = row.get(fiscal_year_col, '').strip()
+                if fiscal_year:
+                    query = query.filter(fiscal_year=fiscal_year)
+
+            if subcategory_col:
+                subcategory = row.get(subcategory_col, '').strip()
+                query = query.filter(subcategory=subcategory)
+
+            if location_col:
+                location = row.get(location_col, '').strip()
+                query = query.filter(location=location)
+
+            if spend_band_col:
+                spend_band = row.get(spend_band_col, '').strip()
+                query = query.filter(spend_band=spend_band)
+
+            if payment_method_col:
+                payment_method = row.get(payment_method_col, '').strip()
+                query = query.filter(payment_method=payment_method)
 
         return query.exists()
 

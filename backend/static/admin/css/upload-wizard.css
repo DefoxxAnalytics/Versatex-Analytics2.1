@@ -166,19 +166,30 @@
 }
 
 .btn-secondary {
-    background: #e0f2fe;
-    color: #1e40af;
-    padding: 8px 16px;
-    border-radius: 6px;
-    border: 1px solid #bfdbfe;
+    background: #f3f4f6;
+    color: #374151 !important;
+    padding: 12px 28px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: 0.95rem;
     cursor: pointer;
     transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
 }
 
 .btn-secondary:hover {
-    background: #bfdbfe;
+    background: #e5e7eb;
+    color: #1f2937 !important;
+}
+
+/* Ensure primary button text is always visible */
+.btn-primary,
+a.btn-primary,
+.step-actions .btn-primary {
+    color: white !important;
 }
 
 /* Form Elements */

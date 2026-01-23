@@ -232,6 +232,18 @@
                         <input type="checkbox" id="skip-invalid" checked>
                         <span>Skip invalid rows and continue with valid data</span>
                     </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="skip-duplicates">
+                        <span>Skip duplicate checking (allow all rows including duplicates)</span>
+                    </label>
+                    <label class="checkbox-label" id="strict-duplicates-label">
+                        <input type="checkbox" id="strict-duplicates">
+                        <span>Strict duplicate detection (use all mapped fields instead of core fields only)</span>
+                    </label>
+                    <p class="help-text" style="margin-top: 8px; color: #6b7280; font-size: 12px;">
+                        <strong>Core fields:</strong> Supplier, Category, Amount, Date, Invoice Number<br>
+                        <strong>Strict mode:</strong> Uses all fields you mapped (Description, Location, etc.)
+                    </p>
                 </div>
             </div>
         </div>

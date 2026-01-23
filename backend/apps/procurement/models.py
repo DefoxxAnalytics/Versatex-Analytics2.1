@@ -186,12 +186,6 @@ class Transaction(models.Model):
             models.Index(fields=['upload_batch']),
             models.Index(fields=['uuid']),
         ]
-        constraints = [
-            models.UniqueConstraint(
-                fields=['organization', 'supplier', 'category', 'amount', 'date', 'invoice_number'],
-                name='unique_transaction_with_invoice'
-            ),
-        ]
 
     def __str__(self):
         return f"{self.supplier.name} - {self.amount} on {self.date}"

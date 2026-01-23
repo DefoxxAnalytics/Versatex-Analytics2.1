@@ -324,43 +324,65 @@ class DataUploadAdmin(admin.ModelAdmin):
                     ).count()
                     PolicyViolation.objects.filter(organization=organization).delete()
 
-                    # 2. Delete transactions
+                    # 2. Delete P2P data (must delete before suppliers due to FK constraints)
+                    # Order: Invoices -> GoodsReceipts -> PurchaseOrders -> PurchaseRequisitions
+                    counts['invoices'] = Invoice.objects.filter(
+                        organization=organization
+                    ).count()
+                    Invoice.objects.filter(organization=organization).delete()
+
+                    counts['goods_receipts'] = GoodsReceipt.objects.filter(
+                        organization=organization
+                    ).count()
+                    GoodsReceipt.objects.filter(organization=organization).delete()
+
+                    counts['purchase_orders'] = PurchaseOrder.objects.filter(
+                        organization=organization
+                    ).count()
+                    PurchaseOrder.objects.filter(organization=organization).delete()
+
+                    counts['purchase_requisitions'] = PurchaseRequisition.objects.filter(
+                        organization=organization
+                    ).count()
+                    PurchaseRequisition.objects.filter(organization=organization).delete()
+
+                    # 3. Delete transactions
                     counts['transactions'] = Transaction.objects.filter(
                         organization=organization
                     ).count()
                     Transaction.objects.filter(organization=organization).delete()
 
-                    # 3. Delete uploads
+                    # 4. Delete uploads
                     counts['uploads'] = DataUpload.objects.filter(
                         organization=organization
                     ).count()
                     DataUpload.objects.filter(organization=organization).delete()
 
-                    # 4. Delete mapping templates
+                    # 5. Delete mapping templates
                     counts['templates'] = ColumnMappingTemplate.objects.filter(
                         organization=organization
                     ).count()
                     ColumnMappingTemplate.objects.filter(organization=organization).delete()
 
-                    # 5. Delete contracts (has FK to suppliers)
+                    # 6. Delete contracts (has FK to suppliers)
                     counts['contracts'] = Contract.objects.filter(
                         organization=organization
                     ).count()
                     Contract.objects.filter(organization=organization).delete()
 
-                    # 6. Delete suppliers
+                    # 7. Delete suppliers
                     counts['suppliers'] = Supplier.objects.filter(
                         organization=organization
                     ).count()
                     Supplier.objects.filter(organization=organization).delete()
 
-                    # 7. Delete categories
+                    # 8. Delete categories
                     counts['categories'] = Category.objects.filter(
                         organization=organization
                     ).count()
                     Category.objects.filter(organization=organization).delete()
 
-                    # 8. Delete spending policies
+                    # 9. Delete spending policies
                     counts['policies'] = SpendingPolicy.objects.filter(
                         organization=organization
                     ).count()
@@ -380,16 +402,23 @@ class DataUploadAdmin(admin.ModelAdmin):
                             'uploads_deleted': counts['uploads'],
                             'templates_deleted': counts['templates'],
                             'contracts_deleted': counts['contracts'],
+                            'invoices_deleted': counts['invoices'],
+                            'purchase_orders_deleted': counts['purchase_orders'],
+                            'goods_receipts_deleted': counts['goods_receipts'],
+                            'purchase_requisitions_deleted': counts['purchase_requisitions'],
                         },
                         request=request
                     )
 
+                p2p_total = (counts['invoices'] + counts['purchase_orders'] +
+                             counts['goods_receipts'] + counts['purchase_requisitions'])
                 messages.success(
                     request,
                     f'Organization "{organization.name}" has been reset. '
                     f'Deleted: {counts["transactions"]} transactions, '
                     f'{counts["suppliers"]} suppliers, {counts["categories"]} categories, '
-                    f'{counts["uploads"]} uploads, {counts["contracts"]} contracts.'
+                    f'{counts["uploads"]} uploads, {counts["contracts"]} contracts, '
+                    f'{p2p_total} P2P documents (PRs/POs/GRs/Invoices).'
                 )
                 return redirect('..')
         else:
@@ -602,6 +631,8 @@ class DataUploadAdmin(admin.ModelAdmin):
         file = request.FILES.get('file')
         mapping_json = request.POST.get('mapping', '{}')
         organization_id = request.POST.get('organization_id')
+        skip_duplicates = request.POST.get('skip_duplicates', 'false').lower() == 'true'
+        strict_duplicates = request.POST.get('strict_duplicates', 'false').lower() == 'true'
 
         if not file:
             return JsonResponse({'error': 'No file provided'}, status=400)
@@ -643,8 +674,8 @@ class DataUploadAdmin(admin.ModelAdmin):
                 if row_errors:
                     errors.extend(row_errors)
                 else:
-                    # Check for duplicates
-                    if self._is_duplicate_row(row, mapping, organization):
+                    # Check for duplicates (unless skip_duplicates is enabled)
+                    if not skip_duplicates and self._is_duplicate_row(row, mapping, organization, strict_mode=strict_duplicates):
                         duplicate_count += 1
                     else:
                         valid_count += 1
@@ -677,6 +708,8 @@ class DataUploadAdmin(admin.ModelAdmin):
         mapping_json = request.POST.get('mapping', '{}')
         organization_id = request.POST.get('organization_id')
         skip_invalid = request.POST.get('skip_invalid', 'true').lower() == 'true'
+        skip_duplicates = request.POST.get('skip_duplicates', 'false').lower() == 'true'
+        strict_duplicates = request.POST.get('strict_duplicates', 'false').lower() == 'true'
         template_name = request.POST.get('template_name', '')
 
         if not file:
@@ -718,7 +751,7 @@ class DataUploadAdmin(admin.ModelAdmin):
 
                 # Queue Celery task
                 from .tasks import process_csv_upload
-                task = process_csv_upload.delay(upload.id, mapping, skip_invalid)
+                task = process_csv_upload.delay(upload.id, mapping, skip_invalid, skip_duplicates, strict_duplicates)
 
                 upload.celery_task_id = task.id
                 upload.status = 'processing'
@@ -736,7 +769,7 @@ class DataUploadAdmin(admin.ModelAdmin):
                 upload.status = 'processing'
                 upload.save()
 
-                result = self._process_csv_sync(file, mapping, organization, request.user, upload, skip_invalid)
+                result = self._process_csv_sync(file, mapping, organization, request.user, upload, skip_invalid, skip_duplicates, strict_duplicates)
 
                 # Log the action
                 log_action(
@@ -1089,8 +1122,16 @@ class DataUploadAdmin(admin.ModelAdmin):
 
         return None
 
-    def _is_duplicate_row(self, row, mapping, organization):
-        """Check if a row would create a duplicate transaction."""
+    def _is_duplicate_row(self, row, mapping, organization, strict_mode=False):
+        """Check if a row would create a duplicate transaction.
+
+        Args:
+            row: The CSV row data
+            mapping: Column to field mapping
+            organization: Target organization
+            strict_mode: If True, use all mapped fields for duplicate detection.
+                        If False (default), use only core fields (supplier, category, amount, date, invoice_number).
+        """
         supplier_col = next((k for k, v in mapping.items() if v == 'supplier'), None)
         category_col = next((k for k, v in mapping.items() if v == 'category'), None)
         amount_col = next((k for k, v in mapping.items() if v == 'amount'), None)
@@ -1113,7 +1154,7 @@ class DataUploadAdmin(admin.ModelAdmin):
             if not date:
                 return False
 
-            # Check for existing transaction
+            # Check for existing transaction - start with core fields
             query = Transaction.objects.filter(
                 organization=organization,
                 supplier__name__iexact=supplier_name,
@@ -1125,12 +1166,46 @@ class DataUploadAdmin(admin.ModelAdmin):
             if invoice_number:
                 query = query.filter(invoice_number=invoice_number)
 
+            # In strict mode, also check all other mapped fields
+            if strict_mode:
+                description_col = next((k for k, v in mapping.items() if v == 'description'), None)
+                fiscal_year_col = next((k for k, v in mapping.items() if v == 'fiscal_year'), None)
+                subcategory_col = next((k for k, v in mapping.items() if v == 'subcategory'), None)
+                location_col = next((k for k, v in mapping.items() if v == 'location'), None)
+                spend_band_col = next((k for k, v in mapping.items() if v == 'spend_band'), None)
+                payment_method_col = next((k for k, v in mapping.items() if v == 'payment_method'), None)
+
+                if description_col:
+                    description = row.get(description_col, '').strip()
+                    query = query.filter(description=description)
+
+                if fiscal_year_col:
+                    fiscal_year = row.get(fiscal_year_col, '').strip()
+                    if fiscal_year:
+                        query = query.filter(fiscal_year=fiscal_year)
+
+                if subcategory_col:
+                    subcategory = row.get(subcategory_col, '').strip()
+                    query = query.filter(subcategory=subcategory)
+
+                if location_col:
+                    location = row.get(location_col, '').strip()
+                    query = query.filter(location=location)
+
+                if spend_band_col:
+                    spend_band = row.get(spend_band_col, '').strip()
+                    query = query.filter(spend_band=spend_band)
+
+                if payment_method_col:
+                    payment_method = row.get(payment_method_col, '').strip()
+                    query = query.filter(payment_method=payment_method)
+
             return query.exists()
 
         except (InvalidOperation, ValueError):
             return False
 
-    def _process_csv_sync(self, file, mapping, organization, user, upload, skip_invalid=True):
+    def _process_csv_sync(self, file, mapping, organization, user, upload, skip_invalid=True, skip_duplicates=False, strict_duplicates=False):
         """Process CSV file synchronously."""
         content = file.read().decode('utf-8-sig')
         reader = csv.DictReader(io.StringIO(content))
@@ -1165,8 +1240,8 @@ class DataUploadAdmin(admin.ModelAdmin):
                         failed += 1
                         continue
 
-                    # Check for duplicates
-                    if self._is_duplicate_row(row, mapping, organization):
+                    # Check for duplicates (unless skip_duplicates is enabled)
+                    if not skip_duplicates and self._is_duplicate_row(row, mapping, organization, strict_mode=strict_duplicates):
                         duplicates += 1
                         continue
 
@@ -1195,7 +1270,7 @@ class DataUploadAdmin(admin.ModelAdmin):
                     date = self._parse_date(date_str)
 
                     # Create transaction
-                    trans = Transaction.objects.create(
+                    Transaction.objects.create(
                         organization=organization,
                         supplier=supplier,
                         category=category,
@@ -1211,7 +1286,6 @@ class DataUploadAdmin(admin.ModelAdmin):
                         uploaded_by=user,
                         upload_batch=upload.batch_id
                     )
-
                     successful += 1
 
                 except Exception as e:

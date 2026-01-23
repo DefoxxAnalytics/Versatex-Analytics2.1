@@ -105,6 +105,27 @@ const UploadWizard = {
 
         // New upload button
         document.getElementById('new-upload-btn').addEventListener('click', () => this.resetWizard());
+
+        // Skip duplicates checkbox - disable strict mode when skip is checked
+        const skipDuplicatesCheckbox = document.getElementById('skip-duplicates');
+        const strictDuplicatesCheckbox = document.getElementById('strict-duplicates');
+        const strictDuplicatesLabel = document.getElementById('strict-duplicates-label');
+        if (skipDuplicatesCheckbox && strictDuplicatesCheckbox) {
+            skipDuplicatesCheckbox.addEventListener('change', () => {
+                if (skipDuplicatesCheckbox.checked) {
+                    strictDuplicatesCheckbox.checked = false;
+                    strictDuplicatesCheckbox.disabled = true;
+                    if (strictDuplicatesLabel) {
+                        strictDuplicatesLabel.style.opacity = '0.5';
+                    }
+                } else {
+                    strictDuplicatesCheckbox.disabled = false;
+                    if (strictDuplicatesLabel) {
+                        strictDuplicatesLabel.style.opacity = '1';
+                    }
+                }
+            });
+        }
     },
 
     /**
@@ -661,10 +682,15 @@ const UploadWizard = {
         loading.classList.remove('hidden');
         results.classList.add('hidden');
 
+        const skipDuplicates = document.getElementById('skip-duplicates')?.checked || false;
+        const strictDuplicates = document.getElementById('strict-duplicates')?.checked || false;
+
         const formData = new FormData();
         formData.append('file', this.file);
         formData.append('mapping', JSON.stringify(this.mapping));
         formData.append('organization_id', this.getOrganizationId());
+        formData.append('skip_duplicates', skipDuplicates);
+        formData.append('strict_duplicates', strictDuplicates);
 
         try {
             const response = await fetch(CONFIG.apiUrls.validate, {
@@ -764,12 +790,16 @@ const UploadWizard = {
         completeEl.classList.add('hidden');
 
         const skipInvalid = document.getElementById('skip-invalid').checked;
+        const skipDuplicates = document.getElementById('skip-duplicates')?.checked || false;
+        const strictDuplicates = document.getElementById('strict-duplicates')?.checked || false;
 
         const formData = new FormData();
         formData.append('file', this.file);
         formData.append('mapping', JSON.stringify(this.mapping));
         formData.append('organization_id', this.getOrganizationId());
         formData.append('skip_invalid', skipInvalid);
+        formData.append('skip_duplicates', skipDuplicates);
+        formData.append('strict_duplicates', strictDuplicates);
 
         try {
             const response = await fetch(CONFIG.apiUrls.upload, {
