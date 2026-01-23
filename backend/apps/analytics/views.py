@@ -1532,6 +1532,99 @@ def ai_insights_cache_invalidate(request):
     })
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def ai_insights_usage(request):
+    """
+    Get LLM usage statistics for cost monitoring dashboard.
+
+    Returns comprehensive usage data including:
+    - Total requests, tokens, and costs
+    - Breakdown by request type and provider
+    - Cache efficiency metrics
+    - Prompt cache savings
+
+    Query params:
+    - days: Number of days to look back (default: 30, max: 90)
+    - organization_id: (superusers only) Get usage for specific organization
+    """
+    from .models import LLMRequestLog
+
+    organization = get_target_organization(request)
+    if organization is None:
+        return Response({'error': 'User profile not found'}, status=400)
+
+    days = min(int(request.query_params.get('days', 30)), 90)
+
+    usage_summary = LLMRequestLog.get_usage_summary(organization.id, days)
+
+    usage_summary['organization_id'] = organization.id
+    usage_summary['organization_name'] = organization.name
+
+    log_action(
+        user=request.user,
+        action='view',
+        resource='ai_insights_usage',
+        request=request,
+        details={'organization_id': organization.id, 'days': days}
+        if request.user.is_superuser else {'days': days}
+    )
+
+    return Response(usage_summary)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def ai_insights_usage_daily(request):
+    """
+    Get daily LLM usage breakdown for trend visualization.
+
+    Returns daily aggregates for charting usage over time.
+
+    Query params:
+    - days: Number of days to look back (default: 30, max: 90)
+    - organization_id: (superusers only) Get usage for specific organization
+    """
+    from django.db.models import Sum, Count
+    from django.db.models.functions import TruncDate
+    from datetime import timedelta
+    from .models import LLMRequestLog
+
+    organization = get_target_organization(request)
+    if organization is None:
+        return Response({'error': 'User profile not found'}, status=400)
+
+    days = min(int(request.query_params.get('days', 30)), 90)
+    cutoff = timezone.now() - timedelta(days=days)
+
+    daily_data = list(
+        LLMRequestLog.objects.filter(
+            organization_id=organization.id,
+            created_at__gte=cutoff
+        )
+        .annotate(date=TruncDate('created_at'))
+        .values('date')
+        .annotate(
+            requests=Count('id'),
+            cost=Sum('cost_usd'),
+            input_tokens=Sum('tokens_input'),
+            output_tokens=Sum('tokens_output'),
+            cache_reads=Sum('prompt_cache_read_tokens'),
+        )
+        .order_by('date')
+    )
+
+    for entry in daily_data:
+        entry['date'] = entry['date'].isoformat() if entry['date'] else None
+        entry['cost'] = float(entry['cost'] or 0)
+
+    return Response({
+        'organization_id': organization.id,
+        'period_days': days,
+        'daily_usage': daily_data
+    })
+
+
 # ============================================================================
 # Predictive Analytics Endpoints
 # ============================================================================
@@ -2519,3 +2612,692 @@ def delete_insight_feedback(request, feedback_id):
     feedback.delete()
 
     return Response(status=204)
+
+
+# =============================================================================
+# RAG Document Management Views
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_rag_documents(request):
+    """
+    List embedded documents for RAG.
+
+    Query params:
+    - document_type: Filter by type (supplier_profile, contract, policy, best_practice, historical_insight)
+    - is_active: Filter by active status (true/false)
+    - limit: Maximum number to return (default: 50, max: 200)
+    - offset: Pagination offset (default: 0)
+    - organization_id: View documents for a specific organization (superusers only)
+    """
+    from .models import EmbeddedDocument
+    from .serializers import EmbeddedDocumentListSerializer
+
+    organization = get_target_organization(request)
+    if organization is None:
+        return Response({'error': 'User profile not found'}, status=400)
+
+    qs = EmbeddedDocument.objects.filter(organization=organization)
+
+    doc_type = request.query_params.get('document_type')
+    if doc_type:
+        qs = qs.filter(document_type=doc_type)
+
+    is_active = request.query_params.get('is_active')
+    if is_active is not None:
+        qs = qs.filter(is_active=is_active.lower() == 'true')
+
+    total_count = qs.count()
+
+    limit = validate_int_param(request, 'limit', 50, min_val=1, max_val=200)
+    offset = validate_int_param(request, 'offset', 0, min_val=0, max_val=10000)
+
+    documents = qs.order_by('-created_at')[offset:offset + limit]
+    serializer = EmbeddedDocumentListSerializer(documents, many=True)
+
+    return Response({
+        'documents': serializer.data,
+        'count': len(serializer.data),
+        'total': total_count,
+        'limit': limit,
+        'offset': offset
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_rag_document(request, document_id):
+    """
+    Get a single embedded document by ID.
+
+    Query params (superusers only):
+    - organization_id: Get document from a specific organization
+    """
+    from .models import EmbeddedDocument
+    from .serializers import EmbeddedDocumentSerializer
+
+    organization = get_target_organization(request)
+    if organization is None:
+        return Response({'error': 'User profile not found'}, status=400)
+
+    try:
+        document = EmbeddedDocument.objects.get(
+            id=document_id,
+            organization=organization
+        )
+    except EmbeddedDocument.DoesNotExist:
+        return Response({'error': 'Document not found'}, status=404)
+
+    serializer = EmbeddedDocumentSerializer(document)
+    return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_rag_document(request):
+    """
+    Create a new embedded document (policy, contract, or best practice).
+
+    Request body:
+    - document_type: Type of document (policy, contract, best_practice)
+    - title: Document title
+    - content: Document content
+    - metadata: Optional metadata dict
+    - supplier_id: Required for contract documents
+    - category_id: Optional category ID
+    - effective_date: Optional effective date (for policies)
+    - contract_start/end: Optional contract dates
+    - contract_value: Optional contract value
+    - source: Optional source attribution (for best practices)
+
+    Query params (superusers only):
+    - organization_id: Create document for a specific organization
+    """
+    from .serializers import DocumentIngestionSerializer
+    from .document_ingestion import DocumentIngestionService
+
+    organization = get_target_organization(request)
+    if organization is None:
+        return Response({'error': 'User profile not found'}, status=400)
+
+    serializer = DocumentIngestionSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=400)
+
+    data = serializer.validated_data
+    doc_type = data['document_type']
+
+    service = DocumentIngestionService(organization_id=organization.id)
+
+    try:
+        if doc_type == 'policy':
+            doc = service.ingest_policy(
+                title=data['title'],
+                content=data['content'],
+                category_id=data.get('category_id'),
+                effective_date=data.get('effective_date')
+            )
+        elif doc_type == 'contract':
+            doc = service.ingest_contract_summary(
+                supplier_id=data['supplier_id'],
+                title=data['title'],
+                content=data['content'],
+                contract_start=data.get('contract_start'),
+                contract_end=data.get('contract_end'),
+                contract_value=data.get('contract_value')
+            )
+        elif doc_type == 'best_practice':
+            doc = service.ingest_best_practice(
+                title=data['title'],
+                content=data['content'],
+                category_id=data.get('category_id'),
+                source=data.get('source')
+            )
+        else:
+            return Response({'error': f'Unsupported document type: {doc_type}'}, status=400)
+
+        log_action(
+            user=request.user,
+            action='create',
+            resource='rag_document',
+            resource_id=str(doc.id),
+            request=request,
+            details={
+                'document_type': doc_type,
+                'title': data['title']
+            }
+        )
+
+        return Response({
+            'id': str(doc.id),
+            'document_type': doc.document_type,
+            'title': doc.title,
+            'message': 'Document created successfully'
+        }, status=201)
+
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_rag_document(request, document_id):
+    """
+    Delete an embedded document.
+
+    Only admins can delete documents.
+
+    Query params (superusers only):
+    - organization_id: Delete document from a specific organization
+    """
+    from .models import EmbeddedDocument
+
+    organization = get_target_organization(request)
+    if organization is None:
+        return Response({'error': 'User profile not found'}, status=400)
+
+    profile = request.user.profile
+    if profile.role != 'admin':
+        return Response(
+            {'error': 'Permission denied. Only admins can delete documents.'},
+            status=403
+        )
+
+    try:
+        document = EmbeddedDocument.objects.get(
+            id=document_id,
+            organization=organization
+        )
+    except EmbeddedDocument.DoesNotExist:
+        return Response({'error': 'Document not found'}, status=404)
+
+    doc_details = {
+        'document_type': document.document_type,
+        'title': document.title
+    }
+
+    log_action(
+        user=request.user,
+        action='delete',
+        resource='rag_document',
+        resource_id=str(document_id),
+        request=request,
+        details=doc_details
+    )
+
+    document.delete()
+    return Response(status=204)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def search_rag_documents(request):
+    """
+    Search documents using RAG vector similarity.
+
+    Request body:
+    - query: Search query text (required)
+    - document_types: List of types to filter (optional)
+    - top_k: Maximum results (1-20, default: 5)
+    - threshold: Minimum similarity (0.0-1.0, default: 0.70)
+
+    Query params (superusers only):
+    - organization_id: Search documents for a specific organization
+    """
+    from .serializers import RAGSearchSerializer
+    from .rag_service import RAGService
+
+    organization = get_target_organization(request)
+    if organization is None:
+        return Response({'error': 'User profile not found'}, status=400)
+
+    serializer = RAGSearchSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=400)
+
+    data = serializer.validated_data
+
+    service = RAGService(organization_id=organization.id)
+
+    results = service.search(
+        query=data['query'],
+        doc_types=data.get('document_types'),
+        top_k=data.get('top_k', 5),
+        threshold=data.get('threshold', 0.70)
+    )
+
+    return Response({
+        'results': results,
+        'count': len(results),
+        'query': data['query'],
+        'search_type': 'vector' if service._pgvector_available else 'keyword'
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def ingest_supplier_profiles(request):
+    """
+    Ingest or refresh supplier profiles for RAG.
+
+    Request body (optional):
+    - supplier_ids: List of specific supplier IDs to ingest
+
+    Query params (superusers only):
+    - organization_id: Ingest for a specific organization
+
+    Returns counts of created, updated, and failed documents.
+    """
+    from .document_ingestion import DocumentIngestionService
+
+    organization = get_target_organization(request)
+    if organization is None:
+        return Response({'error': 'User profile not found'}, status=400)
+
+    profile = request.user.profile
+    if profile.role not in ['admin', 'manager']:
+        return Response(
+            {'error': 'Permission denied. Only admins and managers can trigger ingestion.'},
+            status=403
+        )
+
+    supplier_ids = request.data.get('supplier_ids')
+    if supplier_ids and not isinstance(supplier_ids, list):
+        return Response({'error': 'supplier_ids must be a list'}, status=400)
+
+    service = DocumentIngestionService(organization_id=organization.id)
+
+    try:
+        result = service.ingest_supplier_profiles(supplier_ids=supplier_ids)
+
+        log_action(
+            user=request.user,
+            action='ingest',
+            resource='rag_supplier_profiles',
+            resource_id=str(organization.id),
+            request=request,
+            details=result
+        )
+
+        return Response({
+            **result,
+            'message': 'Supplier profile ingestion completed'
+        })
+
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def ingest_historical_insights(request):
+    """
+    Ingest successful historical insights for RAG.
+
+    Request body (optional):
+    - outcomes: List of outcome types to include (default: ['success', 'partial_success'])
+    - limit: Maximum insights to ingest (default: 100)
+
+    Query params (superusers only):
+    - organization_id: Ingest for a specific organization
+
+    Returns counts of created, updated, and failed documents.
+    """
+    from .document_ingestion import DocumentIngestionService
+
+    organization = get_target_organization(request)
+    if organization is None:
+        return Response({'error': 'User profile not found'}, status=400)
+
+    profile = request.user.profile
+    if profile.role not in ['admin', 'manager']:
+        return Response(
+            {'error': 'Permission denied. Only admins and managers can trigger ingestion.'},
+            status=403
+        )
+
+    outcomes = request.data.get('outcomes')
+    limit = request.data.get('limit', 100)
+
+    if outcomes and not isinstance(outcomes, list):
+        return Response({'error': 'outcomes must be a list'}, status=400)
+
+    try:
+        limit = int(limit)
+        if limit < 1 or limit > 1000:
+            return Response({'error': 'limit must be between 1 and 1000'}, status=400)
+    except (ValueError, TypeError):
+        return Response({'error': 'limit must be an integer'}, status=400)
+
+    service = DocumentIngestionService(organization_id=organization.id)
+
+    try:
+        result = service.ingest_historical_insights(outcomes=outcomes, limit=limit)
+
+        log_action(
+            user=request.user,
+            action='ingest',
+            resource='rag_historical_insights',
+            resource_id=str(organization.id),
+            request=request,
+            details=result
+        )
+
+        return Response({
+            **result,
+            'message': 'Historical insight ingestion completed'
+        })
+
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def refresh_rag_documents(request):
+    """
+    Refresh all auto-generated RAG documents (suppliers + historical insights).
+
+    Query params (superusers only):
+    - organization_id: Refresh for a specific organization
+
+    Returns aggregated counts from all ingestion types.
+    """
+    from .document_ingestion import DocumentIngestionService
+
+    organization = get_target_organization(request)
+    if organization is None:
+        return Response({'error': 'User profile not found'}, status=400)
+
+    profile = request.user.profile
+    if profile.role != 'admin':
+        return Response(
+            {'error': 'Permission denied. Only admins can trigger full refresh.'},
+            status=403
+        )
+
+    service = DocumentIngestionService(organization_id=organization.id)
+
+    try:
+        result = service.refresh_all()
+
+        log_action(
+            user=request.user,
+            action='refresh',
+            resource='rag_documents',
+            resource_id=str(organization.id),
+            request=request,
+            details=result
+        )
+
+        return Response({
+            'results': result,
+            'message': 'Full RAG document refresh completed'
+        })
+
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def cleanup_orphaned_documents(request):
+    """
+    Remove RAG documents whose source objects no longer exist.
+
+    Query params (superusers only):
+    - organization_id: Cleanup for a specific organization
+
+    Returns count of deleted documents.
+    """
+    from .document_ingestion import DocumentIngestionService
+
+    organization = get_target_organization(request)
+    if organization is None:
+        return Response({'error': 'User profile not found'}, status=400)
+
+    profile = request.user.profile
+    if profile.role != 'admin':
+        return Response(
+            {'error': 'Permission denied. Only admins can trigger cleanup.'},
+            status=403
+        )
+
+    service = DocumentIngestionService(organization_id=organization.id)
+
+    try:
+        deleted = service.cleanup_orphaned()
+
+        log_action(
+            user=request.user,
+            action='cleanup',
+            resource='rag_documents',
+            resource_id=str(organization.id),
+            request=request,
+            details={'deleted': deleted}
+        )
+
+        return Response({
+            'deleted': deleted,
+            'message': f'Cleaned up {deleted} orphaned documents'
+        })
+
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_rag_stats(request):
+    """
+    Get RAG document statistics.
+
+    Query params (superusers only):
+    - organization_id: Get stats for a specific organization
+    """
+    from .document_ingestion import DocumentIngestionService
+
+    organization = get_target_organization(request)
+    if organization is None:
+        return Response({'error': 'User profile not found'}, status=400)
+
+    service = DocumentIngestionService(organization_id=organization.id)
+    stats = service.get_stats()
+
+    return Response(stats)
+
+
+# =============================================================================
+# AI Chat Streaming Endpoints
+# =============================================================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def ai_chat_stream(request):
+    """
+    Stream AI chat responses using Server-Sent Events.
+
+    POST body:
+    {
+        "messages": [{"role": "user", "content": "..."}],
+        "context": {"spending": {...}, "suppliers": [...]},
+        "model": "claude-sonnet-4-20250514"  // optional
+    }
+
+    Returns SSE stream with tokens.
+    """
+    import json
+    from django.http import StreamingHttpResponse
+    from django.conf import settings
+
+    organization = get_target_organization(request)
+    if organization is None:
+        return Response({'error': 'User profile not found'}, status=400)
+
+    messages = request.data.get('messages', [])
+    context = request.data.get('context', {})
+    model = request.data.get('model', 'claude-sonnet-4-20250514')
+
+    if not messages:
+        return Response({'error': 'Messages are required'}, status=400)
+
+    api_key = getattr(settings, 'ANTHROPIC_API_KEY', None)
+    if not api_key:
+        return Response(
+            {'error': 'AI streaming not configured'},
+            status=503
+        )
+
+    system_prompt = _build_chat_system_prompt(organization, context)
+
+    def generate_stream():
+        try:
+            import anthropic
+            client = anthropic.Anthropic(api_key=api_key)
+
+            formatted_messages = [
+                {"role": m.get("role", "user"), "content": m.get("content", "")}
+                for m in messages
+            ]
+
+            with client.messages.stream(
+                model=model,
+                max_tokens=2000,
+                system=system_prompt,
+                messages=formatted_messages,
+            ) as stream:
+                for text in stream.text_stream:
+                    yield f"data: {json.dumps({'token': text})}\n\n"
+
+                final_message = stream.get_final_message()
+                usage = {
+                    'input_tokens': final_message.usage.input_tokens,
+                    'output_tokens': final_message.usage.output_tokens,
+                }
+                yield f"data: {json.dumps({'done': True, 'usage': usage})}\n\n"
+
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+    response = StreamingHttpResponse(
+        generate_stream(),
+        content_type='text/event-stream'
+    )
+    response['Cache-Control'] = 'no-cache'
+    response['X-Accel-Buffering'] = 'no'
+    return response
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def ai_quick_query(request):
+    """
+    Quick query endpoint for single-turn procurement questions.
+
+    POST body:
+    {
+        "query": "What are my top spending categories?",
+        "include_context": true  // optional, loads spending stats
+    }
+
+    Returns SSE stream with response.
+    """
+    import json
+    from django.http import StreamingHttpResponse
+    from django.conf import settings
+
+    organization = get_target_organization(request)
+    if organization is None:
+        return Response({'error': 'User profile not found'}, status=400)
+
+    query = request.data.get('query', '')
+    include_context = request.data.get('include_context', True)
+
+    if not query:
+        return Response({'error': 'Query is required'}, status=400)
+
+    api_key = getattr(settings, 'ANTHROPIC_API_KEY', None)
+    if not api_key:
+        return Response(
+            {'error': 'AI streaming not configured'},
+            status=503
+        )
+
+    context = {}
+    if include_context:
+        try:
+            service = AnalyticsService(organization)
+            overview = service.get_overview_stats()
+            context = {
+                'total_spend': overview.get('total_spend', 0),
+                'transaction_count': overview.get('transaction_count', 0),
+                'supplier_count': overview.get('supplier_count', 0),
+                'category_count': overview.get('category_count', 0),
+            }
+        except Exception:
+            pass
+
+    system_prompt = _build_chat_system_prompt(organization, context)
+
+    def generate_stream():
+        try:
+            import anthropic
+            client = anthropic.Anthropic(api_key=api_key)
+
+            with client.messages.stream(
+                model='claude-sonnet-4-20250514',
+                max_tokens=1000,
+                system=system_prompt,
+                messages=[{"role": "user", "content": query}],
+            ) as stream:
+                for text in stream.text_stream:
+                    yield f"data: {json.dumps({'token': text})}\n\n"
+
+                final_message = stream.get_final_message()
+                usage = {
+                    'input_tokens': final_message.usage.input_tokens,
+                    'output_tokens': final_message.usage.output_tokens,
+                }
+                yield f"data: {json.dumps({'done': True, 'usage': usage})}\n\n"
+
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+    response = StreamingHttpResponse(
+        generate_stream(),
+        content_type='text/event-stream'
+    )
+    response['Cache-Control'] = 'no-cache'
+    response['X-Accel-Buffering'] = 'no'
+    return response
+
+
+def _build_chat_system_prompt(organization, context: dict = None) -> str:
+    """Build system prompt for chat with organization context."""
+    context = context or {}
+
+    context_str = ""
+    if context:
+        context_str = f"""
+
+Current Data Context:
+- Total Spend: ${context.get('total_spend', 0):,.2f}
+- Transaction Count: {context.get('transaction_count', 0):,}
+- Supplier Count: {context.get('supplier_count', 0)}
+- Category Count: {context.get('category_count', 0)}"""
+
+    return f"""You are an AI procurement analytics assistant for {organization.name}.
+You help users understand their procurement data, identify cost savings opportunities,
+analyze supplier performance, and answer questions about their spending patterns.
+
+Guidelines:
+- Be concise and actionable in your responses
+- Reference specific data when available
+- Suggest follow-up questions or analyses when appropriate
+- Flag any concerning patterns or risks
+- Use clear formatting with bullet points for lists
+- Include confidence levels when making estimates or projections
+
+When uncertain, ask clarifying questions rather than guessing.
+{context_str}"""

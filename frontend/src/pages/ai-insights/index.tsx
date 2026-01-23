@@ -44,6 +44,7 @@ import {
   ChevronRight,
   Edit,
   Trash2,
+  Cpu,
 } from "lucide-react";
 import {
   Card,
@@ -97,6 +98,8 @@ import {
   getOutcomeColor,
 } from "@/hooks/useAIInsights";
 import { DeepAnalysisModal } from "@/components/DeepAnalysisModal";
+import { AIInsightsChat } from "@/components/AIInsightsChat";
+import { LLMUsageDashboard } from "@/components/LLMUsageDashboard";
 import type {
   AIInsight,
   AIInsightType,
@@ -1628,7 +1631,7 @@ export default function AIInsightsPage() {
   const refreshMutation = useRefreshAIInsights();
   const feedbackMutation = useRecordInsightFeedback();
   const { data: settings } = useSettings();
-  const [mainView, setMainView] = useState<"insights" | "roi">("insights");
+  const [mainView, setMainView] = useState<"insights" | "roi" | "chat" | "usage">("insights");
   const [activeTab, setActiveTab] = useState<AIInsightType | "all">("all");
   const [sortBy, setSortBy] = useState<SortOption>("severity");
 
@@ -1917,10 +1920,32 @@ export default function AIInsightsPage() {
           <BarChart3 className="h-4 w-4 mr-2" />
           ROI Tracking
         </Button>
+        <Button
+          variant={mainView === "chat" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setMainView("chat")}
+          className={mainView === "chat" ? "" : "text-gray-600"}
+        >
+          <MessageSquare className="h-4 w-4 mr-2" />
+          AI Chat
+        </Button>
+        <Button
+          variant={mainView === "usage" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setMainView("usage")}
+          className={mainView === "usage" ? "" : "text-gray-600"}
+        >
+          <Cpu className="h-4 w-4 mr-2" />
+          Usage
+        </Button>
       </div>
 
-      {/* ROI Tracking View */}
-      {mainView === "roi" ? (
+      {/* Conditional View Rendering */}
+      {mainView === "chat" ? (
+        <AIInsightsChat />
+      ) : mainView === "usage" ? (
+        <LLMUsageDashboard />
+      ) : mainView === "roi" ? (
         <ROITrackingSection />
       ) : (
         <>

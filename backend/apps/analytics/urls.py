@@ -58,6 +58,14 @@ urlpatterns = [
     path('ai-insights/metrics/prometheus/', views.ai_insights_metrics_prometheus, name='ai-insights-metrics-prometheus'),
     path('ai-insights/cache/invalidate/', views.ai_insights_cache_invalidate, name='ai-insights-cache-invalidate'),
 
+    # AI Insights LLM Usage & Cost Tracking
+    path('ai-insights/usage/', views.ai_insights_usage, name='ai-insights-usage'),
+    path('ai-insights/usage/daily/', views.ai_insights_usage_daily, name='ai-insights-usage-daily'),
+
+    # AI Chat Streaming
+    path('ai-insights/chat/stream/', views.ai_chat_stream, name='ai-chat-stream'),
+    path('ai-insights/chat/quick/', views.ai_quick_query, name='ai-quick-query'),
+
     # Predictive Analytics
     path('predictions/spending/', views.spending_forecast, name='spending-forecast'),
     path('predictions/category/<int:category_id>/', views.category_forecast, name='category-forecast'),
@@ -86,4 +94,16 @@ urlpatterns = [
 
     # P2P (Procure-to-Pay) Analytics
     path('', include('apps.analytics.p2p_urls')),
+
+    # RAG Document Management
+    path('rag/documents/', views.list_rag_documents, name='rag-documents-list'),
+    path('rag/documents/<uuid:document_id>/', views.get_rag_document, name='rag-document-detail'),
+    path('rag/documents/create/', views.create_rag_document, name='rag-document-create'),
+    path('rag/documents/<uuid:document_id>/delete/', views.delete_rag_document, name='rag-document-delete'),
+    path('rag/search/', views.search_rag_documents, name='rag-search'),
+    path('rag/ingest/suppliers/', views.ingest_supplier_profiles, name='rag-ingest-suppliers'),
+    path('rag/ingest/insights/', views.ingest_historical_insights, name='rag-ingest-insights'),
+    path('rag/refresh/', views.refresh_rag_documents, name='rag-refresh'),
+    path('rag/cleanup/', views.cleanup_orphaned_documents, name='rag-cleanup'),
+    path('rag/stats/', views.get_rag_stats, name='rag-stats'),
 ]

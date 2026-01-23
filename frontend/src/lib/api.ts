@@ -1226,6 +1226,49 @@ export interface DeepAnalysisStatusResponse {
   message?: string;
 }
 
+// LLM Usage & Cost Tracking types
+export interface LLMUsageByType {
+  request_type: string;
+  count: number;
+  cost: number;
+  tokens: number;
+}
+
+export interface LLMUsageByProvider {
+  provider: string;
+  count: number;
+  cost: number;
+}
+
+export interface LLMUsageSummary {
+  organization_id: number;
+  organization_name: string;
+  period_days: number;
+  total_requests: number;
+  total_cost_usd: number;
+  total_tokens: number;
+  avg_latency_ms: number;
+  cache_hit_rate: number;
+  prompt_cache_tokens_saved: number;
+  by_request_type: LLMUsageByType[];
+  by_provider: LLMUsageByProvider[];
+}
+
+export interface LLMUsageDailyEntry {
+  date: string;
+  requests: number;
+  cost: number;
+  input_tokens: number;
+  output_tokens: number;
+  cache_reads: number;
+}
+
+export interface LLMUsageDailyResponse {
+  organization_id: number;
+  period_days: number;
+  daily_usage: LLMUsageDailyEntry[];
+}
+
 // Predictive Analytics types
 export type TrendDirection = "increasing" | "decreasing" | "stable";
 
@@ -2366,6 +2409,21 @@ export const analyticsAPI = {
   ): Promise<AxiosResponse<DeepAnalysisStatusResponse>> =>
     api.get(`/analytics/ai-insights/deep-analysis/status/${insightId}/`, {
       params: getOrganizationParam(),
+    }),
+
+  // LLM Usage & Cost Tracking endpoints
+  getLLMUsageSummary: (
+    days: number = 30,
+  ): Promise<AxiosResponse<LLMUsageSummary>> =>
+    api.get("/analytics/ai-insights/usage/", {
+      params: { days, ...getOrganizationParam() },
+    }),
+
+  getLLMUsageDaily: (
+    days: number = 30,
+  ): Promise<AxiosResponse<LLMUsageDailyResponse>> =>
+    api.get("/analytics/ai-insights/usage/daily/", {
+      params: { days, ...getOrganizationParam() },
     }),
 
   // Predictive Analytics endpoints

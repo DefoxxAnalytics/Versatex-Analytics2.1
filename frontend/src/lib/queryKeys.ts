@@ -415,6 +415,10 @@ export const queryKeys = {
       ["ai", "insight-feedback", params, { orgId }] as const,
     insightEffectiveness: (orgId?: number) =>
       ["ai", "insight-effectiveness", { orgId }] as const,
+    usageSummary: (days: number, orgId?: number) =>
+      ["ai", "usage-summary", days, { orgId }] as const,
+    usageDaily: (days: number, orgId?: number) =>
+      ["ai", "usage-daily", days, { orgId }] as const,
   },
 
   // =========================================================================

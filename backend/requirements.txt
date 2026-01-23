@@ -5,6 +5,7 @@ djangorestframework-simplejwt==5.3.1
 
 # Database
 psycopg2-binary==2.9.9
+pgvector==0.3.6
 
 # CORS
 django-cors-headers==4.3.1
@@ -29,6 +30,15 @@ openpyxl==3.1.2
 # Machine Learning & Predictive Analytics
 scikit-learn==1.4.0
 statsmodels==0.14.1
+
+# AI/LLM Providers
+anthropic>=0.40.0
+openai>=1.12.0
+
+# FastAPI Streaming Service
+fastapi>=0.110.0
+uvicorn>=0.27.0
+pyjwt>=2.8.0
 
 # API Documentation
 drf-spectacular==0.27.0

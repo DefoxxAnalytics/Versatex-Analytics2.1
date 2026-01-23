@@ -36,10 +36,16 @@ export function getCategoryChartFromAPI(
         return `${d.name}<br/>$${d.value.toLocaleString()}`;
       },
     },
+    legend: {
+      show: true,
+      right: 10,
+      top: 0,
+    },
     grid: {
       left: "3%",
       right: "4%",
       bottom: "3%",
+      top: 30,
       containLabel: true,
     },
     xAxis: {
@@ -85,10 +91,16 @@ export function getTrendChartFromAPI(data: MonthlyTrend[]): EChartsOption {
         return `${d.name}<br/>$${d.value.toLocaleString()}`;
       },
     },
+    legend: {
+      show: true,
+      right: 10,
+      top: 0,
+    },
     grid: {
       left: "3%",
       right: "4%",
       bottom: "3%",
+      top: 30,
       containLabel: true,
     },
     xAxis: {
@@ -153,10 +165,16 @@ export function getSupplierChartFromAPI(
         return `${d.name}<br/>$${d.value.toLocaleString()}`;
       },
     },
+    legend: {
+      show: true,
+      right: 10,
+      top: 0,
+    },
     grid: {
       left: "3%",
       right: "4%",
       bottom: "3%",
+      top: 30,
       containLabel: true,
     },
     xAxis: {

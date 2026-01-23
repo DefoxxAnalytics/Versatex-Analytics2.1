@@ -13,6 +13,7 @@
  * - Redis caching with cache_hit indicator
  * - Manual refresh support to bypass cache
  */
+import { useState, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { analyticsAPI, getOrganizationParam } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
@@ -568,6 +569,399 @@ export function getPhaseColor(phaseIndex: number, totalPhases: number): string {
   return colors[phaseIndex % colors.length];
 }
 
+// =============================================================================
+// AI Chat Streaming Hooks
+// =============================================================================
+
+export interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: Date;
+  isStreaming?: boolean;
+}
+
+export interface ChatStreamState {
+  messages: ChatMessage[];
+  isStreaming: boolean;
+  error: string | null;
+  usage: { input_tokens?: number; output_tokens?: number } | null;
+}
+
+interface StreamEvent {
+  token?: string;
+  done?: boolean;
+  error?: string;
+  usage?: { input_tokens: number; output_tokens: number };
+}
+
+/**
+ * Hook for streaming AI chat responses.
+ *
+ * Provides real-time streaming from the SSE endpoint with message history management.
+ */
+export function useAIChatStream() {
+  const [state, setState] = useState<ChatStreamState>({
+    messages: [],
+    isStreaming: false,
+    error: null,
+    usage: null,
+  });
+
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const sendMessage = useCallback(async (content: string, context?: Record<string, unknown>) => {
+    const userMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content,
+      timestamp: new Date(),
+    };
+
+    const assistantMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "assistant",
+      content: "",
+      timestamp: new Date(),
+      isStreaming: true,
+    };
+
+    setState((prev) => ({
+      ...prev,
+      messages: [...prev.messages, userMessage, assistantMessage],
+      isStreaming: true,
+      error: null,
+    }));
+
+    abortControllerRef.current = new AbortController();
+
+    try {
+      const token = localStorage.getItem("access_token");
+      const apiUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:8001/api";
+
+      const messagesToSend = [...state.messages, userMessage].map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+      const response = await fetch(`${apiUrl}/v1/analytics/ai-insights/chat/stream/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          messages: messagesToSend,
+          context: context || {},
+        }),
+        signal: abortControllerRef.current.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("No response body");
+      }
+
+      const decoder = new TextDecoder();
+      let fullContent = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n");
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const data: StreamEvent = JSON.parse(line.slice(6));
+
+              if (data.error) {
+                setState((prev) => ({
+                  ...prev,
+                  isStreaming: false,
+                  error: data.error || "Unknown error",
+                }));
+                return;
+              }
+
+              if (data.token) {
+                fullContent += data.token;
+                setState((prev) => ({
+                  ...prev,
+                  messages: prev.messages.map((m) =>
+                    m.id === assistantMessage.id
+                      ? { ...m, content: fullContent }
+                      : m
+                  ),
+                }));
+              }
+
+              if (data.done) {
+                setState((prev) => ({
+                  ...prev,
+                  isStreaming: false,
+                  usage: data.usage || null,
+                  messages: prev.messages.map((m) =>
+                    m.id === assistantMessage.id
+                      ? { ...m, isStreaming: false }
+                      : m
+                  ),
+                }));
+              }
+            } catch {
+              // Ignore parse errors for incomplete chunks
+            }
+          }
+        }
+      }
+    } catch (error) {
+      if ((error as Error).name !== "AbortError") {
+        setState((prev) => ({
+          ...prev,
+          isStreaming: false,
+          error: (error as Error).message,
+        }));
+      }
+    }
+  }, [state.messages]);
+
+  const cancelStream = useCallback(() => {
+    abortControllerRef.current?.abort();
+    setState((prev) => ({
+      ...prev,
+      isStreaming: false,
+      messages: prev.messages.map((m) =>
+        m.isStreaming ? { ...m, isStreaming: false } : m
+      ),
+    }));
+  }, []);
+
+  const clearMessages = useCallback(() => {
+    setState({
+      messages: [],
+      isStreaming: false,
+      error: null,
+      usage: null,
+    });
+  }, []);
+
+  return {
+    ...state,
+    sendMessage,
+    cancelStream,
+    clearMessages,
+  };
+}
+
+/**
+ * Hook for quick single-turn queries.
+ *
+ * Simpler than full chat for one-off questions about procurement data.
+ */
+export function useAIQuickQuery() {
+  const [state, setState] = useState<{
+    response: string;
+    isStreaming: boolean;
+    error: string | null;
+  }>({
+    response: "",
+    isStreaming: false,
+    error: null,
+  });
+
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const query = useCallback(async (queryText: string, includeContext = true) => {
+    setState({ response: "", isStreaming: true, error: null });
+
+    abortControllerRef.current = new AbortController();
+
+    try {
+      const token = localStorage.getItem("access_token");
+      const apiUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:8001/api";
+
+      const response = await fetch(`${apiUrl}/v1/analytics/ai-insights/chat/quick/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          query: queryText,
+          include_context: includeContext,
+        }),
+        signal: abortControllerRef.current.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("No response body");
+      }
+
+      const decoder = new TextDecoder();
+      let fullContent = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n");
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const data: StreamEvent = JSON.parse(line.slice(6));
+
+              if (data.error) {
+                setState((prev) => ({
+                  ...prev,
+                  isStreaming: false,
+                  error: data.error || "Unknown error",
+                }));
+                return;
+              }
+
+              if (data.token) {
+                fullContent += data.token;
+                setState((prev) => ({ ...prev, response: fullContent }));
+              }
+
+              if (data.done) {
+                setState((prev) => ({ ...prev, isStreaming: false }));
+              }
+            } catch {
+              // Ignore parse errors
+            }
+          }
+        }
+      }
+    } catch (error) {
+      if ((error as Error).name !== "AbortError") {
+        setState((prev) => ({
+          ...prev,
+          isStreaming: false,
+          error: (error as Error).message,
+        }));
+      }
+    }
+  }, []);
+
+  const cancel = useCallback(() => {
+    abortControllerRef.current?.abort();
+    setState((prev) => ({ ...prev, isStreaming: false }));
+  }, []);
+
+  return {
+    ...state,
+    query,
+    cancel,
+  };
+}
+
+// =============================================================================
+// LLM Usage & Cost Tracking Hooks
+// =============================================================================
+
+/**
+ * Get LLM usage summary for cost monitoring
+ */
+export function useLLMUsageSummary(days: number = 30) {
+  const orgId = getOrgKeyPart();
+  return useQuery({
+    queryKey: queryKeys.ai.usageSummary(days, orgId),
+    queryFn: async () => {
+      const response = await analyticsAPI.getLLMUsageSummary(days);
+      return response.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * Get daily LLM usage data for trend charts
+ */
+export function useLLMUsageDaily(days: number = 30) {
+  const orgId = getOrgKeyPart();
+  return useQuery({
+    queryKey: queryKeys.ai.usageDaily(days, orgId),
+    queryFn: async () => {
+      const response = await analyticsAPI.getLLMUsageDaily(days);
+      return response.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * Format cost for display
+ */
+export function formatCost(cost: number): string {
+  if (cost < 0.01) return `$${cost.toFixed(4)}`;
+  if (cost < 1) return `$${cost.toFixed(3)}`;
+  return `$${cost.toFixed(2)}`;
+}
+
+/**
+ * Format large numbers with K/M suffix
+ */
+export function formatTokenCount(count: number): string {
+  if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+  if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+  return count.toString();
+}
+
+/**
+ * Get request type display label
+ */
+export function getRequestTypeLabel(type: string): string {
+  const labels: Record<string, string> = {
+    enhance: "Enhancement",
+    single_insight: "Single Analysis",
+    deep_analysis: "Deep Analysis",
+    classify: "Classification",
+    chat: "Chat",
+    health_check: "Health Check",
+  };
+  return labels[type] || type;
+}
+
+/**
+ * Get request type color
+ */
+export function getRequestTypeColor(type: string): string {
+  const colors: Record<string, string> = {
+    enhance: "bg-blue-100 text-blue-800",
+    single_insight: "bg-purple-100 text-purple-800",
+    deep_analysis: "bg-indigo-100 text-indigo-800",
+    classify: "bg-gray-100 text-gray-800",
+    chat: "bg-green-100 text-green-800",
+    health_check: "bg-yellow-100 text-yellow-800",
+  };
+  return colors[type] || "bg-gray-100 text-gray-800";
+}
+
+/**
+ * Get provider display label
+ */
+export function getProviderLabel(provider: string): string {
+  const labels: Record<string, string> = {
+    anthropic: "Anthropic Claude",
+    openai: "OpenAI GPT",
+  };
+  return labels[provider] || provider;
+}
+
 // Re-export types for convenience
 export type {
   AIEnhancement,
@@ -590,4 +984,10 @@ export type {
   DeepAnalysisFinancialImpact,
   DeepAnalysisRiskFactor,
   DeepAnalysisSuccessMetric,
+  // LLM Usage types
+  LLMUsageSummary,
+  LLMUsageDailyResponse,
+  LLMUsageDailyEntry,
+  LLMUsageByType,
+  LLMUsageByProvider,
 } from "@/lib/api";

@@ -337,7 +337,9 @@ class AIInsightsService:
             self._provider_manager = AIProviderManager(
                 primary_provider=ai_provider,
                 api_keys=self.api_keys,
-                enable_fallback=enable_fallback
+                enable_fallback=enable_fallback,
+                organization_id=self.organization.id,
+                enable_logging=True
             )
 
     def _build_filtered_queryset(self):
@@ -1620,11 +1622,13 @@ class PerInsightEnhancer:
         api_key: str = None,
         provider: str = 'anthropic',
         api_keys: Optional[Dict[str, str]] = None,
-        enable_fallback: bool = True
+        enable_fallback: bool = True,
+        organization_id: Optional[int] = None
     ):
         self.api_key = api_key
         self.provider = provider
         self.enable_fallback = enable_fallback
+        self.organization_id = organization_id
 
         # Build api_keys dict from legacy api_key if not provided
         if api_keys:
@@ -1640,7 +1644,9 @@ class PerInsightEnhancer:
             self._provider_manager = AIProviderManager(
                 primary_provider=provider,
                 api_keys=self.api_keys,
-                enable_fallback=enable_fallback
+                enable_fallback=enable_fallback,
+                organization_id=organization_id,
+                enable_logging=True
             )
 
     def enhance_insights(self, insights: list) -> list:

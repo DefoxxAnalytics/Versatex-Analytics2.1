@@ -1,4 +1,4 @@
-# Versatex Analytics 2.7
+# Versatex Analytics 2.9
 
 [![CI](https://github.com/DefoxxAnalytics/Versatex_Analytics2.0/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/DefoxxAnalytics/Versatex_Analytics2.0/actions/workflows/ci.yml)
 [![Production Ready](https://img.shields.io/badge/Production-Ready-brightgreen.svg)](docs/SHIPPING_READINESS.md)
@@ -27,7 +27,8 @@ Versatex Analytics is a full-stack procurement analytics dashboard designed for 
 | **Backend** | Django 5.0 + Django REST Framework + PostgreSQL |
 | **Frontend** | React 18 + TypeScript + Tailwind CSS 4 + Vite |
 | **Authentication** | JWT tokens with role-based access control |
-| **Database** | PostgreSQL with organization isolation |
+| **Database** | PostgreSQL with pgvector for vector search |
+| **AI/LLM** | Claude/OpenAI with semantic caching + RAG |
 | **Task Queue** | Celery + Redis for background jobs |
 | **Deployment** | Docker + Docker Compose / Railway |
 
@@ -65,7 +66,7 @@ Versatex Analytics is a full-stack procurement analytics dashboard designed for 
 | **Contract Analytics** | Contract utilization, renewals, and compliance |
 | **Compliance/Maverick Spend** | Policy violations and spending compliance |
 
-### AI Insights Module
+### AI Insights Module (v2.9)
 | Feature | Description |
 |---------|-------------|
 | **Cost Optimization** | Price variance detection across suppliers |
@@ -77,6 +78,12 @@ Versatex Analytics is a full-stack procurement analytics dashboard designed for 
 | **ROI Tracking** | Track actions taken on insights and actual savings realized |
 | **Effectiveness Dashboard** | Metrics on insight implementation success |
 | **Action History** | Full history of recorded actions with CRUD support |
+| **AI Chat (Streaming)** | Conversational AI interface with real-time SSE streaming |
+| **LLM Usage Dashboard** | Cost tracking, cache efficiency metrics, and usage trends |
+| **Semantic Caching** | pgvector-powered similarity search (90% threshold) for cost reduction |
+| **RAG Document Intelligence** | Vector search for supplier profiles and historical insights |
+| **Batch Processing** | Overnight insight generation via Celery Beat |
+| **Hallucination Prevention** | Validation layer for monetary values, suppliers, and dates |
 
 ### Reports Module
 | Feature | Description |
@@ -232,6 +239,14 @@ docker-compose exec backend python manage.py shell
 | `/api/v1/analytics/ai-insights/feedback/<id>/delete/` | DELETE | Delete feedback entry |
 | `/api/v1/analytics/ai-insights/metrics/` | GET | AI insights metrics |
 | `/api/v1/analytics/ai-insights/cache/invalidate/` | POST | Invalidate AI cache |
+| `/api/v1/analytics/ai-insights/usage/` | GET | LLM usage summary (cost, cache rate) |
+| `/api/v1/analytics/ai-insights/usage/daily/` | GET | Daily LLM usage trends |
+| `/api/v1/analytics/ai-insights/chat/stream/` | POST | AI chat with SSE streaming |
+| `/api/v1/analytics/ai-insights/chat/quick/` | POST | Non-streaming quick query |
+| `/api/v1/analytics/rag/documents/` | GET | List RAG documents |
+| `/api/v1/analytics/rag/search/` | POST | Vector similarity search |
+| `/api/v1/analytics/rag/ingest/suppliers/` | POST | Ingest supplier profiles |
+| `/api/v1/analytics/rag/stats/` | GET | RAG statistics |
 
 ### Predictive Analytics
 | Endpoint | Method | Description |
@@ -382,6 +397,9 @@ pnpm test:ui     # With UI
 | **InsightFeedback** | Track actions taken on AI insights and actual savings |
 | **Contract** | Contract details with utilization tracking |
 | **PolicyViolation** | Compliance violations and resolutions |
+| **LLMRequestLog** | Track all LLM API calls (tokens, cost, latency, cache) |
+| **SemanticCache** | pgvector embeddings for semantic similarity search |
+| **EmbeddedDocument** | RAG document store with vector embeddings |
 
 ### P2P Models
 
